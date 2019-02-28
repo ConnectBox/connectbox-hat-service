@@ -12,7 +12,7 @@ from . import page_info
 from . import page_stats
 from . import page_memory
 from . import page_battery_low
-
+from . import page_display_image
 
 class DummyDisplay:
 
@@ -52,7 +52,7 @@ class OLED:
         self.blank_page = page_none.PageBlank(self.display_device)
         self.low_battery_page = \
             page_battery_low.PageBatteryLow(self.display_device)
-        self.pages = [
+        self.statusPages = [
             page_main.PageMain(self.display_device, self.axp),
             page_info.PageInfo(self.display_device),
             page_battery.PageBattery(self.display_device, self.axp),
@@ -65,7 +65,22 @@ class OLED:
             page_stats.PageStats(self.display_device, 'week', 2),
             page_stats.PageStats(self.display_device, 'month', 1),
             page_stats.PageStats(self.display_device, 'month', 2),
+            page_display_image.PageDisplayImage(self.display_device, 'show_admin.png'),
         ]
+        self.adminPages = [
+            page_display_image.PageDisplayImage(self.display_device, 'copy_from_usb.png'),
+            page_display_image.PageDisplayImage(self.display_device, 'erase_folder.png'),
+            page_display_image.PageDisplayImage(self.display_device, 'exit.png'),  # MUST be last item in list
+        ]
+        self.adminPageNames = [
+            'copy_from_usb',
+            'erase_folder',
+            'exit'
+        ]
+
+        self.pages = self.statusPages
+        self.pageStack = 'status'
+
         self._curPage = self.pages[self.STARTING_PAGE_INDEX]
         # callbacks run in another thread, so we need to lock access to the
         #  current page variable as it can be modified from the main loop
@@ -75,6 +90,76 @@ class OLED:
         #  manage timeouts and timed display power-downs, so we leave that
         #  as an exercise for anyone using this class
         self.drawLogo()
+
+    def getAdminPageName(self):
+        try:
+            return  self.adminPageNames[self.adminPages.index(self._curPage)]
+        except:
+            return ''
+
+    def checkIfLastPage(self):
+        return True if self._curPage == self.pages[-1] else False
+
+    def showRemoveUsbPage(self):
+        with self._curPageLock:
+            logging.debug("Showing remove usb page")
+            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'remove_usb.png')
+            self._curPage.draw_page()
+
+    def showNoUsbPage(self):
+        with self._curPageLock:
+            logging.debug("Showing no usb page")
+            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'error_no_usb.png')
+            self._curPage.draw_page()
+
+    def showNoSpacePage(self):
+        with self._curPageLock:
+            logging.debug("Showing no space page")
+            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'error_no_space.png')
+            self._curPage.draw_page()
+
+    def showWaitPage(self):
+        with self._curPageLock:
+            logging.debug("Showing wait page")
+            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'wait.png')
+            self._curPage.draw_page()
+
+    def showConfirmPage(self):
+        with self._curPageLock:
+            logging.debug("Showing confirm choice page")
+            self.pageStack = 'confirm'
+            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'confirm.png')
+            self._curPage.draw_page()
+
+    def showSuccessPage(self):
+        with self._curPageLock:
+            logging.debug("Showing success page")
+            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'success.png')
+            self._curPage.draw_page()
+
+    def showErrorPage(self):
+        with self._curPageLock:
+            logging.debug("Showing error page")
+            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'error.png')
+            self._curPage.draw_page()
+
+    def switchPages(self):
+        '''
+        This method is to switch between the original stack of pages referred to as status pages and the new stack
+        of pages referred to as admin pages.  This is based upon the variable pageStack.
+        :return: Nothing
+        '''
+        with self._curPageLock:
+            logging.debug("Previous page stack: {}".format(self.pageStack))
+            self.pages = self.statusPages if self.pageStack == 'admin' else self.adminPages
+            self.pageStack = 'status' if self.pageStack == 'admin' else 'admin'
+            logging.debug("Current page stack: {}".format(self.pageStack))
+            self._curPage = self.pages[0]
+
+            # draw the page while holding the lock, so that it doesn't change
+            #  underneath us
+            self._curPage.draw_page()
+            logging.debug("Transitioned to page %s", self._curPage)
 
     def moveForward(self):
         with self._curPageLock:
@@ -136,7 +221,7 @@ class OLED:
     def powerOffDisplay(self):
         if self._curPage == self.blank_page:
             # nothing to do
-            return
+            return 
 
         with self._curPageLock:
             logging.debug("Current page is %s", self._curPage)
