@@ -8,6 +8,7 @@
   GeoDirk - May 2018
 ===========================================
 """
+import os
 import logging
 from luma.core import cmdline, error  # pylint: disable=import-error
 
@@ -59,3 +60,4 @@ def display_settings(args):
 
     return 'Display: {}\n{}Dimensions: {} x {}\n{}'.format(
         args.display, iface, args.width, args.height, '-' * 40)
+
