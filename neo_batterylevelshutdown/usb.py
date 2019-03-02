@@ -82,8 +82,7 @@ class USB:
             sourceSize = self.getSize(sourcePath)
             destSize = self.getFreeSpace(destPath)
             logging.debug("Source size: {} bytes, destination size: {} bytes".format(sourceSize, destSize))
-            # if destSize >= sourceSize :
-            if destSize < sourceSize :    # test check
+            if destSize >= sourceSize :
                 return True
             else:
                 return False
