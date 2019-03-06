@@ -426,6 +426,7 @@ class Axp209HAT(BasePhysicalHAT):
         else:
             logging.debug("Choice confirmed")
             self.display.showWaitPage()
+            self.display.pageStack == 'wait'
             logging.debug("Waiting Page shown")
             self.executeCommands(self.command_to_reference)
 
@@ -478,6 +479,9 @@ class Axp209HAT(BasePhysicalHAT):
             with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
                 # Perhaps power off the display
                 if time.time() > self.displayPowerOffTime:
+                    if self.display.pageStack == 'wait':
+                        self.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS # reset timer
+                        return # keep waiting
                     self.display.powerOffDisplay()
                     if self.display.pageStack != 'status':  # if we're not on the default status pages
                         self.display.pageStack = 'admin'    # this is to prep to return to the status pages
