@@ -232,7 +232,7 @@ class BUTTONS:
         else:
             logging.debug("Choice confirmed")
             self.display.showWaitPage()
-            self.display.pageStack == 'wait'
+            self.display.pageStack = 'wait'
             logging.debug("Waiting Page shown")
             self.executeCommands(self.command_to_reference)
 
