@@ -139,7 +139,7 @@ class OLED:
             self.pageStack = 'confirm'
             self._curPage = page_display_image.PageDisplayImage(self.display_device,
                                                                 'confirm.png')
-            self._curPage.draw_page()
+
 
     def showSuccessPage(self):
         with self._curPageLock:
@@ -153,13 +153,16 @@ class OLED:
             logging.debug("Showing error page")
             self._curPage = page_display_image.PageDisplayImage(self.display_device,
                                                                 'error.png')
+
             self._curPage.draw_page()
 
     def switchPages(self):
         '''
+
         This method is to switch between the original stack of pages referred to as status pages
         and the new stack of pages referred to as admin pages.  This is based upon the variable
         pageStack.
+
         :return: Nothing
         '''
         with self._curPageLock:
@@ -241,6 +244,7 @@ class OLED:
         if self.pageStack != 'status':  # if we're not on the default status pages
             self.pageStack = 'admin'  # this is to prep to return to the status pages
             self.switchPages()  # switch to the status stack from anywhere else we are
+
         with self._curPageLock:
             logging.debug("Current page is %s", self._curPage)
             self._curPage = self.blank_page
