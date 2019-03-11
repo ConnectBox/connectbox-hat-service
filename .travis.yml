@@ -7,7 +7,7 @@ python:
 
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
-  - pip install .
+  - pip install -e .
   - pip install tox pylint
 
 # command to run tests, e.g. python setup.py test
