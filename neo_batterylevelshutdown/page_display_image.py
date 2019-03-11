@@ -10,25 +10,15 @@
 ===========================================
 """
 
-from datetime import datetime
 import os.path
-import subprocess
 import logging
 import sys
-from PIL import Image, ImageFont, ImageDraw
+from PIL import Image
 from .HAT_Utilities import get_device
 
 
-try:
-    import psutil
-except ImportError:
-    print("The psutil library was not found. "
-          "Run 'sudo -H pip install psutil' to install it.")
-    sys.exit()
-
-
 class PageDisplayImage:
-    def __init__(self, device, imageName = 'error.png'):
+    def __init__(self, device, imageName='error.png'):
         self.device = device
         self.imageName = imageName
 

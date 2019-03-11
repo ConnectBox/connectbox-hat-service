@@ -3,6 +3,7 @@
 import logging
 import os
 import threading
+import time
 from PIL import Image
 from .HAT_Utilities import get_device
 from . import page_none
@@ -16,7 +17,8 @@ from . import page_display_image
 
 class DummyDisplay:
 
-    def __init__(self, powerManagementDevice):
+    def __init__(self, hat_class):
+        self.display_type = 'DummyDisplay'
         pass
 
     def moveForward(self):
@@ -45,9 +47,12 @@ class OLED:
     # What to show after startup and blank screen
     STARTING_PAGE_INDEX = 0  # the main page
 
-    def __init__(self, powerManagementDevice):
+
+    def __init__(self, hat_class):
+        self.hat = hat_class
         # rename this.... perhaps it doesn't even need to be stored
-        self.axp = powerManagementDevice
+        self.axp = self.hat.axp   # powerManagementDevice
+        self.display_type = 'OLED'
         self.display_device = get_device()
         self.blank_page = page_none.PageBlank(self.display_device)
         self.low_battery_page = \
@@ -70,7 +75,7 @@ class OLED:
         self.adminPages = [
             page_display_image.PageDisplayImage(self.display_device, 'copy_from_usb.png'),
             page_display_image.PageDisplayImage(self.display_device, 'erase_folder.png'),
-            page_display_image.PageDisplayImage(self.display_device, 'exit.png'),  # MUST be last item in list
+            page_display_image.PageDisplayImage(self.display_device, 'exit.png'),  # MUST be last
         ]
         self.adminPageNames = [
             'copy_from_usb',
@@ -103,50 +108,58 @@ class OLED:
     def showRemoveUsbPage(self):
         with self._curPageLock:
             logging.debug("Showing remove usb page")
-            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'remove_usb.png')
+            self._curPage = page_display_image.PageDisplayImage(self.display_device,
+                                                                'remove_usb.png')
             self._curPage.draw_page()
 
     def showNoUsbPage(self):
         with self._curPageLock:
             logging.debug("Showing no usb page")
-            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'error_no_usb.png')
+            self._curPage = page_display_image.PageDisplayImage(self.display_device,
+                                                                'error_no_usb.png')
             self._curPage.draw_page()
 
     def showNoSpacePage(self):
         with self._curPageLock:
             logging.debug("Showing no space page")
-            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'error_no_space.png')
+            self._curPage = page_display_image.PageDisplayImage(self.display_device,
+                                                                'error_no_space.png')
             self._curPage.draw_page()
 
     def showWaitPage(self):
         with self._curPageLock:
             logging.debug("Showing wait page")
-            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'wait.png')
+            self._curPage = page_display_image.PageDisplayImage(self.display_device,
+                                                                'wait.png')
             self._curPage.draw_page()
 
     def showConfirmPage(self):
         with self._curPageLock:
             logging.debug("Showing confirm choice page")
             self.pageStack = 'confirm'
-            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'confirm.png')
+            self._curPage = page_display_image.PageDisplayImage(self.display_device,
+                                                                'confirm.png')
             self._curPage.draw_page()
 
     def showSuccessPage(self):
         with self._curPageLock:
             logging.debug("Showing success page")
-            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'success.png')
+            self._curPage = page_display_image.PageDisplayImage(self.display_device,
+                                                                'success.png')
             self._curPage.draw_page()
 
     def showErrorPage(self):
         with self._curPageLock:
             logging.debug("Showing error page")
-            self._curPage = page_display_image.PageDisplayImage(self.display_device, 'error.png')
+            self._curPage = page_display_image.PageDisplayImage(self.display_device,
+                                                                'error.png')
             self._curPage.draw_page()
 
     def switchPages(self):
         '''
-        This method is to switch between the original stack of pages referred to as status pages and the new stack
-        of pages referred to as admin pages.  This is based upon the variable pageStack.
+        This method is to switch between the original stack of pages referred to as status pages
+        and the new stack of pages referred to as admin pages.  This is based upon the variable
+        pageStack.
         :return: Nothing
         '''
         with self._curPageLock:
@@ -222,7 +235,12 @@ class OLED:
         if self._curPage == self.blank_page:
             # nothing to do
             return
-
+        if self.pageStack == 'wait':  # we do not want to reset if we're on a wait screen
+            self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS  # reset
+            return  # keep waiting
+        if self.pageStack != 'status':  # if we're not on the default status pages
+            self.pageStack = 'admin'  # this is to prep to return to the status pages
+            self.switchPages()  # switch to the status stack from anywhere else we are
         with self._curPageLock:
             logging.debug("Current page is %s", self._curPage)
             self._curPage = self.blank_page
@@ -238,7 +256,7 @@ class OLED:
         background = Image.new("RGBA", self.display_device.size, "black")
         posn = ((self.display_device.width - logo.width) // 2, 0)
         img = Image.composite(logo, fff, logo)
-        background.paste(img, posn) 
+        background.paste(img, posn)
         self.display_device.display(
             background.convert(self.display_device.mode)
         )

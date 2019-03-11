@@ -8,7 +8,6 @@
   GeoDirk - May 2018
 ===========================================
 """
-import os
 import logging
 from luma.core import cmdline, error  # pylint: disable=import-error
 
@@ -43,8 +42,6 @@ def get_device(actual_args=None):
     except error.Error as e:
         parser.error(e)
 
-    # print(display_settings(args))
-
     return device
 
 
@@ -60,4 +57,3 @@ def display_settings(args):
 
     return 'Display: {}\n{}Dimensions: {} x {}\n{}'.format(
         args.display, iface, args.width, args.height, '-' * 40)
-
