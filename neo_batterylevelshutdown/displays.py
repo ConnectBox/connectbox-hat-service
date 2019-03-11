@@ -139,7 +139,7 @@ class OLED:
             self.pageStack = 'confirm'
             self._curPage = page_display_image.PageDisplayImage(self.display_device,
                                                                 'confirm.png')
-
+            self._curPage.draw_page()
 
     def showSuccessPage(self):
         with self._curPageLock:
