@@ -6,13 +6,13 @@ import subprocess
 from distutils.dir_util import copy_tree
 
 
-
 class USB:
 
     def __init__(self):
         pass
 
-    def isUsbPresent(self, devPath='/dev/sda1'):
+    @staticmethod
+    def isUsbPresent(devPath='/dev/sda1'):
         '''
         Returns if there is a USB plugged into specified devPath
         :return: True / False
@@ -20,20 +20,18 @@ class USB:
         logging.debug("Checking to see if usb is mounted")
         return os.path.exists(devPath)
 
-
-    def unmount(self, curPath='/media/usb0'):
+    @staticmethod
+    def unmount(curPath='/media/usb0'):
         '''
         Unmount the USB drive from curPath
         :return:  True / False
         '''
-        try:
-            logging.debug("Unmounting file at location {}".format(curPath))
-            response = subprocess.call(['umount', curPath])  # unmount drive
-            return True if response == 0 else False
-        except:
-            return False
+        logging.debug("Unmounting file at location %s", curPath)
+        response = subprocess.call(['umount', curPath])  # unmount drive
+        return response == 0
 
-    def mount(self, devPath='/dev/sda1', newPath='/media/usb1'):
+    @staticmethod
+    def mount(devPath='/dev/sda1', newPath='/media/usb1'):
         '''
         Mount the USB drive at the devPath to the specified newPath location
 
@@ -41,17 +39,16 @@ class USB:
         '''
 
         # try:
-        logging.debug("Mounting USB at {} to {}".format(devPath, newPath))
+        logging.debug("Mounting USB at %s to %s", devPath, newPath)
         if not os.path.exists(newPath):  # see if desired mounting directory exists
             os.makedirs(newPath)  # create directory and all of the intermediary directories
         response = subprocess.call(['mount', '-o', 'sync,noexec,nodev,noatime,nodiratime,utf8',
                                     devPath, newPath])
-        logging.debug("Response: {}".format(response))
-        return True if response == 0 else False
-        # except:
-        #     return False
+        logging.debug("Response: %s", response)
+        return response == 0
 
-    def copyFiles(self, sourcePath='/media/usb1', destPath='/media/usb0'):
+    @staticmethod
+    def copyFiles(sourcePath='/media/usb1', destPath='/media/usb0'):
         '''
         Move files from sourcePath to destPath recursively
         :param sourcePath: place where files are
@@ -61,14 +58,11 @@ class USB:
 
         if os.path.exists(sourcePath) and os.path.exists(destPath):
             logging.debug("Copying tree")
-            try:
-                copy_tree(sourcePath, destPath)
-                logging.debug("Done copying")
-                return True
-            except:
-                return False
-        else:
-            return False
+            copy_tree(sourcePath, destPath)
+            logging.debug("Done copying")
+            return True
+
+        return False
 
     def checkSpace(self, sourcePath='/media/usb1', destPath='/media/usb0'):
         '''
@@ -81,13 +75,16 @@ class USB:
         if os.path.exists(sourcePath) and os.path.exists(destPath):
             sourceSize = self.getSize(sourcePath)
             destSize = self.getFreeSpace(destPath)
-            logging.debug("Source size: {} bytes, destination size: {} bytes".format(
-                sourceSize, destSize))
-            return bool(destSize >= sourceSize)
-        else:
-            return False
+            logging.debug("Source size: %s bytes, destination size: %s bytes",
+                          sourceSize, destSize)
+            return destSize >= sourceSize
 
-    def getSize(self, startPath='/media/usb1'):
+        return False
+
+    # pylint: disable=unused-variable
+    # Looks like this isn't summing subdirectories?
+    @staticmethod
+    def getSize(startPath='/media/usb1'):
         '''
         Recursively get the size of a folder structure
 
@@ -101,7 +98,8 @@ class USB:
                 total_size += os.path.getsize(fp)
         return total_size
 
-    def getFreeSpace(self, path='/media/usb0'):
+    @staticmethod
+    def getFreeSpace(path='/media/usb0'):
         '''
         Determines how much free space in available for copying
 

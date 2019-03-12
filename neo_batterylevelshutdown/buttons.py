@@ -24,6 +24,7 @@ class BUTTONS:
         self.USABLE_BUTTONS = self.hat.USABLE_BUTTONS
         self.command_to_reference = ''
 
+    # pylint: disable=too-many-branches, too-many-branches, too-many-return-statements, too-many-statements
     def executeCommands(self, command):
         '''
         This is where we will actually be executing the commands
@@ -32,7 +33,7 @@ class BUTTONS:
         :return: Nothing
         '''
 
-        logging.debug("Execute Command: {}".format(command))
+        logging.debug("Execute Command: %s", command)
         usb = USB()
         if command == 'remove_usb':
             logging.debug("In remove usb page")
@@ -68,14 +69,14 @@ class BUTTONS:
                 self.display.showErrorPage()        # if not generate error page and exit
                 self.display.pageStack = 'error'
                 return
-            else:   # if we did successfully unmount /media/usb1
-                if usb.isUsbPresent():  # if usb is present, have the remove it
-                    self.display.showRemoveUsbPage()           # show the remove usb page
-                    self.display.pageStack = 'removeUsb'  # so our controller knows what to do
-                    self.command_to_reference = 'remove_usb'   # will cause another check
-                    return
-                self.display.pageStack = 'success'  # if the usb was removed
-                self.display.showSuccessPage()      # display success page
+            # if we're here we successfully unmounted /media/usb1
+            if usb.isUsbPresent():  # if usb is present, have the remove it
+                self.display.showRemoveUsbPage()           # show the remove usb page
+                self.display.pageStack = 'removeUsb'  # so our controller knows what to do
+                self.command_to_reference = 'remove_usb'   # will cause another check
+                return
+            self.display.pageStack = 'success'  # if the usb was removed
+            self.display.showSuccessPage()      # display success page
 
         elif command == 'erase_folder':
             file_exists = False  # in regards to README.txt file
@@ -116,15 +117,15 @@ class BUTTONS:
         # this section is to prevent both buttons calling this method and getting two replies
         if self.BUTTON_PRESS_BUSY:  # if flag is set that means this method is currently being used
             return  # skip
-        else:
-            # check the amount of time that has passed since this function has been cleared and
-            #  see if it exceeds the timeout set.  This avoids buttons bouncing triggering
-            #  this function
-            if time.time() - self.BUTTON_PRESS_CLEARED_TIME > self.BUTTON_PRESS_TIMEOUT_SEC:
-                self.BUTTON_PRESS_BUSY = True  # if enough time, proceed and set the BUSY flag
 
-            else:  # if not enough time, pass
-                return
+        # check the amount of time that has passed since this function has been cleared and
+        #  see if it exceeds the timeout set.  This avoids buttons bouncing triggering
+        #  this function
+        if time.time() - self.BUTTON_PRESS_CLEARED_TIME > self.BUTTON_PRESS_TIMEOUT_SEC:
+            self.BUTTON_PRESS_BUSY = True  # if enough time, proceed and set the BUSY flag
+
+        else:  # if not enough time, pass
+            return
 
         logging.debug("Handling button press")
         # get time single button was pressed along with the amount of time both buttons were pressed
@@ -137,8 +138,8 @@ class BUTTONS:
         self.BUTTON_PRESS_CLEARED_TIME = time.time()
 
         pageStack = self.display.pageStack  # shortcut
-        logging.debug("PAGESTACK: {}".format(pageStack))
-        logging.debug("COMMAND: {}".format(self.command_to_reference))
+        logging.debug("PAGESTACK: %s", pageStack)
+        logging.debug("COMMAND: %s", self.command_to_reference)
 
         # this is where we decide what to do with the button press.  ChanelTime is the first
         # button pushed, dualTime is the amount of time both buttons were pushed.
@@ -226,7 +227,8 @@ class BUTTONS:
             else:
                 # find page name before we change it
                 self.command_to_reference = self.display.getAdminPageName()
-                logging.debug("Leaving admin page: {}".format(self.command_to_reference))
+                logging.debug("Leaving admin page: %s",
+                              self.command_to_reference)
                 logging.debug("Confirmed Page shown")
                 self.display.showConfirmPage()
         else:

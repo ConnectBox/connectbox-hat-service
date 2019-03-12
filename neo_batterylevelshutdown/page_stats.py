@@ -35,6 +35,7 @@ class PageStats:
                 print('count: ' + str(p['count']))
         print('')
 
+    # pylint: disable=too-many-locals, too-many-branches
     def draw_page(self):
         # get an image
         dir_path = os.path.dirname(os.path.abspath(__file__))

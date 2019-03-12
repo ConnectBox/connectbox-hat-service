@@ -34,9 +34,9 @@ def getHATClass():
         if GPIO.input(hats.q3y2018HAT.PA1) == GPIO.LOW:
             logging.info("Q4Y2018 HAT Detected")
             return hats.q4y2018HAT
-        else:
-            logging.info("Q3Y2018 HAT Detected")
-            return hats.q3y2018HAT
+
+        logging.info("Q3Y2018 HAT Detected")
+        return hats.q3y2018HAT
     except OSError:
         # There is no AXP209 on the Q12018 HAT
         logging.info("Q1Y2018 HAT Detected")

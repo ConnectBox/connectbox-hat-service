@@ -15,11 +15,13 @@ from . import page_memory
 from . import page_battery_low
 from . import page_display_image
 
+
 class DummyDisplay:
 
+    # pylint: disable=unused-argument
+    # This is a standard interface - it's ok not to use the argument
     def __init__(self, hat_class):
         self.display_type = 'DummyDisplay'
-        pass
 
     def moveForward(self):
         pass
@@ -42,11 +44,11 @@ class DummyDisplay:
         pass
 
 
+# pylint: disable=too-many-instance-attributes
 class OLED:
 
     # What to show after startup and blank screen
     STARTING_PAGE_INDEX = 0  # the main page
-
 
     def __init__(self, hat_class):
         self.hat = hat_class
@@ -97,13 +99,10 @@ class OLED:
         self.drawLogo()
 
     def getAdminPageName(self):
-        try:
-            return  self.adminPageNames[self.adminPages.index(self._curPage)]
-        except:
-            return ''
+        return self.adminPageNames[self.adminPages.index(self._curPage)]
 
     def checkIfLastPage(self):
-        return True if self._curPage == self.pages[-1] else False
+        return self._curPage == self.pages[-1]
 
     def showRemoveUsbPage(self):
         with self._curPageLock:
@@ -166,10 +165,10 @@ class OLED:
         :return: Nothing
         '''
         with self._curPageLock:
-            logging.debug("Previous page stack: {}".format(self.pageStack))
+            logging.debug("Previous page stack: %s", self.pageStack)
             self.pages = self.statusPages if self.pageStack == 'admin' else self.adminPages
             self.pageStack = 'status' if self.pageStack == 'admin' else 'admin'
-            logging.debug("Current page stack: {}".format(self.pageStack))
+            logging.debug("Current page stack: %s", self.pageStack)
             self._curPage = self.pages[0]
 
             # draw the page while holding the lock, so that it doesn't change

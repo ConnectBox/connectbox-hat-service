@@ -11,7 +11,6 @@
 """
 
 import os.path
-import sys
 from PIL import Image
 from .HAT_Utilities import get_device
 
