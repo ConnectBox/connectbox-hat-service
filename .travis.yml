@@ -14,6 +14,7 @@ install:
 
 # command to run tests, e.g. python setup.py test
 script:
-  - python -c "import distutils; print(distutils.dir_util)"
+  - python35 -c "import distutils; print(distutils.dir_util)"
+  - python --version
   - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d .)
   - pylint neo_batterylevelshutdown
