@@ -4,10 +4,12 @@ from contextlib import contextmanager
 import logging
 import os
 import os.path
+
 import sys
 import time
 from axp209 import AXP209, AXP209_ADDRESS
 import RPi.GPIO as GPIO  # pylint: disable=import-error
+from .buttons import BUTTONS
 
 
 @contextmanager
@@ -149,12 +151,15 @@ class Axp209HAT(BasePhysicalHAT):
     MIN_BATTERY_THRESHOLD_PERC_DOUBLE_FLASH = 3  # Parity with PIN_VOLT_3_45
     BATTERY_WARNING_THRESHOLD_PERC = MIN_BATTERY_THRESHOLD_PERC_DOUBLE_FLASH
     BATTERY_SHUTDOWN_THRESHOLD_PERC = 1
-    # possibly should be moved elsewhere
     DISPLAY_TIMEOUT_SECS = 20
+    # possibly should be moved elsewhere
+
+
 
     def __init__(self, displayClass):
         self.axp = AXP209()
-        self.display = displayClass(self.axp)
+        self.display = displayClass(self)
+        self.buttons = BUTTONS(self, self.display)
         # Blank the screen 3 seconds after showing the logo - that's long
         #  enough. While displayPowerOffTime is read and written from both
         #  callback threads and the main loop, there's no TOCTOU race
@@ -189,6 +194,7 @@ class Axp209HAT(BasePhysicalHAT):
         self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x3B, 0x18)
         super().__init__(displayClass)
 
+
     def batteryLevelAbovePercent(self, level):
         # Battery guage of -1 means that the battery is not attached.
         # Given that amounts to infinite power because a charger is
@@ -219,19 +225,7 @@ class Axp209HAT(BasePhysicalHAT):
         #  yet been shutdown, so flash three times
         self.blinkLED(times=3)
 
-    def moveForward(self, channel):
-        """callback for use on button press"""
-        logging.debug("Processing press on GPIO %s (move forward)", channel)
-        self.display.moveForward()
-        # reset the display power off time
-        self.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
 
-    def moveBackward(self, channel):
-        """callback for use on button press"""
-        logging.debug("Processing press on GPIO %s (move backward)", channel)
-        self.display.moveBackward()
-        # reset the display power off time
-        self.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
 
     def clearAllPreviousInterrupts(self):
         """
@@ -299,6 +293,7 @@ class q3y2018HAT(Axp209HAT):
     PIN_L_BUTTON = PA1 = 22
     PIN_M_BUTTON = PG7 = 10
     PIN_R_BUTTON = PG8 = 16
+    USABLE_BUTTONS = [PIN_L_BUTTON, PIN_M_BUTTON] # Used in the checkPressTime method
 
     def __init__(self, displayClass):
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
@@ -309,10 +304,10 @@ class q3y2018HAT(Axp209HAT):
         #  in parent constructors
         super().__init__(displayClass)
         GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
-                              callback=self.moveForward,
+                              callback=self.buttons.handleButtonPress,
                               bouncetime=125)
         GPIO.add_event_detect(self.PIN_M_BUTTON, GPIO.FALLING,
-                              callback=self.moveBackward,
+                              callback=self.buttons.handleButtonPress,
                               bouncetime=125)
         GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
                               callback=self.powerOffDisplay,
@@ -333,6 +328,7 @@ class q4y2018HAT(Axp209HAT):
     PIN_L_BUTTON = PG6 = 8
     PIN_R_BUTTON = PG7 = 10
     PIN_AXP_INTERRUPT_LINE = PG8 = 16
+    USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
 
     def __init__(self, displayClass):
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
@@ -343,10 +339,10 @@ class q4y2018HAT(Axp209HAT):
         #  in parent constructors
         super().__init__(displayClass)
         GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
-                              callback=self.moveForward,
+                              callback=self.buttons.handleButtonPress,
                               bouncetime=125)
         GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
-                              callback=self.moveBackward,
+                              callback=self.buttons.handleButtonPress,
                               bouncetime=125)
 
         # We only enable interrupts on this HAT, rather than in the superclass

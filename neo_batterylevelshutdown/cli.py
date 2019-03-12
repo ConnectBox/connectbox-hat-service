@@ -3,7 +3,6 @@
 """Console script for neo_batterylevelshutdown."""
 
 import logging
-
 import axp209
 import click
 import RPi.GPIO as GPIO  # pylint: disable=import-error
