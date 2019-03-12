@@ -14,4 +14,4 @@ install:
 # command to run tests, e.g. python setup.py test
 script:
   - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d .)
-  - pylint neo_batterylevelshutdown
+  - pylint --extension-pkg-whitelist=RPi.GPIO neo_batterylevelshutdown
