@@ -4,4 +4,4 @@
 
 __author__ = """ConnectBox Developers"""
 __email__ = 'edwin@wordspeak.org'
-__version__ = '0.12.0'
+__version__ = '0.13.0'

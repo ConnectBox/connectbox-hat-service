@@ -33,7 +33,7 @@ test_requirements = [
 
 setup(
     name='neo_batterylevelshutdown',
-    version='0.12.0',
+    version='0.13.0',
     description="Monitor and display battery level via the Connectbox NEO "
                 "hat and gracefully shutdown when necessary",
     long_description=readme + '\n\n' + history,
