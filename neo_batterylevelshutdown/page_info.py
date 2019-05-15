@@ -52,7 +52,14 @@ class PageInfo:
     def uptime():
         # uptime
         uptime = datetime.now() - datetime.fromtimestamp(psutil.boot_time())
-        return "Up: %s" % (str(uptime).split('.')[0])
+        if uptime.days > 0:
+            # Only show days
+            duration_str = "%s days" % (uptime.days,)
+        else:
+            # Drop microseconds
+            duration_str = str(uptime).split('.')[0]
+
+        return "Up: %s" % (duration_str,)
 
     @staticmethod
     def get_connected_users():

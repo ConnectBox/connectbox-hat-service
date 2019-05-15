@@ -27,36 +27,6 @@ class PageCopyFromUsb:
         base = Image.open(img_path).convert('RGBA')
         fff = Image.new(base.mode, base.size, (255,) * 4)
         img = Image.composite(base, fff, base)
-
-        # # make a blank image for the text, initialized as transparent
-        # txt = Image.new('RGBA', base.size, (255, 255, 255, 0))
-        #
-        # # get a font
-        # font_path = dir_path + '/assets/connectbox.ttf'
-        # font20 = ImageFont.truetype(font_path, 26)
-        # font18 = ImageFont.truetype(font_path, 18)
-        # # get a drawing context
-        # d = ImageDraw.Draw(txt)
-        #
-        # # uptime
-        # d.text((50, 0), PageInfo.uptime(), font=font18, fill="black")
-        #
-        # # connected users
-        # d.text((20, 30), PageInfo.get_connected_users(),
-        #        font=font20, fill="black")
-        #
-        # # network stats
-        # try:
-        #     stat = PageInfo.network('wlan0')
-        #     d.text((58, 35), "Tx: %s" % PageInfo.bytes2human(
-        #         stat.bytes_sent), font=font18, fill="black")
-        #     d.text((58, 47), "Rx: %s" % PageInfo.bytes2human(
-        #         stat.bytes_recv), font=font18, fill="black")
-        # except KeyError:
-        #     # no wifi enabled/available
-        #     pass
-
-        # out = Image.alpha_composite(img, txt)
         self.device.display(img.convert(self.device.mode))
         self.device.show()
 
