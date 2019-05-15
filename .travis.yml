@@ -9,8 +9,10 @@ python:
 
 # We need to bump pip because the travis default version doesn't allow
 #  dependency install via URL
-install:
+before_install:
   - pip install --upgrade pip
+
+install:
   - pip install -e .
   - pip install tox pylint
 
