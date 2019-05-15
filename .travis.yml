@@ -18,3 +18,5 @@ install:
 script:
   - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d .)
   - pylint neo_batterylevelshutdown
+
+dist: xenial
