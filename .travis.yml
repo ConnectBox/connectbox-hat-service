@@ -17,6 +17,6 @@ install:
 
 # command to run tests, e.g. python setup.py test
 script:
-  - tox
+  - tox -e pylint
 
 dist: xenial
