@@ -4,6 +4,8 @@
 language: python
 python:
   - "3.5"
+  - "3.6"
+  - "3.7"
 
 # We need to bump pip because the travis default version doesn't allow
 #  dependency install via URL
