@@ -170,7 +170,12 @@ class Axp209HAT(BasePhysicalHAT):
         #  if we don't, never schedule the battery check (this assumes that
         #  the battery will never be plugged in after startup, which is a
         #  reasonable assumption for non-development situations)
-        if self.axp.battery_exists:
+        try:
+            batexists = self.axp.battery_exists
+        except:
+            batexists = False
+
+        if batexists:
             self.nextBatteryCheckTime = 0
         else:
             # Never schedule it...
@@ -180,18 +185,29 @@ class Axp209HAT(BasePhysicalHAT):
         #  enable interrupts on certain actions below, but let's start
         #  with a known state for all registers.
         for ec_reg in (0x40, 0x41, 0x42, 0x43, 0x44):
-            self.axp.bus.write_byte_data(AXP209_ADDRESS, ec_reg, 0x00)
+            try:
+                self.axp.bus.write_byte_data(AXP209_ADDRESS, ec_reg, 0x00)
+            except:
+                logging.error("Hats.py - axp write error")
 
         # Now all interrupts are disabled, clear the previous state
         self.clearAllPreviousInterrupts()
 
         # shutdown delay time to 3 secs (they delay before axp209 yanks power
         #  when it determines a shutdown is required) (default is 2 sec)
-        hexval = self.axp.bus.read_byte_data(AXP209_ADDRESS, 0x32)
-        hexval = hexval | 0x03
-        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x32, hexval)
-        # Set LEVEL2 voltage i.e. 3.0V
-        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x3B, 0x18)
+        try:
+            hexval = self.axp.bus.read_byte_data(AXP209_ADDRESS, 0x32)
+        except:
+            logging.error("Hats.py - axp read error")
+
+        try:
+            hexval = hexval | 0x03
+            self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x32, hexval)
+            # Set LEVEL2 voltage i.e. 3.0V
+            self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x3B, 0x18)
+        except:
+            logging.error("Hats.py - axp write error")
+
         super().__init__(displayClass)
 
 
@@ -201,9 +217,15 @@ class Axp209HAT(BasePhysicalHAT):
         #  attached, or the device has found a mysterious alternative
         #  power source, let's say that the level is always above if
         #  we have a negative battery_gauge
-        logging.debug("Battery Level: %s%%", self.axp.battery_gauge)
-        return self.axp.battery_gauge < 0 or \
-            self.axp.battery_gauge > level
+        try:
+            logging.debug("Battery Level: %s%%", self.axp.battery_gauge)
+        except:
+            logging.error("self.axp.battery_gauge ERROR")
+
+        gaugelevel = self.axp.battery_gauge
+
+        return gaugelevel < 0 or \
+            gaugelevel > level
 
     def updateLEDState(self):
         if self.batteryLevelAbovePercent(
@@ -244,7 +266,10 @@ class Axp209HAT(BasePhysicalHAT):
         """
         # (IRQ status register 1-5)
         for stat_reg in (0x48, 0x49, 0x4A, 0x4B, 0x4C):
-            self.axp.bus.write_byte_data(AXP209_ADDRESS, stat_reg, 0xFF)
+            try:
+                self.axp.bus.write_byte_data(AXP209_ADDRESS, stat_reg, 0xFF)
+            except:
+                logging.error("Hats.py - axp write error")
         logging.debug("IRQ records cleared")
 
     def mainLoop(self):
