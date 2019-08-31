@@ -23,6 +23,7 @@ class PageBattery:
         self.device = device
         self.axp = axp
 
+    # pylint: disable=too-many-locals
     def draw_page(self):
         dir_path = os.path.dirname(os.path.abspath(__file__))
         # find out if the unit is charging or not

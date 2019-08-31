@@ -36,6 +36,7 @@ class PageMain:
             tempC = f.readline()
         return int(tempC)/1000
 
+    # pylint: disable=too-many-locals
     def draw_page(self):
         # get an image
         dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -66,30 +67,27 @@ class PageMain:
                font=font20, fill="black")
 
         try:
+            # The AXP209 can disappear - degrade gracefully if that
+            #  happens.
             acin_present = self.axp.power_input_status.acin_present
-        except:
+            battexists = self.axp.battery_exists
+            battgauge = self.axp.battery_gauge
+        except OSError:
             acin_present = False
+            battexists = False
+            battgauge = -1
 
         if not acin_present:
             # not charging - cover up symbol
             d.rectangle((64, 48, 71, 61), fill="white")  # charge symbol
 
         # draw battery fill lines
-        try:
-            battexists = self.axp.battery_exists
-        except:
-            battexists = False
         if not battexists:
             # cross out the battery
             d.line((37, 51, 57, 58), fill="black", width=2)
             d.line((37, 58, 57, 51), fill="black", width=2)
         else:
             # get the percent filled and draw a rectangle
-            try:
-                battgauge = self.axp.battery_gauge
-            except:
-                battgauge = -1
-
             if battgauge < 10:
                 d.rectangle((37, 51, 39, 58), fill="black")
                 d.text((43, 51), "!", font=font14, fill="black")
@@ -98,9 +96,10 @@ class PageMain:
                 x = int((57 - 37) * (battgauge / 100)) + 37
                 d.rectangle((37, 51, x, 58), fill="black")
 
-        # percent charge left
-        d.text((75, 49), "%.0f%%" % battgauge,
-               font=font14, fill="black")
+            # percent charge left
+            d.text((75, 49), "%.0f%%" % battgauge,
+                   font=font14, fill="black")
+
         # cpu temp
         d.text((105, 49), "%.0fC" % PageMain.get_cpu_temp(),
                font=font14, fill="black")
