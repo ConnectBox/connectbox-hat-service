@@ -192,6 +192,7 @@ class Axp209HAT(BasePhysicalHAT):
         self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x32, hexval)
         # Set LEVEL2 voltage i.e. 3.0V
         self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x3B, 0x18)
+
         super().__init__(displayClass)
 
 
@@ -201,9 +202,15 @@ class Axp209HAT(BasePhysicalHAT):
         #  attached, or the device has found a mysterious alternative
         #  power source, let's say that the level is always above if
         #  we have a negative battery_gauge
-        logging.debug("Battery Level: %s%%", self.axp.battery_gauge)
-        return self.axp.battery_gauge < 0 or \
-            self.axp.battery_gauge > level
+        try:
+            logging.debug("Battery Level: %s%%", self.axp.battery_gauge)
+            gaugelevel = self.axp.battery_gauge
+        except OSError:
+            logging.error("Unable to read from AXP")
+            gaugelevel = -1
+
+        return gaugelevel < 0 or \
+            gaugelevel > level
 
     def updateLEDState(self):
         if self.batteryLevelAbovePercent(

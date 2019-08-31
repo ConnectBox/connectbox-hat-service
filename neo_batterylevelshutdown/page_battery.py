@@ -23,6 +23,7 @@ class PageBattery:
         self.device = device
         self.axp = axp
 
+    # pylint: disable=too-many-locals
     def draw_page(self):
         dir_path = os.path.dirname(os.path.abspath(__file__))
         # find out if the unit is charging or not
@@ -43,13 +44,27 @@ class PageBattery:
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
-        # draw text, full opacity
-        d.text((5, 42), "%.0f" %
-               int(self.axp.battery_voltage), font=font18, fill="black")
-        d.text((52, 42), "%.1f" %
-               self.axp.internal_temperature, font=font18, fill="black")
+        # See if we have a responsive AXP209
+        try:
+            _ = self.axp.battery_exists
+            have_axp209 = True
+        except OSError:
+            have_axp209 = False
 
-        if self.axp.power_input_status.acin_present:
+        # draw text, full opacity
+        if have_axp209:
+            d.text((5, 42), "%.0f" %
+                   int(self.axp.battery_voltage), font=font18, fill="black")
+            d.text((52, 42), "%.1f" %
+                   self.axp.internal_temperature, font=font18, fill="black")
+        else:
+            # Act like there's no battery present
+            d.text((5, 42), "%.0f" %
+                   -1, font=font18, fill="black")
+            d.text((52, 42), "%.1f" %
+                   -1, font=font18, fill="black")
+
+        if have_axp209 and self.axp.power_input_status.acin_present:
             # charging
             # cover the out arrow
             d.rectangle((47, 4, 62, 14), fill="white")  # out arrow
@@ -59,19 +74,25 @@ class PageBattery:
             d.text((94, 42), "%.0f" %
                    self.axp.battery_charge_current, font=font18, fill="black")
         else:
-            # discharging
+            # discharging or AXP209 not present i.e. not doing it's job
             # cover the charging symbol & in arrow
             d.rectangle((119, 0, 127, 16), fill="white")  # charge symbol
             d.rectangle((0, 4, 14, 14), fill="white")  # in arrow
             # percent charge left
-            d.text((63, 1), "%.0f%%" %
-                   self.axp.battery_gauge, font=font18, fill="black")
-            d.text((94, 42), "%.0f" %
-                   self.axp.battery_discharge_current,
-                   font=font18, fill="black")
+            if have_axp209:
+                d.text((63, 1), "%.0f%%" %
+                       self.axp.battery_gauge, font=font18, fill="black")
+                d.text((94, 42), "%.0f" %
+                       self.axp.battery_discharge_current,
+                       font=font18, fill="black")
+            else:
+                d.text((63, 1), "%.0f%%" %
+                       -1, font=font18, fill="black")
+                d.text((94, 42), "%.0f" %
+                       -1, font=font18, fill="black")
 
         # draw battery fill lines
-        if not self.axp.battery_exists:
+        if not have_axp209 or not self.axp.battery_exists:
             # cross out the battery
             d.line((20, 5, 38, 12), fill="black", width=2)
             d.line((20, 12, 38, 5), fill="black", width=2)
@@ -86,6 +107,7 @@ class PageBattery:
                 x = int((38 - 20) * (percent / 100)) + 20
                 # print("X:" + str(x))
                 d.rectangle((20, 5, x, 12), fill="black")
+
         out = Image.alpha_composite(img, txt)
         self.device.display(out.convert(self.device.mode))
         self.device.show()
