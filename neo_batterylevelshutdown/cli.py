@@ -2,6 +2,8 @@
 
 """Console script for neo_batterylevelshutdown."""
 
+# Modified 11/05/19 JRA to detect no battery unit by asking the AXP209 whether battery exists
+
 import logging
 import axp209
 import click
@@ -27,13 +29,18 @@ def getHATClass():
 
     try:
         axp = axp209.AXP209()
+        battexists = axp.battery_exists
         axp.close()
         # AXP209 found... we have HAT from Q3Y2018 or later
         # Test PA1... LOW => Q4Y2018; HIGH => Q3Y2018
         GPIO.setup(hats.q3y2018HAT.PA1, GPIO.IN)
         if GPIO.input(hats.q3y2018HAT.PA1) == GPIO.LOW:
-            logging.info("Q4Y2018 HAT Detected")
-            return hats.q4y2018HAT
+            if battexists:
+                logging.info("Q4Y2018 HAT Detected") 
+                return hats.q4y2018HAT
+            else:
+                logging.info("Q42019 HAT Detected")
+                return hats.q4y2019HAT
 
         logging.info("Q3Y2018 HAT Detected")
         return hats.q3y2018HAT
@@ -44,7 +51,7 @@ def getHATClass():
     except KeyboardInterrupt:
         pass
 
-    return hats.DummyHAT
+    return hats.DummyHAT   
 
 
 def getDisplayClass():
@@ -70,6 +77,12 @@ def main(verbose):
     GPIO.setmode(GPIO.BOARD)
     hatClass = getHATClass()
     displayClass = getDisplayClass()
+#    displayClass = displays.OLEDA   #temp overwrite for debug - putting the overwrite here worked...
+    # test to see if hatClass is hats.q1y2018HAT (no AXP209) but OLED present... 
+    #  which would be a Q4Y2019HAT
+    if ((hatClass == hats.q4y2019HAT) and (displayClass == displays.OLED)):
+        displayClass = displays.OLEDA
+         
     logging.info("starting main loop")
     try:
         hatClass(displayClass).mainLoop()

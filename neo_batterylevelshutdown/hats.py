@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# hats.py
+# Modified 10/17/19 by JRA to add new class q4y2019HAT (HAT 5.0.9 board with OLED but no AXP209) ie, the NoBatt version
+
 from contextlib import contextmanager
 import logging
 import os
@@ -365,3 +368,59 @@ class q4y2018HAT(Axp209HAT):
         #  so the desired action here is always to shutdown
         GPIO.add_event_detect(self.PIN_AXP_INTERRUPT_LINE, GPIO.FALLING,
                               callback=self.shutdownDeviceCallback)
+                              
+
+class q4y2019HAT(BasePhysicalHAT):
+
+    # Q4Y2019 - nomenclature for a Q4Y2018 HAT without a battery
+    #  This code a hack of copying Q4Y2018 code, parenting direct from BasePhysicalHAT and including
+    #   the interrupt code. Also borrowed from the Axp209HAT class, all the display stuff
+    # Pin numbers from https://github.com/auto3000/RPi.GPIO_NP
+    
+    
+    DISPLAY_TIMEOUT_SECS = 20
+    PIN_L_BUTTON = PG6 = 8
+    PIN_R_BUTTON = PG7 = 10
+    PIN_AXP_INTERRUPT_LINE = PG8 = 16
+    USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
+
+   
+    
+    def __init__(self, displayClass):           
+        # Next 3 lines from Axp209HAT class
+        self.display = displayClass(self)   
+        self.buttons = BUTTONS(self, self.display)
+        self.displayPowerOffTime = time.time() + 3
+
+        GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
+        GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
+        GPIO.setup(self.PIN_AXP_INTERRUPT_LINE, GPIO.IN)
+        # Run parent constructors before adding event detection
+        #  as some callbacks require objects only initialised
+        #  in parent constructors
+        super().__init__(displayClass)
+        GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
+                              callback=self.buttons.handleButtonPress,
+                              bouncetime=125)
+        GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
+                              callback=self.buttons.handleButtonPress,
+                              bouncetime=125)
+        
+        # For the Q4Y2019HAT, the power switch is tied to the IRQ line and so
+        #   when moved to the OFF position, will pull the "AXP interrupt line"
+        #   low, even though there is NO AXP209 present                      
+        # The desired action here is always to shutdown
+        GPIO.add_event_detect(self.PIN_AXP_INTERRUPT_LINE, GPIO.FALLING,
+                              callback=self.shutdownDeviceCallback)
+  
+  
+# from Axp209HAT...
+    def mainLoop(self):
+        while True:
+            with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
+                # Perhaps power off the display
+                if time.time() > self.displayPowerOffTime:
+                    self.display.powerOffDisplay()
+
+
+                               

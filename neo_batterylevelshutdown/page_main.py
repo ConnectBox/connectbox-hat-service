@@ -114,3 +114,54 @@ if __name__ == "__main__":
         PageMain(get_device(), axp209.AXP209()).draw_page()
     except KeyboardInterrupt:
         pass
+        
+        
+class PageMainA(PageMain):
+    def __init__(self, device):
+        self.device = device
+    
+    def draw_page(self):
+        # get an image
+        dir_path = os.path.dirname(os.path.abspath(__file__))
+        img_path = dir_path + '/assets/main_page.png'
+        base = Image.open(img_path).convert('RGBA')
+        fff = Image.new(base.mode, base.size, (255,) * 4)
+        img = Image.composite(base, fff, base)
+
+        # make a blank image for the text, initialized as transparent
+        txt = Image.new('RGBA', base.size, (255, 255, 255, 0))
+
+        # get a font
+        font_path = dir_path + '/assets/connectbox.ttf'
+        font30 = ImageFont.truetype(font_path, 30)
+        font20 = ImageFont.truetype(font_path, 20)
+        font14 = ImageFont.truetype(font_path, 14)
+
+        # get a drawing context
+        d = ImageDraw.Draw(txt)
+
+        # ConnectBox Banner
+        d.text((2, 0), 'ConnectBox', font=font30, fill="black")
+        # Image version name/number
+        d.text((38, 32), GetReleaseVersion(), font=font14, fill="black")
+
+        # connected users
+        d.text((13, 35), PageMain.get_connected_users(),
+               font=font20, fill="black")
+
+
+#        d.rectangle((64, 48, 71, 61), fill="white")  # charge symbol
+        d.rectangle((34, 48, 71, 61), fill="white")  # blank out battery and charge symbol
+
+            # cross out the battery
+#        d.line((37, 51, 57, 58), fill="black", width=2)
+#        d.line((37, 58, 57, 51), fill="black", width=2)
+
+        # cpu temp
+        d.text((105, 49), "%.0fC" % PageMain.get_cpu_temp(),
+               font=font14, fill="black")
+
+        out = Image.alpha_composite(img, txt)
+        self.device.display(out.convert(self.device.mode))
+        self.device.show()
+    
