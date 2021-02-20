@@ -71,7 +71,14 @@ class PageMain:
             #  happens.
             acin_present = self.axp.power_input_status.acin_present
             battexists = self.axp.battery_exists
-            battgauge = self.axp.battery_gauge
+            if acin_present:
+                battgauge = self.axp.battery_gauge
+            else:
+            # if on battery power, calculate fuel based on battery voltage
+            #  Fuel = (Vbatt - 3.275)/0.00767
+            # simplifies to: (Vbatt(mv) - 3275) / 7.67 
+                battery_voltage = self.axp.battery_voltage
+                battgauge =  (battery_voltage - 3275) / 7.67   
         except OSError:
             acin_present = False
             battexists = False

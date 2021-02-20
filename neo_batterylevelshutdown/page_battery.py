@@ -69,8 +69,9 @@ class PageBattery:
             # cover the out arrow
             d.rectangle((47, 4, 62, 14), fill="white")  # out arrow
             # percent charge left
+            percent = self.axp.battery_gauge
             d.text((50, 1), "%.0f%%" %
-                   self.axp.battery_gauge, font=font18, fill="black")
+                   percent, font=font18, fill="black")
             d.text((94, 42), "%.0f" %
                    self.axp.battery_charge_current, font=font18, fill="black")
         else:
@@ -80,8 +81,14 @@ class PageBattery:
             d.rectangle((0, 4, 14, 14), fill="white")  # in arrow
             # percent charge left
             if have_axp209:
+                # if on battery power, calculate fuel based on battery voltage
+                #  Fuel = (Vbatt - 3.275)/0.00767
+                # simplifies to: (Vbatt(mv) - 3275) / 7.67 
+                battery_voltage = self.axp.battery_voltage
+                percent =  (battery_voltage - 3275) / 7.67   
+                
                 d.text((63, 1), "%.0f%%" %
-                       self.axp.battery_gauge, font=font18, fill="black")
+                       percent, font=font18, fill="black")
                 d.text((94, 42), "%.0f" %
                        self.axp.battery_discharge_current,
                        font=font18, fill="black")
@@ -98,7 +105,7 @@ class PageBattery:
             d.line((20, 12, 38, 5), fill="black", width=2)
         else:
             # get the percent filled and draw a rectangle
-            percent = self.axp.battery_gauge
+            # percent = self.axp.battery_gauge
             if percent < 10:
                 d.rectangle((20, 5, 22, 12), fill="black")
                 d.text((15, 2), "!", font=font14, fill="black")
