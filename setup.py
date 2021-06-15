@@ -34,12 +34,12 @@ test_requirements = [
 setup(
     name='neo_batterylevelshutdown',
     version='0.14.0',
-    description="Monitor and display battery level via the Connectbox NEO "
+    description="Monitor and display battery level via the WayPoint NEO "
                 "hat and gracefully shutdown when necessary",
     long_description=readme + '\n\n' + history,
-    author="ConnectBox Developers",
+    author="ConnectBox/WayPoint Developers",
     author_email='edwin@wordspeak.org',
-    url='https://github.com/ConnectBox/neo_batterylevelshutdown',
+    url='https://github.com/kirkdwilson/MV-WayPoint/neo_batterylevelshutdown',
     packages=['neo_batterylevelshutdown'],
     package_data={'neo_batterylevelshutdown': ['assets/*.png',
                                                'assets/connectbox.ttf',]},

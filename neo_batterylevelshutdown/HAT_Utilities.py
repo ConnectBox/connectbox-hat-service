@@ -2,7 +2,7 @@
 """
 ===========================================
   HAT_Utilities.py
-  https://github.com/ConnectBox/NEO_BatteryLevelShutdown
+  https://github.com/kirkdwilson/WayPoint/NEO_BatteryLevelShutdown
   License: MIT
   Version 1.0
   GeoDirk - May 2018
@@ -15,7 +15,7 @@ from luma.core import cmdline, error  # pylint: disable=import-error
 def GetReleaseVersion():
     """Read the release version"""
     try:
-        with open("/etc/connectbox-release", 'r') as release:
+        with open("/etc/waypoint-release", 'r') as release:
             return str(release.read())
     except OSError:
         logging.warning("Error reading release version")

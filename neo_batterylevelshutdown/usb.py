@@ -17,6 +17,8 @@ class USB:
         Returns if there is a USB plugged into specified devPath
         :return: True / False
         '''
+        if not os.path.exists(devPath):
+            devPath="/dev/sdb1"
         logging.debug("Checking to see if usb is mounted")
         return os.path.exists(devPath)
 
@@ -37,7 +39,8 @@ class USB:
 
         :return: True / False
         '''
-
+        if not os.path.exists(devPath):
+            devPath = "/dev/sdb1"
         # try:
         logging.debug("Mounting USB at %s to %s", devPath, newPath)
         if not os.path.exists(newPath):  # see if desired mounting directory exists
