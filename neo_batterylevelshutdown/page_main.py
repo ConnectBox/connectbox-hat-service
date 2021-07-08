@@ -5,8 +5,8 @@
   page_main.py
   https://github.com/ConnectBox/NEO_BatteryLevelShutdown
   License: MIT
-  Version 1.0
-  GeoDirk - May 2018
+  Version 1.1
+  DorJamJr - July 2021
 ===========================================
 """
 
@@ -15,7 +15,7 @@ import subprocess
 from PIL import Image, ImageFont, ImageDraw
 import axp209
 from .HAT_Utilities import get_device, GetReleaseVersion
-
+from .branding import Brand
 
 class PageMain:
     def __init__(self, device, axp):
@@ -58,7 +58,8 @@ class PageMain:
         d = ImageDraw.Draw(txt)
 
         # ConnectBox Banner
-        d.text((2, 0), 'ConnectBox', font=font30, fill="black")
+        br = Brand()
+        d.text((2, 0), br.name(), font=font30, fill="black")
         # Image version name/number
         d.text((38, 32), GetReleaseVersion(), font=font14, fill="black")
 
