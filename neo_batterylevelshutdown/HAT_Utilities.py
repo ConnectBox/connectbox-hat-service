@@ -15,7 +15,7 @@ from luma.core import cmdline, error  # pylint: disable=import-error
 def GetReleaseVersion():
     """Read the release version"""
     try:
-        with open("/etc/waypoint-release", 'r') as release:
+        with open("/etc/connectbox-release", 'r') as release:
             return str(release.read())
     except OSError:
         logging.warning("Error reading release version")
@@ -26,10 +26,21 @@ def get_device(actual_args=None):
     """
     Create device from command-line arguments and return it.
     """
+    global device_type = "NEO"
+    port = 0    #We assume its a NEO which is port 0
     parser = cmdline.create_parser(description='luma.examples arguments')
-    # We only every use i2c-port 0. We may be able to define this in a nicer
-    #  way... but this is ok for the moment
-    args = parser.parse_args(['--i2c-port', '0'])
+    with open("/proc/cpuinfo", encoding = 'utf8')as f:
+        filx = f.read()
+        if ("Raspberry" in filx):
+            if ("Compute Module" in filx):
+                port = 0
+                global device_type = "CM"
+            else:           #all other Raspberry Pi version other than compute modules
+                port = 1
+                global device_type = "PI"
+
+    # for NEO we use i2c-port 0. For Pi's other than compute modules we use i2c-port 1
+    args = parser.parse_args(['--i2c-port', str(port)])
 
     if args.config:
         # load config from file

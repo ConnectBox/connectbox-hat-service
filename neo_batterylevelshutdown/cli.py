@@ -23,7 +23,21 @@ def getHATClass():
     #  or read from it. That's the safe option and means that we won't
     #  immediately shutdown devices that don't have a HAT if we've incorrect
     #  detected the presence of a HAT
-    if GPIO.input(hats.BasePhysicalHAT.PA6) == GPIO.LOW:
+     try:
+        # See if we can find an OLED
+        x=get_device()
+    except OSError:
+        # No OLED. This is a standard Axp209 HAT
+        logging.info("No OLED detected")
+        return hats.DummyHAT
+    if (x[1]=='0'):
+        if device_type == "NEO":
+            io6 = 12    #PA6
+        elif device_type == "CM":
+            io6 = 31    #GPIO6/30
+        else:
+            io6 = 12    #device is PI GPIO18
+    if GPIO.input(io6) == GPIO.LOW:
         logging.info("NEO HAT not detected")
         return hats.DummyHAT
 
@@ -33,8 +47,14 @@ def getHATClass():
         axp.close()
         # AXP209 found... we have HAT from Q3Y2018 or later
         # Test PA1... LOW => Q4Y2018; HIGH => Q3Y2018
-        GPIO.setup(hats.q3y2018HAT.PA1, GPIO.IN)
-        if GPIO.input(hats.q3y2018HAT.PA1) == GPIO.LOW:
+        if (device_type == "NEO"):
+            PA1 = 22    #PA1
+        elif (device_type =="CM")
+            PA1 = 22    #GPIO25/41
+        else:
+            PA1 = 22    #GPIO25
+        GPIO.setup(PA1, GPIO.IN)
+        if GPIO.input(PA1) == GPIO.LOW:
             if battexists:
                 logging.info("Q4Y2018 HAT Detected") 
                 return hats.q4y2018HAT
@@ -75,9 +95,10 @@ def main(verbose):
         logging.basicConfig(level=logging.INFO)
 
     GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(22, GPIO.IN,pull_up_down=GPIO.PUD_DOWN)  #for CM no pin is connected see it as low.
     hatClass = getHATClass()
     displayClass = getDisplayClass()
-#    displayClass = displays.OLEDA   #temp overwrite for debug - putting the overwrite here worked...
+    # displayClass = displays.OLEDA   #temp overwrite for debug - putting the overwrite here worked...
     # test to see if hatClass is hats.q1y2018HAT (no AXP209) but OLED present... 
     #  which would be a Q4Y2019HAT
     if ((hatClass == hats.q4y2019HAT) and (displayClass == displays.OLED)):
