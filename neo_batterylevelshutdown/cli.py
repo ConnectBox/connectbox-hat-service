@@ -10,7 +10,7 @@ import click
 import RPi.GPIO as GPIO  # pylint: disable=import-error
 import neo_batterylevelshutdown.hats as hats
 import neo_batterylevelshutdown.displays as displays
-from .HAT_Utilities import get_device
+
 
 
 def getHATClass():
@@ -23,17 +23,26 @@ def getHATClass():
     #  or read from it. That's the safe option and means that we won't
     #  immediately shutdown devices that don't have a HAT if we've incorrect
     #  detected the presence of a HAT
-     try:
+    try:
         # See if we can find an OLED
-        x=get_device()
+        x = get_device()
     except OSError:
         # No OLED. This is a standard Axp209 HAT
         logging.info("No OLED detected")
         return hats.DummyHAT
+    device_type = "NEO"
+    with open("/proc/cpuinfo", encoding = 'utf8')as f:
+        filx = f.read()
+        if ("Raspberry" in filx):
+            if ("Compute Module" in filx):
+                device_type = "CM"
+            else:           #all other Raspberry Pi version other than compute modules
+                device_type = "PI"
+    f.close()
     if (x[1]=='0'):
-        if device_type == "NEO":
+        if (device_type == "NEO"):
             io6 = 12    #PA6
-        elif device_type == "CM":
+        elif (device_type == "CM"):
             io6 = 31    #GPIO6/30
         else:
             io6 = 12    #device is PI GPIO18
@@ -49,7 +58,7 @@ def getHATClass():
         # Test PA1... LOW => Q4Y2018; HIGH => Q3Y2018
         if (device_type == "NEO"):
             PA1 = 22    #PA1
-        elif (device_type =="CM")
+        elif (device_type == "CM"):
             PA1 = 22    #GPIO25/41
         else:
             PA1 = 22    #GPIO25

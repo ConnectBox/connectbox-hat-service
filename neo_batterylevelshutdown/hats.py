@@ -13,6 +13,8 @@ import time
 from axp209 import AXP209, AXP209_ADDRESS
 import RPi.GPIO as GPIO  # pylint: disable=import-error
 from .buttons import BUTTONS
+global device_type
+global PIN_LED
 
 
 @contextmanager
@@ -33,23 +35,34 @@ def min_execution_time(min_time_secs):
 
 
 class BasePhysicalHAT:
-    if device_type == "NEO":
-        PIN_LED = PA6 = GPIO18 = 12 
-    elif device_type == "CM":
-        PIN_LED = GPIO6 = 31
-    else:
-        PIN_LED = GPIO18 = 12
     
     LED_CYCLE_TIME_SECS = 5
 
     # pylint: disable=unused-argument
     # This is a standard interface - it's ok not to use
     def __init__(self, displayClass):
-        GPIO.setup(self.PIN_LED, GPIO.OUT)
-        # All HATs should turn on their LED on startup. Doing it in the base
-        #  class constructor allows us the main loop to focus on transitions
-        #  and not worry about initial state (and thus be simpler)
-        self.solidLED()
+
+        with open("/proc/cpuinfo", encoding = 'utf8')as f:
+            filx = f.read()
+            device_type = "NEO"
+            if ("Raspberry" in filx):
+                if ("Compute Module" in filx):
+                    device_type = "CM"
+                else:           #all other Raspberry Pi version other than compute modules
+                    device_type = "PI"
+        f.close()
+    
+        if (device_type == "NEO"):
+            PIN_LED = PA6 = GPIO18 = 12 
+        elif (device_type == "CM"):
+            PIN_LED = GPIO6 = 31
+        else:
+            PIN_LED = GPIO18 = 12
+            GPIO.setup(self.PIN_LED, GPIO.OUT)
+            # All HATs should turn on their LED on startup. Doing it in the base
+            #  class constructor allows us the main loop to focus on transitions
+            #  and not worry about initial state (and thus be simpler)
+            self.solidLED()
 
     @classmethod
     def shutdownDevice(cls):
@@ -304,22 +317,33 @@ class Axp209HAT(BasePhysicalHAT):
 
 class q3y2018HAT(Axp209HAT):
 
-    # Pin numbers from https://github.com/auto3000/RPi.GPIO_NP
-    if (device_type == "NEO"):
-        PIN_L_BUTTON = PA1 = 22 
-        PIN_M_BUTTON = PG7 = 10 
-        PIN_R_BUTTON = PG8 = 16 
-        USABLE_BUTTONS = [PIN_L_BUTTON, PIN_M_BUTTON] # Used in the checkPressTime method
-    elif (device_type == "CM"):
-        PIN_L_BUTTON = PA1 = 5      #GPIO3/56
-        PIN_M_BUTTON  = PG7 = 11    #GPIO17/50
-        PIN_R_BUTTON = PG8 = 7      #GPIO4/54
-    else #device type is Pi
-        PIN_L_BUTTON = PA1 = 8      #GPIO14
-        PIN_M_BUTTON  = PG7 = 22    #GPIO25
-        PIN_R_BUTTON = PG8 = 10     #GPIO15    
        
     def __init__(self, displayClass):
+        with open("/proc/cpuinfo", encoding = 'utf8') as f:
+            device_type = "NEO"
+            filx = f.read()
+            if ("Raspberry" in filx):
+                if ("Compute Module" in filx):
+                    device_type = "CM"
+                else:           #all other Raspberry Pi version other than compute modules
+                    device_type = "PI"
+        f.close()   
+        
+        if (device_type == "NEO"):
+            PIN_L_BUTTON = PG6 = 8 
+            PIN_R_BUTTON = PG7 = 10 
+            PIN_AXP_INTERRUPT_LINE = PG8 = 16
+            USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
+        elif (device_type =="CM"):
+            PIN_L_BUTTON = PG6 = 5 #GPIO3/56  
+            PIN_R_BUTTON = PG7 = 7 #GPIO4/54  
+            PIN_AXP_INTERRUPT_LINE = PG8 = 10 #GPIO15/51
+            USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
+        else:                   #device type is Pi
+            PIN_L_BUTTON = PG6 = 8 #GPIO 14
+            PIN_R_BUTTON = PG7 = 10 #GPIO 15
+            PIN_AXP_INTERRUPT_LIINE = PG8 = 16 #GPIO23
+
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_M_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
@@ -349,22 +373,34 @@ class q4y2018HAT(Axp209HAT):
 
     # Q4Y2018 - AXP209/OLED (Anker) Unit run specific pins
     # Pin numbers from https://github.com/auto3000/RPi.GPIO_NP
-    if (device_type == "NEO"):
-        PIN_L_BUTTON = PG6 = 8 
-        PIN_R_BUTTON = PG7 = 10 
-        PIN_AXP_INTERRUPT_LINE = PG8 = 16
-        USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
-    elif (device_type =="CM"):
-        PIN_L_BUTTON = PG6 = 5 #GPIO3/56  
-        PIN_R_BUTTON = PG7 = 7 #GPIO4/54  
-        PIN_AXP_INTERRUPT_LINE = PG8 = 10 #GPIO15/51
-        USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
-    else:   #device type is Pi
-        PIN_L_BUTTON = PG6 = 8 #GPIO 14
-        PIN_R_BUTTON = PG7 = 10 #GPIO 15
-        PIN_AXP_INTERRUPT_LIINE = PG8 = 16 #GPIO23
+
         
     def __init__(self, displayClass):
+        with open("/proc/cpuinfo", encoding = 'utf8') as f:
+            device_type = "NEO"
+            filx = f.read()
+            if ("Raspberry" in filx):
+                if ("Compute Module" in filx):
+                    device_type = "CM"
+                else:           #all other Raspberry Pi version other than compute modules
+                    device_type = "PI"
+        f.close()   
+        
+        if (device_type == "NEO"):
+            PIN_L_BUTTON = PG6 = 8 
+            PIN_R_BUTTON = PG7 = 10 
+            PIN_AXP_INTERRUPT_LINE = PG8 = 16
+            USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
+        elif (device_type =="CM"):
+            PIN_L_BUTTON = PG6 = 5 #GPIO3/56  
+            PIN_R_BUTTON = PG7 = 7 #GPIO4/54  
+            PIN_AXP_INTERRUPT_LINE = PG8 = 10 #GPIO15/51
+            USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
+        else:                   #device type is Pi
+            PIN_L_BUTTON = PG6 = 8 #GPIO 14
+            PIN_R_BUTTON = PG7 = 10 #GPIO 15
+            PIN_AXP_INTERRUPT_LIINE = PG8 = 16 #GPIO23    
+    
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_AXP_INTERRUPT_LINE, GPIO.IN)
@@ -400,26 +436,34 @@ class q4y2019HAT(BasePhysicalHAT):
     #  This code a hack of copying Q4Y2018 code, parenting direct from BasePhysicalHAT and including
     #   the interrupt code. Also borrowed from the Axp209HAT class, all the display stuff
     # Pin numbers from https://github.com/auto3000/RPi.GPIO_NP
+
     
+    def __init__(self, displayClass):
+        with open("/proc/cpuinfo", encoding = 'utf8') as f:
+            device_type = "NEO"
+            filx = f.read()
+            if ("Raspberry" in filx):
+                if ("Compute Module" in filx):
+                    device_type = "CM"
+                else:           #all other Raspberry Pi version other than compute modules
+                    device_type = "PI"
+        f.close()   
+        
+        if (device_type == "NEO"):
+            PIN_L_BUTTON = PG6 = 8 
+            PIN_R_BUTTON = PG7 = 10 
+            PIN_AXP_INTERRUPT_LINE = PG8 = 16
+            USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
+        elif (device_type =="CM"):
+            PIN_L_BUTTON = PG6 = 5 #GPIO3/56  
+            PIN_R_BUTTON = PG7 = 7 #GPIO4/54  
+            PIN_AXP_INTERRUPT_LINE = PG8 = 10 #GPIO15/51
+            USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
+        else:                   #device type is Pi
+            PIN_L_BUTTON = PG6 = 8 #GPIO 14
+            PIN_R_BUTTON = PG7 = 10 #GPIO 15
+            PIN_AXP_INTERRUPT_LIINE = PG8 = 16 #GPIO23
     
-    DISPLAY_TIMEOUT_SECS = 20
-    if (device_type == "NEO"):
-        PIN_L_BUTTON = PG6 = 8 #GPIO14   
-        PIN_R_BUTTON = PG7 = 10 #GPIO15 
-        PIN_AXP_INTERRUPT_LINE = PG8 = 16
-        USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
-    elif (device_type =="CM"):
-        PIN_L_BUTTON = PG6 = 5 #GPIO3/56
-        PIN_R_BUTTON = PG7 = 7 #GPIO4/54
-        PIN_AXP_INTERRUPT_LINE = PG8 = 10 #GPIO15/51
-        USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method   
-    else #device is Pi
-        PIN_L_BUTTON = PG6 = 8 #GPIO14  
-        PIN_R_BUTTON = PG7 = 10 #GPIO15   
-        PIN_AXP_INTERRUPT_LINE = PG8 = 16
-        USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method   
-    
-    def __init__(self, displayClass):           
         # Next 3 lines from Axp209HAT class
         self.display = displayClass(self)   
         self.buttons = BUTTONS(self, self.display)
