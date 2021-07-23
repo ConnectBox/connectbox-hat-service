@@ -19,7 +19,7 @@ requirements = [
     'pillow==5.3.0',
     'luma.core==1.7.2',
     'luma.oled==2.4.1',
-    'RPi.GPIO @ https://github.com/auto3000/RPi.GPIO_NP/archive/master.zip'
+    'RPi.GPIO==0.7.0'
 ]
 
 # No setup requirements (distutils extensions, etc.)
@@ -33,13 +33,13 @@ test_requirements = [
 
 setup(
     name='neo_batterylevelshutdown',
-    version='0.14.0',
+    version='0.15.0',
     description="Monitor and display battery level via the WayPoint NEO "
                 "hat and gracefully shutdown when necessary",
     long_description=readme + '\n\n' + history,
-    author="ConnectBox/WayPoint Developers",
+    author="ConnectBox/Developers",
     author_email='edwin@wordspeak.org',
-    url='https://github.com/kirkdwilson/MV-WayPoint/neo_batterylevelshutdown',
+    url='https://github.com/ConnectBox/connectbox-hat-service/neo_batterylevelshutdown'.,
     packages=['neo_batterylevelshutdown'],
     package_data={'neo_batterylevelshutdown': ['assets/*.png',
                                                'assets/connectbox.ttf',]},

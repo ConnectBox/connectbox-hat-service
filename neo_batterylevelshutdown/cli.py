@@ -32,18 +32,21 @@ def getHATClass():
         return hats.DummyHAT
     device_type = "NEO"
     io6 = 12    #PA6
+    PA1 = 22    #PA1
     with open("/proc/cpuinfo", encoding = 'utf8')as f:
         filx = f.read()
         if ("Raspberry" in filx):
             if ("Compute Module" in filx):
                 device_type = "CM"
-                io6 = 31    #GPIO6/30            
+                io6 = 31    #GPIO6/30  
+                PA1 = 22    #GPIO25/41                
             else:           #all other Raspberry Pi version other than compute modules
                 device_type = "PI"
                 io6 = 12    #device is Pi GPIO18
+                PA1 = 22    #GPIO25        
     f.close()
 
-    GPIO.setup(io6,GPIO.INPUT)
+    GPIO.setup(io6,GPIO.IN)
     if GPIO.input(io6) == GPIO.LOW:
         logging.info("NEO HAT not detected")
         return hats.DummyHAT
@@ -54,12 +57,7 @@ def getHATClass():
         axp.close()
         # AXP209 found... we have HAT from Q3Y2018 or later
         # Test PA1... LOW => Q4Y2018; HIGH => Q3Y2018
-        if (device_type == "NEO"):
-            PA1 = 22    #PA1
-        elif (device_type == "CM"):
-            PA1 = 22    #GPIO25/41
-        else:
-            PA1 = 22    #GPIO25
+ 
         GPIO.setup(PA1, GPIO.IN)
         if GPIO.input(PA1) == GPIO.LOW:
             if battexists:
