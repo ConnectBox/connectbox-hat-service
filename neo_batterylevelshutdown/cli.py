@@ -10,12 +10,12 @@ import click
 import RPi.GPIO as GPIO  # pylint: disable=import-error
 import neo_batterylevelshutdown.hats as hats
 import neo_batterylevelshutdown.displays as displays
-
+import neo_batterylevelshutdown.HAT_Utilities as utilities
 
 
 def getHATClass():
-    GPIO.setup(hats.BasePhysicalHAT.PA6, GPIO.IN)
-    # As PA6 is set to be a pulldown resistor on system startup by the
+
+    # As PA6 is set to be a pulldown GPIO.setup(hats.BasePhysicalHAT.PA6, GPIO.IN resistor on system startup by the
     #  pa6-pulldown.service, and the HAT sets PA6 HIGH, so we check the
     #  value of PA6, knowing non-HAT NEOs will read LOW.
     #
@@ -25,27 +25,25 @@ def getHATClass():
     #  detected the presence of a HAT
     try:
         # See if we can find an OLED
-        x = get_device()
+        x = utilities.get_device()
     except OSError:
         # No OLED. This is a standard Axp209 HAT
         logging.info("No OLED detected")
         return hats.DummyHAT
     device_type = "NEO"
+    io6 = 12    #PA6
     with open("/proc/cpuinfo", encoding = 'utf8')as f:
         filx = f.read()
         if ("Raspberry" in filx):
             if ("Compute Module" in filx):
                 device_type = "CM"
+                io6 = 31    #GPIO6/30            
             else:           #all other Raspberry Pi version other than compute modules
                 device_type = "PI"
+                io6 = 12    #device is Pi GPIO18
     f.close()
-    if (x[1]=='0'):
-        if (device_type == "NEO"):
-            io6 = 12    #PA6
-        elif (device_type == "CM"):
-            io6 = 31    #GPIO6/30
-        else:
-            io6 = 12    #device is PI GPIO18
+
+    GPIO.setup(io6,GPIO.INPUT)
     if GPIO.input(io6) == GPIO.LOW:
         logging.info("NEO HAT not detected")
         return hats.DummyHAT
@@ -86,7 +84,7 @@ def getHATClass():
 def getDisplayClass():
     try:
         # See if we can find an OLED
-        get_device()
+        utilities.get_device()
         logging.info("Found OLED")
         return displays.OLED
     except OSError:
@@ -104,6 +102,7 @@ def main(verbose):
         logging.basicConfig(level=logging.INFO)
 
     GPIO.setmode(GPIO.BOARD)
+    GPIO.setwarnings(False)
     GPIO.setup(22, GPIO.IN,pull_up_down=GPIO.PUD_DOWN)  #for CM no pin is connected see it as low.
     hatClass = getHATClass()
     displayClass = getDisplayClass()

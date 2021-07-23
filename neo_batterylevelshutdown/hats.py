@@ -37,6 +37,7 @@ def min_execution_time(min_time_secs):
 class BasePhysicalHAT:
     
     LED_CYCLE_TIME_SECS = 5
+    PA6 = 12
 
     # pylint: disable=unused-argument
     # This is a standard interface - it's ok not to use
@@ -45,24 +46,21 @@ class BasePhysicalHAT:
         with open("/proc/cpuinfo", encoding = 'utf8')as f:
             filx = f.read()
             device_type = "NEO"
+            PIN_LED = 12 
             if ("Raspberry" in filx):
                 if ("Compute Module" in filx):
                     device_type = "CM"
+                    PIN_LED = 31
                 else:           #all other Raspberry Pi version other than compute modules
                     device_type = "PI"
+                    PIN_LED = 12
         f.close()
-    
-        if (device_type == "NEO"):
-            PIN_LED = PA6 = GPIO18 = 12 
-        elif (device_type == "CM"):
-            PIN_LED = GPIO6 = 31
-        else:
-            PIN_LED = GPIO18 = 12
-            GPIO.setup(self.PIN_LED, GPIO.OUT)
+
+        GPIO.setup(self.PIN_LED, GPIO.OUT)
             # All HATs should turn on their LED on startup. Doing it in the base
             #  class constructor allows us the main loop to focus on transitions
             #  and not worry about initial state (and thus be simpler)
-            self.solidLED()
+        self.solidLED()
 
     @classmethod
     def shutdownDevice(cls):
@@ -330,19 +328,19 @@ class q3y2018HAT(Axp209HAT):
         f.close()   
         
         if (device_type == "NEO"):
-            PIN_L_BUTTON = PG6 = 8 
-            PIN_R_BUTTON = PG7 = 10 
-            PIN_AXP_INTERRUPT_LINE = PG8 = 16
+            PIN_L_BUTTON = 8 
+            PIN_R_BUTTON =  10 
+            PIN_AXP_INTERRUPT_LINE = 16
             USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
         elif (device_type =="CM"):
-            PIN_L_BUTTON = PG6 = 5 #GPIO3/56  
-            PIN_R_BUTTON = PG7 = 7 #GPIO4/54  
-            PIN_AXP_INTERRUPT_LINE = PG8 = 10 #GPIO15/51
+            PIN_L_BUTTON = 5 #GPIO3/56  
+            PIN_R_BUTTON = 7 #GPIO4/54  
+            PIN_AXP_INTERRUPT_LINE = 10 #GPIO15/51
             USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
         else:                   #device type is Pi
-            PIN_L_BUTTON = PG6 = 8 #GPIO 14
-            PIN_R_BUTTON = PG7 = 10 #GPIO 15
-            PIN_AXP_INTERRUPT_LIINE = PG8 = 16 #GPIO23
+            PIN_L_BUTTON = 8 #GPIO 14
+            PIN_R_BUTTON = 10 #GPIO 15
+            PIN_AXP_INTERRUPT_LIINE = 16 #GPIO23
 
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_M_BUTTON, GPIO.IN)
@@ -387,19 +385,20 @@ class q4y2018HAT(Axp209HAT):
         f.close()   
         
         if (device_type == "NEO"):
-            PIN_L_BUTTON = PG6 = 8 
-            PIN_R_BUTTON = PG7 = 10 
-            PIN_AXP_INTERRUPT_LINE = PG8 = 16
+            PIN_L_BUTTON = 8 
+            PIN_R_BUTTON = 10 
+            PIN_AXP_INTERRUPT_LINE = 16
             USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
         elif (device_type =="CM"):
-            PIN_L_BUTTON = PG6 = 5 #GPIO3/56  
-            PIN_R_BUTTON = PG7 = 7 #GPIO4/54  
-            PIN_AXP_INTERRUPT_LINE = PG8 = 10 #GPIO15/51
+            PIN_L_BUTTON = 5 #GPIO3/56  
+            PIN_R_BUTTON = 7 #GPIO4/54  
+            PIN_AXP_INTERRUPT_LINE = 10 #GPIO15/51
             USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
         else:                   #device type is Pi
-            PIN_L_BUTTON = PG6 = 8 #GPIO 14
-            PIN_R_BUTTON = PG7 = 10 #GPIO 15
-            PIN_AXP_INTERRUPT_LIINE = PG8 = 16 #GPIO23    
+            PIN_L_BUTTON = 8 #GPIO 14
+            PIN_R_BUTTON = 10 #GPIO 15
+            PIN_AXP_INTERRUPT_LIINE = 16 #GPIO23
+            USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method            
     
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
@@ -450,20 +449,21 @@ class q4y2019HAT(BasePhysicalHAT):
         f.close()   
         
         if (device_type == "NEO"):
-            PIN_L_BUTTON = PG6 = 8 
-            PIN_R_BUTTON = PG7 = 10 
-            PIN_AXP_INTERRUPT_LINE = PG8 = 16
-            USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
+            PIN_L_BUTTON =  8 
+            PIN_R_BUTTON = 10 
+            PIN_AXP_INTERRUPT_LINE = 16
+ 
         elif (device_type =="CM"):
             PIN_L_BUTTON = PG6 = 5 #GPIO3/56  
             PIN_R_BUTTON = PG7 = 7 #GPIO4/54  
             PIN_AXP_INTERRUPT_LINE = PG8 = 10 #GPIO15/51
-            USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
+
         else:                   #device type is Pi
             PIN_L_BUTTON = PG6 = 8 #GPIO 14
             PIN_R_BUTTON = PG7 = 10 #GPIO 15
             PIN_AXP_INTERRUPT_LIINE = PG8 = 16 #GPIO23
-    
+            
+        USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
         # Next 3 lines from Axp209HAT class
         self.display = displayClass(self)   
         self.buttons = BUTTONS(self, self.display)
