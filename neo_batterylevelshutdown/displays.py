@@ -96,7 +96,7 @@ class OLED:
         #  current page variable as it can be modified from the main loop
         #  and from callbacks
         self._curPageLock = threading.Lock()
-        # draw the WayPoint logo - classes containing an OLED display
+        # draw the Brand logo - classes containing an OLED display
         #  manage timeouts and timed display power-downs, so we leave that
         #  as an exercise for anyone using this class
         self.drawLogo()
@@ -319,7 +319,7 @@ class OLEDA(OLED):      # why is OLED"" in red? Because camel case was expected 
         #  current page variable as it can be modified from the main loop
         #  and from callbacks
         self._curPageLock = threading.Lock()
-        # draw the WayPoint logo - classes containing an OLED display
+        # draw the brand logo - classes containing an OLED display
         #  manage timeouts and timed display power-downs, so we leave that
         #  as an exercise for anyone using this class
         self.drawLogo()

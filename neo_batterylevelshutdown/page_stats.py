@@ -1,7 +1,7 @@
 """
 ===========================================
   stats_page.py
-  https://github.com/kirkdwilson/MV-WayPoint/NEO_BatteryLevelShutdown
+  https://github.com/ConnectBox/NEO_BatteryLevelShutdown
   License: MIT
   Version 1.0
   GeoDirk - May 2018
@@ -24,7 +24,7 @@ class PageStats:
         self.page_num = page_num
 
     def readStatsJSON(self):
-        STATS_FILE = '/var/www/waypoint/waypoint_default/stats.top10.json'
+        STATS_FILE = '/var/www/connectbox/connectbox_default/stats.top10.json'
         with open(STATS_FILE) as json_file:
             data = json.load(json_file)
             print('============================')
@@ -65,7 +65,7 @@ class PageStats:
         d = ImageDraw.Draw(txt)
 
         # draw text, full opacity
-        fname = '/var/www/WayPoint/connectbox_default/stats.top10.json'
+        fname = '/var/www/connectbox/connectbox_default/stats.top10.json'
         if os.path.isfile(fname):
             # file exists continue
             with open(fname) as json_file:

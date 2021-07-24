@@ -34,7 +34,7 @@ test_requirements = [
 setup(
     name='neo_batterylevelshutdown',
     version='0.15.0',
-    description="Monitor and display battery level via the WayPoint NEO "
+    description="Monitor and display battery level via the connectbox NEO "
                 "hat and gracefully shutdown when necessary",
     long_description=readme + '\n\n' + history,
     author="ConnectBox/Developers",

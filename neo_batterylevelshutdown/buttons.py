@@ -10,7 +10,7 @@ from .usb import USB
 
 
 class BUTTONS:
-    # This class is for dealing with button presses on the WayPoint
+    # This class is for dealing with button presses on the connectbox
 
     BUTTON_PRESS_BUSY = False  # Prevent dual usage of the handleButtonPress function
     BUTTON_PRESS_TIMEOUT_SEC = 0.25  # Prevent bouncing of the handleButtonPress function
