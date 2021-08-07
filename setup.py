@@ -39,7 +39,7 @@ setup(
     long_description=readme + '\n\n' + history,
     author="ConnectBox/Developers",
     author_email='edwin@wordspeak.org',
-    url='https://github.com/ConnectBox/connectbox-hat-service/neo_batterylevelshutdown'.,
+    url='https://github.com/ConnectBox/connectbox-hat-service/neo_batterylevelshutdown',
     packages=['neo_batterylevelshutdown'],
     package_data={'neo_batterylevelshutdown': ['assets/*.png',
                                                'assets/connectbox.ttf',]},
