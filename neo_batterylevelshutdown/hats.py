@@ -351,7 +351,7 @@ class q3y2018HAT(Axp209HAT):
         GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
                               callback=self.buttons.handleButtonPress,
                               bouncetime=125)
-         GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
+        GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
                               callback=self.powerOffDisplay,
                               bouncetime=125)
 
