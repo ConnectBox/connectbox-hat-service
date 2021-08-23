@@ -18,8 +18,8 @@ requirements = [
     'psutil==5.4.5',
     'pillow==5.3.0',
     'luma.core==1.7.2',
-    'luma.oled==2.4.1',
-    'RPi.GPIO==0.7.0'
+    'luma.oled==2.4.1'
+#    'RPi.GPIO==0.7.0'
 ]
 
 # No setup requirements (distutils extensions, etc.)
@@ -61,6 +61,8 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
     test_suite='tests',
     tests_require=test_requirements,
