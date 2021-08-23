@@ -14,7 +14,7 @@ from axp209 import AXP209, AXP209_ADDRESS
 import RPi.GPIO as GPIO  # pylint: disable=import-error
 from .buttons import BUTTONS
 global device_type
-global PIN_LED
+
 
 
 @contextmanager
@@ -37,7 +37,7 @@ def min_execution_time(min_time_secs):
 class BasePhysicalHAT:
     
     LED_CYCLE_TIME_SECS = 5
-    PA6 = 12
+#    PA6 = 12
 
     # pylint: disable=unused-argument
     # This is a standard interface - it's ok not to use
@@ -46,14 +46,14 @@ class BasePhysicalHAT:
         with open("/proc/cpuinfo", encoding = 'utf8')as f:
             filx = f.read()
             device_type = "NEO"
-            PIN_LED = 12 
+            self.PIN_LED = 12 
             if ("Raspberry" in filx):
                 if ("Compute Module" in filx):
                     device_type = "CM"
-                    PIN_LED = 31
+                    self.PIN_LED = 31
                 else:           #all other Raspberry Pi version other than compute modules
                     device_type = "PI"
-                    PIN_LED = 12
+                    self.PIN_LED = 12
         f.close()
 
         GPIO.setup(self.PIN_LED, GPIO.OUT)
