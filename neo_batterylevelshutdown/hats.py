@@ -331,17 +331,18 @@ class q3y2018HAT(Axp209HAT):
             self.PIN_L_BUTTON = 8 
             self.PIN_R_BUTTON =  10 
             self.PIN_AXP_INTERRUPT_LINE = 16
-            self.USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
+            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         elif (device_type =="CM"):
             self.PIN_L_BUTTON = 5 #GPIO3/56  
             self.PIN_R_BUTTON = 7 #GPIO4/54  
             self.PIN_AXP_INTERRUPT_LINE = 10 #GPIO15/51
-            self.USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
+            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         else:                   #device type is Pi
             self.PIN_L_BUTTON = 8 #GPIO 14
             self.PIN_R_BUTTON = 10 #GPIO 15
             self.PIN_AXP_INTERRUPT_LIINE = 16 #GPIO23
-
+            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+            
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
         # Run parent constructors before adding event detection
@@ -384,12 +385,12 @@ class q4y2018HAT(Axp209HAT):
             self.PIN_L_BUTTON = 8 
             self.PIN_R_BUTTON = 10 
             self.PIN_AXP_INTERRUPT_LINE = 16
-            self.USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
+            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         elif (device_type =="CM"):
             self.PIN_L_BUTTON = 5 #GPIO3/56  
             self.PIN_R_BUTTON = 7 #GPIO4/54  
             self.PIN_AXP_INTERRUPT_LINE = 10 #GPIO15/51
-            self.USABLE_BUTTONS = [PIN_L_BUTTON, PIN_R_BUTTON]  # Used in the checkPressTime method
+            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         else:                   #device type is Pi
             self.PIN_L_BUTTON = 8 #GPIO 14
             self.PIN_R_BUTTON = 10 #GPIO 15
