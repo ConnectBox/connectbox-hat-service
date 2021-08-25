@@ -109,6 +109,7 @@ class BUTTONS:
 
         :param channel: The pin number that has been pressed and thus is registering a 0
         :return: nothing
+
         '''
 
         if self.display_type == 'DummyDisplay':  # this device has no buttons or display, skip
@@ -185,12 +186,30 @@ class BUTTONS:
 
         :param channel: The pin number that has been pressed and thus is registering a 0
         :return: time original button pressed, time both buttons were pressed
+
+        Note that the RPi.GPIO_NP_CB library invalidates the GPIO.input() function when the
+        GPIO.add_event_detect() function is invoked. To work around this we will use the
+        GPIO.remove_event_detect() function and add the GPIO.setup() function (for BOTH push button
+        pins) at the top of the checkPressTime() routine. This will make the 
+        GPIO.input() functional for the pushbuttons. Then we will re-establish the GPIO.add_event_detect()
+        for both push buttons before leaving this routine to re-enable interrupt servicing for push button
+        action. 
+       
         '''
 
+        
         # otherChannel is the button that has not been passed in by the channel parameter.
         otherChannel = self.USABLE_BUTTONS[0] if channel == self.USABLE_BUTTONS[1] else \
             self.USABLE_BUTTONS[1]
-
+        
+        # Temporarily turn off the push button interrupt handler
+        GPIO.remove_event_detect(channel)
+        GPIO.remove_event_detect(otherChannel)
+        # and turn on the push button pins as regular inputs
+        GPIO.setup(channel, GPIO.IN)
+        GPIO.setup(otherChannel, GPIO.IN)
+    
+         
         # there are two timers here.  One is for total time the original button was pushed.
         # The second is for when the second button was pushed.  The timer gets restarted if
         # the button is not pressed or is released.  The reason for the recorder is that if
@@ -208,6 +227,11 @@ class BUTTONS:
                 dualStartTime = time.time()     # reset start time to now
 
         buttonTime = time.time() - startTime    # How long was the original button down?
+
+        # We are through with reading of the button states so turn interrupt handling back on
+        GPIO.add_event_detect(channel, GPIO.FALLING, callback=self.handleButtonPress, bouncetime=125)
+        GPIO.add_event_detect(otherChannel, GPIO.FALLING, callback=self.handleButtonPress, bouncetime=125)
+        
         return buttonTime, dualTimeRecorded
 
     def chooseCancel(self):
