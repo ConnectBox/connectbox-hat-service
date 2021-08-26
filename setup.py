@@ -19,7 +19,6 @@ requirements = [
     'pillow==5.3.0',
     'luma.core==1.7.2',
     'luma.oled==2.4.1'
-#    'RPi.GPIO==0.7.0'
 ]
 
 # No setup requirements (distutils extensions, etc.)
