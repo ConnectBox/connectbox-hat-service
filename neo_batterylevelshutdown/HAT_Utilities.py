@@ -2,7 +2,7 @@
 """
 ===========================================
   HAT_Utilities.py
-  https://github.com/kirkdwilson/Connectbox/NEO_BatteryLevelShutdown
+  https://github.com/Connectbox/NEO_BatteryLevelShutdown
   License: MIT
   Version 1.0
   GeoDirk - May 2018
