@@ -16,8 +16,9 @@ requirements = [
     'smbus2==0.2.0',
     'axp209==0.0.2',
     'psutil==5.4.5',
-    'luma.core==1.7.2',
-    'luma.oled==2.4.1'
+    'Pillow==6.2.1'
+#    'luma.core==1.7.2',
+#    'luma.oled==2.4.1'
 ]
 
 # No setup requirements (distutils extensions, etc.)
