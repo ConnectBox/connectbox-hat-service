@@ -460,7 +460,7 @@ class q4y2019HAT(BasePhysicalHAT):
             self.PIN_R_BUTTON = PG7 = 10 #GPIO 15
             self.PIN_AXP_INTERRUPT_LIINE = PG8 = 16 #GPIO23
             
-        USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+        self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         # Next 3 lines from Axp209HAT class
         self.display = displayClass(self)   
         self.buttons = BUTTONS(self, self.display)
