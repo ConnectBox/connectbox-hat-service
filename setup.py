@@ -17,6 +17,8 @@ requirements = [
     'axp209==0.0.2',
     'psutil==5.4.5',
     'Pillow==6.2.1'
+# install the following two AFTER installing RPi.GPIO_NP_CB
+#  to prevent install of RPi.GPIO==0.7.0    
 #    'luma.core==1.7.2',
 #    'luma.oled==2.4.1'
 ]
