@@ -465,7 +465,7 @@ class q4y2019HAT(BasePhysicalHAT):
         self.display = displayClass(self)   
         self.buttons = BUTTONS(self, self.display)
         self.displayPowerOffTime = time.time() + 3
-        DISPLAY_TIMEOUT_SECS = 20
+        self.DISPLAY_TIMEOUT_SECS = 20
 
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
