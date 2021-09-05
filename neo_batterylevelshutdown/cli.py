@@ -11,7 +11,7 @@ import RPi.GPIO as GPIO  # pylint: disable=import-error
 import neo_batterylevelshutdown.hats as hats
 import neo_batterylevelshutdown.displays as displays
 import neo_batterylevelshutdown.HAT_Utilities as utilities
-
+import neo_batterylevelshutdown.globals as globals
 
 def getHATClass():
 
@@ -99,6 +99,7 @@ def main(verbose):
     else:
         logging.basicConfig(level=logging.INFO)
 
+    globals.init()
     GPIO.setmode(GPIO.BOARD)
     GPIO.setwarnings(False)
     GPIO.setup(22, GPIO.IN,pull_up_down=GPIO.PUD_DOWN)  #for CM no pin is connected see it as low.
