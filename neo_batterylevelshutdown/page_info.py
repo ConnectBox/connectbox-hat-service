@@ -16,6 +16,7 @@ import subprocess
 import sys
 from PIL import Image, ImageFont, ImageDraw
 from .HAT_Utilities import get_device
+import neo_batterylevelshutdown.globals as globals
 
 
 try:
@@ -86,25 +87,25 @@ class PageInfo:
 
         # get a font
         font_path = dir_path + '/assets/connectbox.ttf'
-        font20 = ImageFont.truetype(font_path, 26)
-        font18 = ImageFont.truetype(font_path, 18)
+        font30 = ImageFont.truetype(font_path, globals.font30)
+        font20 = ImageFont.truetype(font_path, globals.font20)
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
         # uptime
-        d.text((50, 0), PageInfo.uptime(), font=font18, fill="black")
+        d.text((47, 0), PageInfo.uptime(), font=font20, fill="black")
 
         # connected users
         d.text((20, 30), PageInfo.get_connected_users(),
-               font=font20, fill="black")
+               font=font30, fill="black")
 
         # network stats
         try:
             stat = PageInfo.network('wlan0')
             d.text((58, 35), "Tx: %s" % PageInfo.bytes2human(
-                stat.bytes_sent), font=font18, fill="black")
+                stat.bytes_sent), font=font20, fill="black")
             d.text((58, 47), "Rx: %s" % PageInfo.bytes2human(
-                stat.bytes_recv), font=font18, fill="black")
+                stat.bytes_recv), font=font20, fill="black")
         except KeyError:
             # no wifi enabled/available
             pass

@@ -16,6 +16,7 @@ from PIL import Image, ImageFont, ImageDraw
 import axp209
 from .HAT_Utilities import get_device, GetReleaseVersion
 from .branding import Brand
+import neo_batterylevelshutdown.globals as globals
 
 class PageMain:
     def __init__(self, device, axp):
@@ -48,18 +49,21 @@ class PageMain:
         # make a blank image for the text, initialized as transparent
         txt = Image.new('RGBA', base.size, (255, 255, 255, 0))
 
-        # get a font
-        font_path = dir_path + '/assets/connectbox.ttf'
-        font30 = ImageFont.truetype(font_path, 30)
-        font20 = ImageFont.truetype(font_path, 20)
-        font14 = ImageFont.truetype(font_path, 14)
 
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
-        # ConnectBox Banner
+        # ConnectBox Banner - get name, font size, x and y position from Brand()
         br = Brand()
-        d.text((2, 0), br.name(), font=font30, fill="black")
+        br_name, br_font, br_x, br_y = br.splash()
+
+        # get a font
+        font_path = dir_path + '/assets/connectbox.ttf'
+        font30 = ImageFont.truetype(font_path, br_font)
+        font20 = ImageFont.truetype(font_path, globals.font20)
+        font14 = ImageFont.truetype(font_path, globals.font14)
+
+        d.text((br_x, br_y), br_name, font=font30, fill="black")
         # Image version name/number
         d.text((38, 32), GetReleaseVersion(), font=font14, fill="black")
 
@@ -140,17 +144,33 @@ class PageMainA(PageMain):
         txt = Image.new('RGBA', base.size, (255, 255, 255, 0))
 
         # get a font
-        font_path = dir_path + '/assets/connectbox.ttf'
-        font30 = ImageFont.truetype(font_path, 30)
-        font20 = ImageFont.truetype(font_path, 20)
-        font14 = ImageFont.truetype(font_path, 14)
+    #    font_path = dir_path + '/assets/connectbox.ttf'
+    #    font30 = ImageFont.truetype(font_path, 30)
+    #    font20 = ImageFont.truetype(font_path, 20)
+    #    font14 = ImageFont.truetype(font_path, 14)
 
         # get a drawing context
-        d = ImageDraw.Draw(txt)
+    #    d = ImageDraw.Draw(txt)
 
         # ConnectBox Banner
-        br = Brand()    
-        d.text((2, 0), br.name(), font=font30, fill="black")
+    #    br = Brand()    
+    #    d.text((2, 0), br.name(), font=font30, fill="black")
+
+           # get a drawing context
+        d = ImageDraw.Draw(txt)
+
+        # ConnectBox Banner - get name, font size, x and y position from Brand()
+        br = Brand()
+        br_name, br_font, br_x, br_y = br.splash()
+
+        # get a font
+        font_path = dir_path + '/assets/connectbox.ttf'
+        font30 = ImageFont.truetype(font_path, br_font)
+        font20 = ImageFont.truetype(font_path, globals.font20)
+        font14 = ImageFont.truetype(font_path, globals.font14)
+
+        d.text((br_x, br_y), br_name, font=font30, fill="black")
+
         # Image version name/number
         d.text((38, 32), GetReleaseVersion(), font=font14, fill="black")
 
