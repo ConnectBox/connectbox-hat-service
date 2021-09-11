@@ -15,7 +15,7 @@ import subprocess
 from PIL import Image, ImageFont, ImageDraw
 import axp209
 from .HAT_Utilities import get_device, GetReleaseVersion
-from .branding import Brand
+from .branding import Brand as br
 
 class PageMain:
     def __init__(self, device, axp):
@@ -58,7 +58,6 @@ class PageMain:
         d = ImageDraw.Draw(txt)
 
         # ConnectBox Banner
-        br = Brand()
         d.text((2, 0), br.name(), font=font30, fill="black")
         # Image version name/number
         d.text((38, 32), GetReleaseVersion(), font=font14, fill="black")
@@ -149,7 +148,6 @@ class PageMainA(PageMain):
         d = ImageDraw.Draw(txt)
 
         # ConnectBox Banner
-        br = Brand()    
         d.text((2, 0), br.name(), font=font30, fill="black")
         # Image version name/number
         d.text((38, 32), GetReleaseVersion(), font=font14, fill="black")

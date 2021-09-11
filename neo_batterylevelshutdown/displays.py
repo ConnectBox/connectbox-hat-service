@@ -15,7 +15,7 @@ from . import page_stats
 from . import page_memory
 from . import page_battery_low
 from . import page_display_image
-from .branding import Brand
+from .branding import Brand as br
 
 
 class DummyDisplay:
@@ -255,7 +255,6 @@ class OLED:
 
     # Ideally this should be a page, like the low battery page
     def drawLogo(self):
-        br = Brand()
         dir_path = os.path.dirname(os.path.abspath(__file__))
         img_path = dir_path + '/assets/' + br.image()
         logo = Image.open(img_path).convert("RGBA")
