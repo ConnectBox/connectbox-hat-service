@@ -7,6 +7,7 @@ import logging
 import os
 import RPi.GPIO as GPIO  # pylint: disable=import-error
 from .usb import USB
+import neo_batterylevelshutdown.globals as globals
 
 
 class BUTTONS:
@@ -203,12 +204,13 @@ class BUTTONS:
             self.USABLE_BUTTONS[1]
         
         # Temporarily turn off the push button interrupt handler
-        GPIO.remove_event_detect(channel)
-        GPIO.remove_event_detect(otherChannel)
-        # and turn on the push button pins as regular inputs
-        GPIO.setup(channel, GPIO.IN)
-        GPIO.setup(otherChannel, GPIO.IN)
-    
+        #   and turn on the push button pins as regular inputs
+        # Note that this is a specific case of buttons being on PG6 and PG7... 
+        #  If another implementation is made for NEO, this will need updating.
+        if (globals.device_type == "NEO"):
+            cmd = "devmem2 0x01c208d8 w 0x00777777"
+            retval = os.system(cmd)
+
          
         # there are two timers here.  One is for total time the original button was pushed.
         # The second is for when the second button was pushed.  The timer gets restarted if
@@ -229,9 +231,10 @@ class BUTTONS:
         buttonTime = time.time() - startTime    # How long was the original button down?
 
         # We are through with reading of the button states so turn interrupt handling back on
-        GPIO.add_event_detect(channel, GPIO.FALLING, callback=self.handleButtonPress, bouncetime=125)
-        GPIO.add_event_detect(otherChannel, GPIO.FALLING, callback=self.handleButtonPress, bouncetime=125)
-        
+        if (globals.device_type == "NEO"):
+            cmd = "devmem2 0x01c208d8 w 0x66777777"
+            retval = os.system(cmd)
+
         return buttonTime, dualTimeRecorded
 
     def chooseCancel(self):

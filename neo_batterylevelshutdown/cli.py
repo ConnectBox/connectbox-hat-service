@@ -11,7 +11,7 @@ import RPi.GPIO as GPIO  # pylint: disable=import-error
 import neo_batterylevelshutdown.hats as hats
 import neo_batterylevelshutdown.displays as displays
 import neo_batterylevelshutdown.HAT_Utilities as utilities
-
+import neo_batterylevelshutdown.globals as globals
 
 def getHATClass():
 
@@ -30,21 +30,31 @@ def getHATClass():
         # No OLED. This is a standard Axp209 HAT
         logging.info("No OLED detected")
         return hats.DummyHAT
-    device_type = "NEO"
-    io6 = 12    #PA6
-    PA1 = 22    #PA1
-    with open("/proc/cpuinfo", encoding = 'utf8')as f:
-        filx = f.read()
-        if ("Raspberry" in filx):
-            if ("Compute Module" in filx):
-                device_type = "CM"
-                io6 = 31    #GPIO6/30  
-                PA1 = 22    #GPIO25/41                
-            else:           #all other Raspberry Pi version other than compute modules
-                device_type = "PI"
-                io6 = 12    #device is Pi GPIO18
-                PA1 = 22    #GPIO25        
-    f.close()
+#    device_type = "NEO"
+#    io6 = 12    #PA6
+#    PA1 = 22    #PA1
+#    with open("/proc/cpuinfo", encoding = 'utf8')as f:
+#        filx = f.read()
+#        if ("Raspberry" in filx):
+#            if ("Compute Module" in filx):
+#                device_type = "CM"
+#                io6 = 31    #GPIO6/30  
+#                PA1 = 22    #GPIO25/41                
+#            else:           #all other Raspberry Pi version other than compute modules
+#                device_type = "PI"
+#                io6 = 12    #device is Pi GPIO18
+#                PA1 = 22    #GPIO25        
+#    f.close()
+    
+    if globals.device_type == "NEO":
+        io6 = 12  #PA6
+        PA1 = 22  #PA1
+    if globals.device_type == "CM":
+        io6 = 31  #GPIO6/30   
+        PA1 = 22    #GPIO25/41
+    if globals.device_type == "PI":
+        io6 = 12    #device is Pi GPIO18
+        PA1 = 22    #GPIO25
 
     GPIO.setup(io6,GPIO.IN)
     if GPIO.input(io6) == GPIO.LOW:
@@ -99,6 +109,7 @@ def main(verbose):
     else:
         logging.basicConfig(level=logging.INFO)
 
+    globals.init()
     GPIO.setmode(GPIO.BOARD)
     GPIO.setwarnings(False)
     GPIO.setup(22, GPIO.IN,pull_up_down=GPIO.PUD_DOWN)  #for CM no pin is connected see it as low.

@@ -13,7 +13,9 @@ import time
 from axp209 import AXP209, AXP209_ADDRESS
 import RPi.GPIO as GPIO  # pylint: disable=import-error
 from .buttons import BUTTONS
-global device_type
+import neo_batterylevelshutdown.globals as globals
+
+#global device_type
 
 
 
@@ -43,18 +45,25 @@ class BasePhysicalHAT:
     # This is a standard interface - it's ok not to use
     def __init__(self, displayClass):
 
-        with open("/proc/cpuinfo", encoding = 'utf8')as f:
-            filx = f.read()
-            device_type = "NEO"
-            self.PIN_LED = 12 
-            if ("Raspberry" in filx):
-                if ("Compute Module" in filx):
-                    device_type = "CM"
-                    self.PIN_LED = 31
-                else:           #all other Raspberry Pi version other than compute modules
-                    device_type = "PI"
-                    self.PIN_LED = 12
-        f.close()
+#        with open("/proc/cpuinfo", encoding = 'utf8')as f:
+#            filx = f.read()
+#            device_type = "NEO"
+#            self.PIN_LED = 12 
+#            if ("Raspberry" in filx):
+#                if ("Compute Module" in filx):
+#                    device_type = "CM"
+#                    self.PIN_LED = 31
+#                else:           #all other Raspberry Pi version other than compute modules
+#                    device_type = "PI"
+#                    self.PIN_LED = 12
+#        f.close()
+        if globals.device_type == "NEO":
+            self.PIN_LED = 12
+        if globals.device_type == "CM":
+            self.PIN_LED = 31
+        if globals.device_type == "PI":
+            self.PIN_LED = 12    
+
 
         GPIO.setup(self.PIN_LED, GPIO.OUT)
             # All HATs should turn on their LED on startup. Doing it in the base
@@ -317,22 +326,22 @@ class q3y2018HAT(Axp209HAT):
 
        
     def __init__(self, displayClass):
-        with open("/proc/cpuinfo", encoding = 'utf8') as f:
-            device_type = "NEO"
-            filx = f.read()
-            if ("Raspberry" in filx):
-                if ("Compute Module" in filx):
-                    device_type = "CM"
-                else:           #all other Raspberry Pi version other than compute modules
-                    device_type = "PI"
-        f.close()   
+#        with open("/proc/cpuinfo", encoding = 'utf8') as f:
+#            device_type = "NEO"
+#            filx = f.read()
+#            if ("Raspberry" in filx):
+#                if ("Compute Module" in filx):
+#                    device_type = "CM"
+#                else:           #all other Raspberry Pi version other than compute modules
+#                    device_type = "PI"
+#        f.close()   
         
-        if (device_type == "NEO"):
+        if (globals.device_type == "NEO"):
             self.PIN_L_BUTTON = 8 
             self.PIN_R_BUTTON =  10 
             self.PIN_AXP_INTERRUPT_LINE = 16
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
-        elif (device_type =="CM"):
+        elif (globals.device_type =="CM"):
             self.PIN_L_BUTTON = 5 #GPIO3/56  
             self.PIN_R_BUTTON = 7 #GPIO4/54  
             self.PIN_AXP_INTERRUPT_LINE = 10 #GPIO15/51
@@ -371,22 +380,22 @@ class q4y2018HAT(Axp209HAT):
 
         
     def __init__(self, displayClass):
-        with open("/proc/cpuinfo", encoding = 'utf8') as f:
-            device_type = "NEO"
-            filx = f.read()
-            if ("Raspberry" in filx):
-                if ("Compute Module" in filx):
-                    device_type = "CM"
-                else:           #all other Raspberry Pi version other than compute modules
-                    device_type = "PI"
-        f.close()   
+#        with open("/proc/cpuinfo", encoding = 'utf8') as f:
+#            device_type = "NEO"
+#            filx = f.read()
+#            if ("Raspberry" in filx):
+#                if ("Compute Module" in filx):
+#                    device_type = "CM"
+#                else:           #all other Raspberry Pi version other than compute modules
+#                    device_type = "PI"
+#        f.close()   
         
-        if (device_type == "NEO"):
+        if (globals.device_type == "NEO"):
             self.PIN_L_BUTTON = 8 
             self.PIN_R_BUTTON = 10 
             self.PIN_AXP_INTERRUPT_LINE = 16
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
-        elif (device_type =="CM"):
+        elif (globals.device_type =="CM"):
             self.PIN_L_BUTTON = 5 #GPIO3/56  
             self.PIN_R_BUTTON = 7 #GPIO4/54  
             self.PIN_AXP_INTERRUPT_LINE = 10 #GPIO15/51
@@ -435,22 +444,22 @@ class q4y2019HAT(BasePhysicalHAT):
 
     
     def __init__(self, displayClass):
-        with open("/proc/cpuinfo", encoding = 'utf8') as f:
-            device_type = "NEO"
-            filx = f.read()
-            if ("Raspberry" in filx):
-                if ("Compute Module" in filx):
-                    device_type = "CM"
-                else:           #all other Raspberry Pi version other than compute modules
-                    device_type = "PI"
-        f.close()   
+#        with open("/proc/cpuinfo", encoding = 'utf8') as f:
+#            device_type = "NEO"
+#            filx = f.read()
+#            if ("Raspberry" in filx):
+#                if ("Compute Module" in filx):
+#                    device_type = "CM"
+#                else:           #all other Raspberry Pi version other than compute modules
+#                    device_type = "PI"
+#        f.close()   
         
-        if (device_type == "NEO"):
+        if (globals.device_type == "NEO"):
             self.PIN_L_BUTTON =  8 
             self.PIN_R_BUTTON = 10 
             self.PIN_AXP_INTERRUPT_LINE = 16
  
-        elif (device_type =="CM"):
+        elif (globals.device_type =="CM"):
             self.PIN_L_BUTTON = PG6 = 5 #GPIO3/56  
             self.PIN_R_BUTTON = PG7 = 7 #GPIO4/54  
             self.PIN_AXP_INTERRUPT_LINE = PG8 = 10 #GPIO15/51

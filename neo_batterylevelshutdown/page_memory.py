@@ -15,6 +15,7 @@ import os.path
 from PIL import Image, ImageFont, ImageDraw
 
 from .HAT_Utilities import get_device
+import neo_batterylevelshutdown.globals as globals
 
 
 try:
@@ -76,26 +77,26 @@ class PageMemory:
 
         # get a font
         font_path = dir_path + '/assets/connectbox.ttf'
-        font18 = ImageFont.truetype(font_path, 18)
+        font20 = ImageFont.truetype(font_path, globals.font20)
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
         # cpu usage
         d.text((50, 1), "%.0f%%" % PageMemory.cpu_usage(),
-               font=font18, fill="black")
+               font=font20, fill="black")
 
         # memory usage
         usage = PageMemory.mem_usage()
         d.text((50, 21), "%.0f%%" %
-               (100 - usage.percent), font=font18, fill="black")
+               (100 - usage.percent), font=font20, fill="black")
         d.text((85, 21), "%s" % PageMemory.bytes2human(usage.used),
-               font=font18, fill="black")
+               font=font20, fill="black")
 
         # disk usage
         usage = PageMemory.disk_usage('/media/usb0')
-        d.text((50, 42), "%.0f%%" % usage.percent, font=font18, fill="black")
+        d.text((50, 42), "%.0f%%" % usage.percent, font=font20, fill="black")
         d.text((85, 42), "%s" % PageMemory.bytes2human(usage.used),
-               font=font18, fill="black")
+               font=font20, fill="black")
 
         out = Image.alpha_composite(img, txt)
         self.device.display(out.convert(self.device.mode))

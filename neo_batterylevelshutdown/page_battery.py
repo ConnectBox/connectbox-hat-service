@@ -16,6 +16,7 @@ from PIL import ImageFont
 from PIL import ImageDraw
 import axp209
 from .HAT_Utilities import get_device
+import neo_batterylevelshutdown.globals as globals
 
 
 class PageBattery:
@@ -39,8 +40,8 @@ class PageBattery:
 
         # get a font
         font_path = dir_path + '/assets/connectbox.ttf'
-        font18 = ImageFont.truetype(font_path, 18)
-        font14 = ImageFont.truetype(font_path, 14)
+        font20 = ImageFont.truetype(font_path, globals.font20)
+        font14 = ImageFont.truetype(font_path, globals.font14)
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
@@ -54,15 +55,15 @@ class PageBattery:
         # draw text, full opacity
         if have_axp209:
             d.text((5, 42), "%.0f" %
-                   int(self.axp.battery_voltage), font=font18, fill="black")
+                   int(self.axp.battery_voltage), font=font20, fill="black")
             d.text((52, 42), "%.1f" %
-                   self.axp.internal_temperature, font=font18, fill="black")
+                   self.axp.internal_temperature, font=font20, fill="black")
         else:
             # Act like there's no battery present
             d.text((5, 42), "%.0f" %
-                   -1, font=font18, fill="black")
+                   -1, font=font20, fill="black")
             d.text((52, 42), "%.1f" %
-                   -1, font=font18, fill="black")
+                   -1, font=font20, fill="black")
 
         if have_axp209 and self.axp.power_input_status.acin_present:
             # charging
@@ -71,9 +72,9 @@ class PageBattery:
             # percent charge left
             percent = self.axp.battery_gauge
             d.text((50, 1), "%.0f%%" %
-                   percent, font=font18, fill="black")
+                   percent, font=font20, fill="black")
             d.text((94, 42), "%.0f" %
-                   self.axp.battery_charge_current, font=font18, fill="black")
+                   self.axp.battery_charge_current, font=font20, fill="black")
         else:
             # discharging or AXP209 not present i.e. not doing it's job
             # cover the charging symbol & in arrow
@@ -88,15 +89,15 @@ class PageBattery:
                 percent =  (battery_voltage - 3275) / 7.67   
                 
                 d.text((63, 1), "%.0f%%" %
-                       percent, font=font18, fill="black")
+                       percent, font=font20, fill="black")
                 d.text((94, 42), "%.0f" %
                        self.axp.battery_discharge_current,
-                       font=font18, fill="black")
+                       font=font20, fill="black")
             else:
                 d.text((63, 1), "%.0f%%" %
-                       -1, font=font18, fill="black")
+                       -1, font=font20, fill="black")
                 d.text((94, 42), "%.0f" %
-                       -1, font=font18, fill="black")
+                       -1, font=font20, fill="black")
 
         # draw battery fill lines
         if not have_axp209 or not self.axp.battery_exists:

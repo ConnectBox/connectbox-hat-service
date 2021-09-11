@@ -15,6 +15,7 @@ import json
 import os.path
 from PIL import Image, ImageFont, ImageDraw
 from .HAT_Utilities import get_device
+import neo_batterylevelshutdown.globals as globals
 
 
 class PageStats:
@@ -59,8 +60,8 @@ class PageStats:
 
         # get a font
         font_path = dir_path + '/assets/connectbox.ttf'
-        font20 = ImageFont.truetype(font_path, 22)
-        font10 = ImageFont.truetype(font_path, 12)
+        font20 = ImageFont.truetype(font_path, globals.font20)
+        font10 = ImageFont.truetype(font_path, globals.font10)
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
