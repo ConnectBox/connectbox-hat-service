@@ -9,7 +9,7 @@
   DorJamJr - July 2021
 ===========================================
 """
-
+import logging
 import os.path
 import subprocess
 from PIL import Image, ImageFont, ImageDraw
@@ -54,6 +54,8 @@ class PageMain:
         d = ImageDraw.Draw(txt)
         br_name, br_font, br_x, br_y = br.splash()
 
+        logging.info("Branding Name"+ br_name)          # test element for log  
+    
         # get a font
         font_path = dir_path + '/assets/connectbox.ttf'
         font30 = ImageFont.truetype(font_path, br_font)
