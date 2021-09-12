@@ -149,7 +149,7 @@ class PageMainA(PageMain):
     #    font14 = ImageFont.truetype(font_path, 14)
 
         # get a drawing context
-    #    d = ImageDraw.Draw(txt)
+        d = ImageDraw.Draw(txt)
 
         # ConnectBox Banner - get name, font size, x and y position from Brand.splash
         name, font, x, y = Brand.splash(self)
