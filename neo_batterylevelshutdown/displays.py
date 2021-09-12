@@ -256,7 +256,7 @@ class OLED:
     # Ideally this should be a page, like the low battery page
     def drawLogo(self):
         dir_path = os.path.dirname(os.path.abspath(__file__))
-        img_path = dir_path + '/assets/' + br.image()
+        img_path = dir_path + '/assets/' + br.image(self)
         logo = Image.open(img_path).convert("RGBA")
         fff = Image.new(logo.mode, logo.size, (255,) * 4)
         background = Image.new("RGBA", self.display_device.size, "black")

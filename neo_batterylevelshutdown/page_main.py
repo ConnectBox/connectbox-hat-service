@@ -15,7 +15,7 @@ import subprocess
 from PIL import Image, ImageFont, ImageDraw
 import axp209
 from .HAT_Utilities import get_device, GetReleaseVersion
-from .branding import Brand as br
+from .branding import Brand
 import neo_batterylevelshutdown.globals as globals
 
 class PageMain:
@@ -52,17 +52,17 @@ class PageMain:
 
         # get a drawing context
         d = ImageDraw.Draw(txt)
-        br_name, br_font, br_x, br_y = br.splash()
+        name, font, x, y = Brand.splash(self)
 
-        logging.info("Branding Name"+ br_name)          # test element for log  
+        logging.info("Branding Name"+ name)          # test element for log  
     
         # get a font
         font_path = dir_path + '/assets/connectbox.ttf'
-        font30 = ImageFont.truetype(font_path, br_font)
+        font30 = ImageFont.truetype(font_path, font)
         font20 = ImageFont.truetype(font_path, globals.font20)
         font14 = ImageFont.truetype(font_path, globals.font14)
 
-        d.text((br_x, br_y), br.name, font=font30, fill="black")
+        d.text((x, y), name, font=font30, fill="black")
         # Image version name/number
         d.text((38, 32), GetReleaseVersion(), font=font14, fill="black")
 
@@ -151,16 +151,16 @@ class PageMainA(PageMain):
         # get a drawing context
     #    d = ImageDraw.Draw(txt)
 
-        # ConnectBox Banner - get name, font size, x and y position from Brand()
-        br_name, br_font, br_x, br_y = br.splash()
+        # ConnectBox Banner - get name, font size, x and y position from Brand.splash
+        name, font, x, y = Brand.splash(self)
 
         # get a font
         font_path = dir_path + '/assets/connectbox.ttf'
-        font30 = ImageFont.truetype(font_path, br_font)
+        font30 = ImageFont.truetype(font_path, font)
         font20 = ImageFont.truetype(font_path, globals.font20)
         font14 = ImageFont.truetype(font_path, globals.font14)
 
-        d.text((br_x, br_y), br_name, font=font30, fill="black")
+        d.text((x, y), name, font=font30, fill="black")
 
         # Image version name/number
         d.text((38, 32), GetReleaseVersion(), font=font14, fill="black")
