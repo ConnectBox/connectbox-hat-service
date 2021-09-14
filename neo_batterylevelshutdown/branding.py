@@ -23,10 +23,10 @@ global  logo_image
 class Brand:
 
     def name(self):
-        brand_name = 'ConnectBox'
+        brand_name = "ConnectBox"        #should match what is set in ansible/group_vars/all file except for Capitalization
         return "%s" % brand_name
 
-    def splash(self):
+    def splash(self):                    #For screen display
         a = Brand.name(self)
         position_x = 7
         position_y = 0
@@ -34,6 +34,8 @@ class Brand:
         return (a, font, position_x, position_y)
     
 
-    def image(self):
+    def image(self):                     #Boot up Logo on screen
         logo_image = 'connectbox_logo.png'
         return "%s" % logo_image
+
+
