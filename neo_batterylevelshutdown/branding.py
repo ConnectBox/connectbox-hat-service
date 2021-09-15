@@ -23,7 +23,7 @@ global  logo_image
 class Brand:
 
     def name(self):
-        brand_name = "ConnectBox"        #should match what is set in ansible/group_vars/all file except for Capitalization
+        brand_name = {{ connectbox_pretty_hostname }}        
         return "%s" % brand_name
 
     def splash(self):                    #For screen display
