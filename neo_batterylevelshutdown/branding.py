@@ -22,9 +22,16 @@ global  logo_image
 
 class Brand:
 
-    def name(self):
-        brand_name = {{ connectbox_pretty_hostname }}        
-        return "%s" % brand_name
+    def __init__(self):
+        with open('/usr/local/connectbox/brand_name.txt', encoding='utf-8') as f:
+        self.brand_name = f.read()
+        f.close()
+        with open('/usr/local/connectbox/logo_image.txt') as f:
+        self.logo_image = f.read()
+        f.close()
+
+    def name(self):    
+        return "%s" % self.brand_name
 
     def splash(self):                    #For screen display
         a = Brand.name(self)
@@ -33,9 +40,7 @@ class Brand:
         font = 26
         return (a, font, position_x, position_y)
     
-
     def image(self):                     #Boot up Logo on screen
-        logo_image = 'connectbox_logo.png'
-        return "%s" % logo_image
+        return "%s" % self.logo_image
 
 
