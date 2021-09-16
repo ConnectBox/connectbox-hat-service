@@ -23,7 +23,7 @@ global  logo_image
 class Brand:
 
     def __init__(self):
-        with open('/usr/local/connectbox/brand_name.txt', encoding='utf-8') as f:
+        with open('/etc/hostname', encoding='utf-8') as f:
         self.brand_name = f.read()
         f.close()
         with open('/usr/local/connectbox/logo_image.txt') as f:
