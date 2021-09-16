@@ -15,7 +15,6 @@ import subprocess
 from PIL import Image, ImageFont, ImageDraw
 import axp209
 from .HAT_Utilities import get_device, GetReleaseVersion
-from .branding import Brand
 import neo_batterylevelshutdown.globals as globals
 
 class PageMain:
@@ -52,9 +51,12 @@ class PageMain:
 
         # get a drawing context
         d = ImageDraw.Draw(txt)
-        name, font, x, y = Brand.splash(self)
+        name = globals.brand_name
+        font = globals.splash_font
+        x = globals.splash_x
+        y = globals.splash_y
 
-        logging.info("Branding Name"+ name)          # test element for log  
+        logging.info("Branding Name"+ globals.brand_name)          # test element for log  
     
         # get a font
         font_path = dir_path + '/assets/connectbox.ttf'
@@ -151,8 +153,11 @@ class PageMainA(PageMain):
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
-        # ConnectBox Banner - get name, font size, x and y position from Brand.splash
-        name, font, x, y = Brand.splash(self)
+        # ConnectBox Banner - get name, font size, x and y position from 
+        name = globals.brand_name
+        font = globals.splash_font
+        x = globals.splash_x
+        y = globals.splash_y
 
         # get a font
         font_path = dir_path + '/assets/connectbox.ttf'

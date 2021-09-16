@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+nan# -*- coding: utf-8 -*-
 
 import logging
 import os
@@ -15,7 +15,7 @@ from . import page_stats
 from . import page_memory
 from . import page_battery_low
 from . import page_display_image
-from .branding import Brand
+import neo_batterylevelshutdown.globals as globals
 
 
 class DummyDisplay:
@@ -256,7 +256,7 @@ class OLED:
     # Ideally this should be a page, like the low battery page
     def drawLogo(self):
         dir_path = os.path.dirname(os.path.abspath(__file__))
-        img_path = dir_path + '/assets/' + Brand.image(self)
+        img_path = dir_path + '/assets/' + globals.logo_image
         logo = Image.open(img_path).convert("RGBA")
         fff = Image.new(logo.mode, logo.size, (255,) * 4)
         background = Image.new("RGBA", self.display_device.size, "black")
@@ -318,7 +318,7 @@ class OLEDA(OLED):      # why is OLED"" in red? Because camel case was expected 
         #  current page variable as it can be modified from the main loop
         #  and from callbacks
         self._curPageLock = threading.Lock()
-        # draw the brand logo - classes containing an OLED display
+        # draw the py logo - classes containing an OLED display
         #  manage timeouts and timed display power-downs, so we leave that
         #  as an exercise for anyone using this class
         self.drawLogo()
