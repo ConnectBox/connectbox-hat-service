@@ -9,3 +9,8 @@ details  = {'Brand':"ConnectBox", 'Image':"connectbox_image.png", 'Font':26,'pos
 with open('brand.txt', 'w') as f:
     f.write(json.dumps(details))
     f.close()
+
+with open('hostname', 'w') as f:
+    f.write((details["Brand"]).lower()) 
+    f.close()
+
