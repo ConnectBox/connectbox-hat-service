@@ -49,6 +49,8 @@ def getHATClass():
     if globals.device_type == "NEO":
         io6 = 12  #PA6
         PA1 = 22  #PA1
+        PA0 = 11  #PA0
+        PG11 = 7  #PG11
     if globals.device_type == "CM":
         io6 = 31  #GPIO6/30   
         PA1 = 22    #GPIO25/41
@@ -57,6 +59,7 @@ def getHATClass():
         PA1 = 22    #GPIO25
 
     GPIO.setup(io6,GPIO.IN)
+    GPIO.setup(PG11,GPIO.IN, pull_up_down=GPIO.PUD_UP)
     if GPIO.input(io6) == GPIO.LOW:
         logging.info("NEO HAT not detected")
         return hats.DummyHAT
@@ -66,13 +69,26 @@ def getHATClass():
         battexists = axp.battery_exists
         axp.close()
         # AXP209 found... we have HAT from Q3Y2018 or later
-        # Test PA1... LOW => Q4Y2018; HIGH => Q3Y2018
- 
+        # Test PA1... 
+        #    HIGH => Q3Y2018 == HAT 4.6.7
+        #    LOW =>          == HAT 5.0.0; 5.1.1 (with or w/o battery); HAT 6; HAT 7
+        # Test PG11...
+        #    HIGH => Q4Y2018 == HAT 5.0.0; 5.1.1 (with or w/o battery); HAT 6
+        #    LOW  => Q3Y2021 == HAT 7 
+    
         GPIO.setup(PA1, GPIO.IN)
         if GPIO.input(PA1) == GPIO.LOW:
             if battexists:
-                logging.info("Q4Y2018 HAT Detected") 
-                return hats.q4y2018HAT
+                if GPIO.input(PG11) == GPIO.HIGH:
+                    logging.info("Q4Y2018 HAT Detected") 
+                    return hats.q4y2018HAT
+                else:
+                    logging.info("Q3Y2021 HAT Detected")
+                    return hats.q3y2021HAT
+        # we have a non-battery HAT... we call all non-battery HATS "Q42019"
+        #   Note that if we really want to use features of HAT 7 in a non-battery
+        #    version, we will need to expand this search tree and create yet anotheer
+        #    hat class.               
             else:
                 logging.info("Q42019 HAT Detected")
                 return hats.q4y2019HAT
