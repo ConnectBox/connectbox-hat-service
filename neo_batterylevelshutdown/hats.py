@@ -119,10 +119,10 @@ class BasePhysicalHAT:
         
         # Now we have determined the OTG request, so do the requested work
         if otg_mode == True:
-            #<<<------- PUT CODE HERE TO DISABLE OTG MODE -------->>>
+            logging.debug("in OTG set")
 
         else:    
-            #<<<------- PUT CODE HERE TO ENABLE OTG MODE -------->>>
+            logging.debug("not OTG set")
         
         # End of the OTG interrupt handler.......
         

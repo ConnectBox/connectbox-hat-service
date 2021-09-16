@@ -10,6 +10,8 @@ def init():
     global font20
     global font14
     global font10
+    global brand_name
+    global logo_image
 
     #find and set device_type global
     device_type = "NEO"
