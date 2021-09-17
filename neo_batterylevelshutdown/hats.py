@@ -478,7 +478,7 @@ class q4y2018HAT(Axp209HAT):
                               callback=self.shutdownDeviceCallback)
                               
 
-class q4y2019HAT(BasePhysicalHAT):
+class q4y2019HAT(Axp209HAT):
 
     # Q4Y2019 - nomenclature for a Q4Y2018 HAT without a battery
     #  This code a hack of copying Q4Y2018 code, parenting direct from BasePhysicalHAT and including
