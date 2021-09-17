@@ -7,7 +7,7 @@ from contextlib import contextmanager
 import logging
 import os
 import os.path
-
+import io
 import sys
 import time
 from axp209 import AXP209, AXP209_ADDRESS
@@ -45,7 +45,7 @@ class BasePhysicalHAT:
     # This is a standard interface - it's ok not to use
     def __init__(self, displayClass):
 
-#        with open("/proc/cpuinfo", encoding = 'utf8')as f:
+#        f = open("/proc/cpuinfo",mode = "r", encoding = 'utf-8')
 #            filx = f.read()
 #            device_type = "NEO"
 #            self.PIN_LED = 12 
