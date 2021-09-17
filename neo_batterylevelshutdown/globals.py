@@ -27,7 +27,7 @@ global splash_font
 def init():
   # Using a dictionary and json to store Branding stuff
   # Read the dictionary
-  with open('/usr/local/connectbox/brand.txt') as f:
+  with open('/usr/local/connectbox/brand.txt', "r") as f:
     data = f.read()
   js = json.loads(data)
 
@@ -36,11 +36,25 @@ def init():
   splash_font = js["Font"]
   splash_x = js["pos_x"]
   splash_y = js["pos_y"]
+  f.close()
+# check that the brand name eg: hostname hasn't changed.
+# if it did we need to update the brand and the hostname
+  with open('/etc/hostname', "r", encoding='utf8') as f
+    bname = f.read().rstrip()
+    f.close()
+  if (bname.lower() != brand_name.lower()):
+    brand_name = bname 
+    js["Brand"] = bname 
+    with open("/usr/local/connectbox/brand.txt", 'w') as f:
+      f.write(json.dumps(js))
+      f.close() 
+
 
   #find and set device_type global
   device_type = "NEO"
-  with open("/proc/cpuinfo", encoding = 'utf8') as f:
+  with open("/proc/cpuinfo", encoding = 'utf8', "r") as f:
     filx = f.read()
+
     if ("Raspberry" in filx):
       if ("Compute Module" in filx):
         device_type = "CM"
