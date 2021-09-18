@@ -227,6 +227,8 @@ class BUTTONS:
                 if dualButtonTime > dualTimeRecorded:
                     dualTimeRecorded = dualButtonTime
                 dualStartTime = time.time()     # reset start time to now
+            if (time.time() - startTime) > 5:   # don't stick in this interrupt service forever
+                break    
 
         buttonTime = time.time() - startTime    # How long was the original button down?
 
