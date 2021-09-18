@@ -14,6 +14,7 @@ from . import page_info
 from . import page_stats
 from . import page_memory
 from . import page_battery_low
+from . import page_power_down
 from . import page_display_image
 import neo_batterylevelshutdown.globals as globals
 
@@ -62,6 +63,8 @@ class OLED:
         self.blank_page = page_none.PageBlank(self.display_device)
         self.low_battery_page = \
             page_battery_low.PageBatteryLow(self.display_device)
+        self.power_down_page = \
+            page_power_down.PagePowerDown(self.display_device)
         self.statusPages = [
             page_main.PageMain(self.display_device, self.axp),
             page_info.PageInfo(self.display_device),
@@ -232,6 +235,18 @@ class OLED:
             self._curPage.draw_page()
             logging.debug("Transitioned to page %s", self._curPage)
 
+    def showPoweringOff(self):
+        if self._curPage == self.power_down_page:
+            # nothing to do
+            return
+
+        with self._curPageLock:
+            logging.debug("Current page is %s", self._curPage)
+            self._curPage = self.power_down_page
+            self._curPage.draw_page()
+            logging.debug("Transitioned to page %s", self._curPage)
+        
+
     def hideLowBatteryWarning(self):
         if self._curPage == self.low_battery_page:
             self.powerOffDisplay()
@@ -285,6 +300,8 @@ class OLEDA(OLED):      # why is OLED"" in red? Because camel case was expected 
         self.blank_page = page_none.PageBlank(self.display_device)
         self.low_battery_page = \
             page_battery_low.PageBatteryLow(self.display_device)
+        self.power_down_page = \
+            page_power_down.PagePowerDown(self.display_device)
         self.statusPages = [
             page_main.PageMainA(self.display_device),  # new page 
             page_info.PageInfo(self.display_device),

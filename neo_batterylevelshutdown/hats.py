@@ -44,7 +44,6 @@ class BasePhysicalHAT:
     # pylint: disable=unused-argument
     # This is a standard interface - it's ok not to use
     def __init__(self, displayClass):
-
 #        f = open("/proc/cpuinfo",mode = "r", encoding = 'utf-8')
 #            filx = f.read()
 #            device_type = "NEO"
@@ -71,14 +70,18 @@ class BasePhysicalHAT:
             #  and not worry about initial state (and thus be simpler)
         self.solidLED()
 
-    @classmethod
-    def shutdownDevice(cls):
+#    @classmethod
+    def shutdownDevice(self):
         # Turn off the LED, as some people associate that with wifi being
         #  active (the HAT can stay powered after shutdown under some
         #  circumstances)
-        GPIO.output(cls.PIN_LED, GPIO.HIGH)
+        GPIO.output(self.PIN_LED, GPIO.HIGH)
+        self.display.showPoweringOff()
         logging.info("Exiting for Shutdown")
         os.system("shutdown now")
+        # Stick here to leave the showPoweringOff() display on to the end
+        while True:
+            pass
 
     def shutdownDeviceCallback(self, channel):
         logging.debug("Triggering device shutdown based on edge detection "
@@ -405,7 +408,7 @@ class q3y2018HAT(Axp209HAT):
                               callback=self.buttons.handleButtonPress,
                               bouncetime=125)
         GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
-                              callback=self.powerOffDisplay,
+                              callback=self.buttons.handleButtonPress,
                               bouncetime=125)
 
     def powerOffDisplay(self, channel):
@@ -510,7 +513,7 @@ class q4y2019HAT(Axp209HAT):
         else:                   #device type is Pi
             self.PIN_L_BUTTON = PG6 = 8 #GPIO 14
             self.PIN_R_BUTTON = PG7 = 10 #GPIO 15
-            self.PIN_AXP_INTERRUPT_LIINE = PG8 = 16 #GPIO23
+            self.PIN_AXP_INTERRUPT_LINE = PG8 = 16 #GPIO23
             
         self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         # Next 3 lines from Axp209HAT class
@@ -605,16 +608,4 @@ class q3y2021HAT(Axp209HAT):
         #  so the desired action here is always to shutdown
         GPIO.add_event_detect(self.PIN_AXP_INTERRUPT_LINE, GPIO.FALLING,
                               callback=self.shutdownDeviceCallback)
-                              
-  
-  
-# from Axp209HAT...
-    def mainLoop(self):
-        while True:
-            with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
-                # Perhaps power off the display
-                if time.time() > self.displayPowerOffTime:
-                    self.display.powerOffDisplay()
-
-
                                
