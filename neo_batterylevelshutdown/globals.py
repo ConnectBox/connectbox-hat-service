@@ -22,12 +22,15 @@ logo_image = "PH_image"
 splash_x = 7
 splash_y = 0
 splash_font = 26
+enable_massstorage = 0
+screen_enable = [1,1,1,1,1,1,1,1,1]
 
 # font sizes are just specified here
 font30 = 26
 font20 = 19
 font14 = 13
 font10 = 11
+g_device = "g_serial"
 
 
 def init():
@@ -39,6 +42,9 @@ def init():
     global splash_x
     global splash_y
     global splash_font
+    global enable_massstorage
+    global screen_enable
+    global g_device
 
   # Using a dictionary and json to store Branding stuff
   # Read the dictionary
