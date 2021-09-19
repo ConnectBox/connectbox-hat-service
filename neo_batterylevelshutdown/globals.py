@@ -22,8 +22,8 @@ logo_image = "PH_image"
 splash_x = 7
 splash_y = 0
 splash_font = 26
-enable_massstorage = 0
-screen_enable = [1,1,1,1,1,1,1,1,1]
+enable_mass_storage = 0
+screen_enable = [1,1,1,1,1,1,1,1,1,1,1,1,1]
 
 # font sizes are just specified here
 font30 = 26
@@ -42,7 +42,7 @@ def init():
     global splash_x
     global splash_y
     global splash_font
-    global enable_massstorage
+    global enable_mass_storage
     global screen_enable
     global g_device
 
@@ -50,14 +50,33 @@ def init():
   # Read the dictionary
     f = open('/usr/local/connectbox/brand.txt', "r")
     data = f.read()
+    f.close()
     js = json.loads(data)
+
+# May want to put some checks in to allow fields to be missing and
+#  if so, revert to defaults...
 
     brand_name = js["Brand"]
     logo_image = js["Image"]
     splash_font = js["Font"]
     splash_x = js["pos_x"]
     splash_y = js["pos_y"]
-    f.close()
+
+    # Just in case our brand.txt doesn't have these parameters...
+    #   (for any that are missing, just keep the defaults)
+    try:
+        enable_mass_storage = js["Enable_MassStorage"]
+    except:
+        pass
+    try:        
+        screen_enable = js["Screen_Enable"]
+    except:
+        pass
+    try:    
+        g_device = js["g_device"]
+    except:
+        pass    
+
 # check that the brand name eg: hostname hasn't changed.
 # if it did we need to update the brand and the hostname
     f = io.open('/etc/hostname', mode="r", encoding='utf-8')
