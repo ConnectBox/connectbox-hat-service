@@ -4,11 +4,7 @@
 # Here we have a single place to create and make available globals which
 #  will be used in multiple modules
 
-# Example to create and write the dictionary (next four lines)
-#details  = {'Brand':"ConnectBox", 'Image':"connectbox_image.png", 'Font':26,'pos_x': 7,'pos_y': 0}
-#with open('/usr/local/connectbox/brand.txt', 'w') as f:
-#    f.write(json.dumps(details))
-#    f.close()
+# To easily create brand.txt, use the tool BrandCreationTool.py
 
 import io
 import json

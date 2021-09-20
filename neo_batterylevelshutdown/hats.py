@@ -15,9 +15,24 @@ import RPi.GPIO as GPIO  # pylint: disable=import-error
 from .buttons import BUTTONS
 import neo_batterylevelshutdown.globals as globals
 
-#global device_type
+# mount usb variables
+usbMounted = False
 
-
+def mountCheck():
+   global usbMounted
+   b = os.popen('lsblk').read()
+   if 'sda1' in b:
+       if usbMounted == True:
+           return
+   # found /dev/sda1 but it isn’t mounted
+   #    print ("Found sda1")
+       res = os.system("mount /dev/sda1 /media/usb0")
+       if res == 0:
+           usbMounted = True
+       else:  
+           logging.info("hats.py #33: problem with mounting usb")
+   else:
+       usbMounted = False
 
 @contextmanager
 def min_execution_time(min_time_secs):
@@ -110,10 +125,10 @@ class BasePhysicalHAT:
         # we are now in input mode for the pin...
         if GPIO.input(channel) == 0:
             logging.debug("The OTG pin is LOW, so leaving OTG mode")
-            otg_mode = True
+            otg_mode = False
         else:
             logging.debug("The OTG pin is HIGH, so entering OTG mode")    
-            otg_mode = False
+            otg_mode = True
 
         # we are through with using the OTG pin as an input... put the register back as it was
         if (globals.device_type == "NEO"):
@@ -193,6 +208,8 @@ class q1y2018HAT(BasePhysicalHAT):
         logging.info("Starting Monitoring")
         while True:
             with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
+               # test for usb mount need each time through the loop
+                mountCheck()
                 if GPIO.input(self.PIN_VOLT_3_84):
                     logging.debug("Battery voltage > 3.84V i.e. > ~63%")
                     self.solidLED()
@@ -330,7 +347,11 @@ class Axp209HAT(BasePhysicalHAT):
 
     def mainLoop(self):
         while True:
+            # The following ensures that the while loop only executes once every 
+            #  LED_CYCLE_TIME_SECS...
             with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
+                # test for usb mount need each time through the loop
+                mountCheck()
                 # Perhaps power off the display
                 if time.time() > self.displayPowerOffTime:
                     self.display.powerOffDisplay()
