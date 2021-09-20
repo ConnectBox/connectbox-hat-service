@@ -190,13 +190,15 @@ class OLED:
                 #  or if we were showing the low battery page
                 self._curPage = self.pages[self.STARTING_PAGE_INDEX]
             else:
-                # move forward in the page list
-                # If we're at the end of the page list, go to the start
-                if self._curPage == self.pages[-1]:
-                    self._curPage = self.pages[0]
-                else:
-                    self._curPage = \
-                        self.pages[self.pages.index(self._curPage) + 1]
+                # Figure out what the index of the next valid page
+                screenList = globals.screen_enable
+                current_page_index = index(self._curPage)
+                page_count = len(self.pages)
+                next_page_index = (current_page_index +1) % page_count
+                while screenList[next_page_index % page_count] == 0:
+                    next_page_index = (next_page_index+1) % page_count   # skip page with value 0  
+                self._curPage = \
+                        self.pages[next_page_index]
 
             # draw the page while holding the lock, so that it doesn't change
             #  underneath us
@@ -212,12 +214,15 @@ class OLED:
                 self._curPage = self.pages[self.STARTING_PAGE_INDEX]
             else:
                 # move backwards in the page list
-                # If we're at the start of the page list, go to the start
-                if self._curPage == self.pages[0]:
-                    self._curPage = self.pages[-1]
-                else:
-                    self._curPage = \
-                        self.pages[self.pages.index(self._curPage) - 1]
+                # Figure out what the index of the next valid page
+                screenList = globals.screen_enable
+                current_page_index = index(self._curPage)
+                page_count = len(self.pages)
+                next_page_index = (current_page_index + page_count -1) % page_count
+                while screenList[next_page_index % page_count] == 0:
+                    next_page_index = (next_page_index + page_count -1) % page_count   # skip page with value 0  
+                self._curPage = \
+                        self.pages[next_page_index]
 
             # draw the page while holding the lock, so that it doesn't change
             #  underneath us
