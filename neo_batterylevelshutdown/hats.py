@@ -15,30 +15,6 @@ import RPi.GPIO as GPIO  # pylint: disable=import-error
 from .buttons import BUTTONS
 import neo_batterylevelshutdown.globals as globals
 
-# mount usb variables
-usbMounted = False
-
-def mountCheck():
-    global usbMounted
-    b = os.popen('lsblk').read()
-    if 'sda1' in b:
-        if usbMounted == True:
-            return
-   # found /dev/sda1 but it isn’t mounted
-   #    print ("Found sda1")
-        res = os.system("mount /dev/sda1 /media/usb0")
-        if res == 0:
-            usbMounted = True
-        else:  
-            logging.info("hats.py #33: problem with mounting usb")
-    else:
-        if (usbMounted == False):
-            return
-        res = os.system("umount /media/usb0")
-        usbMounted = False
-        if res != 0:
-            logging.info("hats.py #40: problem with umount usb")
-
 @contextmanager
 def min_execution_time(min_time_secs):
     """
@@ -213,8 +189,6 @@ class q1y2018HAT(BasePhysicalHAT):
         logging.info("Starting Monitoring")
         while True:
             with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
-               # test for usb mount need each time through the loop
-                mountCheck()
                 if GPIO.input(self.PIN_VOLT_3_84):
                     logging.debug("Battery voltage > 3.84V i.e. > ~63%")
                     self.solidLED()
@@ -355,8 +329,6 @@ class Axp209HAT(BasePhysicalHAT):
             # The following ensures that the while loop only executes once every 
             #  LED_CYCLE_TIME_SECS...
             with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
-                # test for usb mount need each time through the loop
-                mountCheck()
                 # Perhaps power off the display
                 if time.time() > self.displayPowerOffTime:
                     self.display.powerOffDisplay()

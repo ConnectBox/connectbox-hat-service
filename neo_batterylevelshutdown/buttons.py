@@ -208,8 +208,8 @@ class BUTTONS:
         # Note that this is a specific case of buttons being on PG6 and PG7... 
         #  If another implementation is made for NEO, this will need updating.
         if (globals.device_type == "NEO"):
-            cmd = "devmem2 0x01c208d8 w 0x00777777"
-            retval = os.system(cmd)
+            cmd = "devmem2 0x01c208d8 w 0x00777777 >/dev/null"
+            os.popen(cmd).read()
 
          
         # there are two timers here.  One is for total time the original button was pushed.
@@ -234,8 +234,8 @@ class BUTTONS:
 
         # We are through with reading of the button states so turn interrupt handling back on
         if (globals.device_type == "NEO"):
-            cmd = "devmem2 0x01c208d8 w 0x66777777"
-            retval = os.system(cmd)
+            cmd = "devmem2 0x01c208d8 w 0x66777777 >/dev/null"
+            os.popen(cmd).read()
 
         return buttonTime, dualTimeRecorded
 
