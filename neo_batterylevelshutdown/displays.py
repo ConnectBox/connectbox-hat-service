@@ -192,7 +192,7 @@ class OLED:
             else:
                 # Figure out what the index of the next valid page
                 screenList = globals.screen_enable
-                current_page_index = index(self._curPage)
+                current_page_index = self.pages.index(self._curPage)
                 page_count = len(self.pages)
                 next_page_index = (current_page_index +1) % page_count
                 while screenList[next_page_index % page_count] == 0:
@@ -216,7 +216,7 @@ class OLED:
                 # move backwards in the page list
                 # Figure out what the index of the next valid page
                 screenList = globals.screen_enable
-                current_page_index = index(self._curPage)
+                current_page_index = self.pages.index(self._curPage)
                 page_count = len(self.pages)
                 next_page_index = (current_page_index + page_count -1) % page_count
                 while screenList[next_page_index % page_count] == 0:

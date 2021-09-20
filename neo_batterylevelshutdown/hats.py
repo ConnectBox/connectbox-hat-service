@@ -19,20 +19,25 @@ import neo_batterylevelshutdown.globals as globals
 usbMounted = False
 
 def mountCheck():
-   global usbMounted
-   b = os.popen('lsblk').read()
-   if 'sda1' in b:
-       if usbMounted == True:
-           return
+    global usbMounted
+    b = os.popen('lsblk').read()
+    if 'sda1' in b:
+        if usbMounted == True:
+            return
    # found /dev/sda1 but it isn’t mounted
    #    print ("Found sda1")
-       res = os.system("mount /dev/sda1 /media/usb0")
-       if res == 0:
-           usbMounted = True
-       else:  
-           logging.info("hats.py #33: problem with mounting usb")
-   else:
-       usbMounted = False
+        res = os.system("mount /dev/sda1 /media/usb0")
+        if res == 0:
+            usbMounted = True
+        else:  
+            logging.info("hats.py #33: problem with mounting usb")
+    else:
+        if (usbMounted == False):
+            return
+        res = os.system("umount /media/usb0")
+        usbMounted = False
+        if res != 0:
+            logging.info("hats.py #40: problem with umount usb")
 
 @contextmanager
 def min_execution_time(min_time_secs):
