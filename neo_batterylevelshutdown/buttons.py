@@ -222,10 +222,11 @@ class BUTTONS:
         dualTimeRecorded = 0        # to prevent time being reset when letting off of buttons
 
         while GPIO.input(channel) == 0:         # While original button is being pressed
-            if GPIO.input(otherChannel) == 1:   # move start time up if not pressing other button
+            if GPIO.input(otherChannel) == 0:   # capture hold time if 2nd button down
                 dualButtonTime = time.time() - dualStartTime # How long were both buttons down?
                 if dualButtonTime > dualTimeRecorded:
                     dualTimeRecorded = dualButtonTime
+            if GPIO.input(otherChannel) == 1:   # move start time up if not pressing other button     
                 dualStartTime = time.time()     # reset start time to now
             if (time.time() - startTime) > 5:   # don't stick in this interrupt service forever
                 break    

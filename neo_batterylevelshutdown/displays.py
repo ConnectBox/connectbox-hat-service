@@ -170,6 +170,15 @@ class OLED:
 
         :return: Nothing
         '''
+        
+        # First check to make sure the admin page stack is allowed...
+        #  The last page in the normal stack is the admin page so we can simply
+        #  test if the globals.screen_enable[lastPage] is '0' and bail out in that case
+        screenList = globals.screen_enable
+        adminPage = len(self.pages) - 1
+        if screenList[adminPage == 0]:
+            return
+
         with self._curPageLock:
             logging.debug("Previous page stack: %s", self.pageStack)
             self.pages = self.statusPages if self.pageStack == 'admin' else self.adminPages
