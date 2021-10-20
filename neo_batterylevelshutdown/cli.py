@@ -58,7 +58,7 @@ def getHATClass():
         io6 = 12    #device is Pi GPIO18
         PA1 = 22    #GPIO25
 
-    GPIO.setup(io6,GPIO.IN)
+    GPIO.setup(io6,GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(PG11,GPIO.IN, pull_up_down=GPIO.PUD_UP)
     if GPIO.input(io6) == GPIO.LOW:
         logging.info("NEO HAT not detected")
@@ -76,7 +76,7 @@ def getHATClass():
         #    HIGH => Q4Y2018 == HAT 5.0.0; 5.1.1 (with or w/o battery); HAT 6
         #    LOW  => Q3Y2021 == HAT 7 
     
-        GPIO.setup(PA1, GPIO.IN)
+        GPIO.setup(PA1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         if GPIO.input(PA1) == GPIO.LOW:
             if battexists:
                 if GPIO.input(PG11) == GPIO.HIGH:
