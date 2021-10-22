@@ -15,7 +15,7 @@ import neo_batterylevelshutdown.globals as globals
 
 def getHATClass():
 
-    # As PA6 is set to be a pulldown GPIO.setup(hats.BasePhysicalHAT.PA6, GPIO.IN resistor on system startup by the
+    # As 6 is set to be a pulldown GPIO.setup(hats.BasePhysicalHAT.PA6, GPIO.IN resistor on system startup by the
     #  pa6-pulldown.service, and the HAT sets PA6 HIGH, so we check the
     #  value of PA6, knowing non-HAT NEOs will read LOW.
     #
@@ -53,10 +53,14 @@ def getHATClass():
         PG11 = 7  #PG11
     if globals.device_type == "CM":
         io6 = 31  #GPIO6/30   
-        PA1 = 22    #GPIO25/41
+        PA1 = 22  #GPIO25/41
+        PG11 = 7  #GPIO4/54
+        PA0 = 11  #GPIO17/50
     if globals.device_type == "PI":
-        io6 = 12    #device is Pi GPIO18
-        PA1 = 22    #GPIO25
+        io6 = 12  #device is Pi GPIO18
+        PA1 = 22  #GPIO25
+        PG11 = 7  #GPIO4
+        PA0 = 11  #GPIO17
 
     GPIO.setup(io6,GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(PG11,GPIO.IN, pull_up_down=GPIO.PUD_UP)

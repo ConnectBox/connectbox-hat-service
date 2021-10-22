@@ -33,7 +33,7 @@ def get_device(actual_args=None):
         filx = f.read()
         if ("Raspberry" in filx):
             if ("Compute Module" in filx):
-                port = 0
+                port = 10
                 device_type = "CM"
             else:           #all other Raspberry Pi version other than compute modules
                 port = 1
