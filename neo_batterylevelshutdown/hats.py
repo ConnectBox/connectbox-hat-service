@@ -40,18 +40,7 @@ class BasePhysicalHAT:
     # pylint: disable=unused-argument
     # This is a standard interface - it's ok not to use
     def __init__(self, displayClass):
-#        f = open("/proc/cpuinfo",mode = "r", encoding = 'utf-8')
-#            filx = f.read()
-#            device_type = "NEO"
-#            self.PIN_LED = 12 
-#            if ("Raspberry" in filx):
-#                if ("Compute Module" in filx):
-#                    device_type = "CM"
-#                    self.PIN_LED = 31
-#                else:           #all other Raspberry Pi version other than compute modules
-#                    device_type = "PI"
-#                    self.PIN_LED = 12
-#        f.close()
+
         if globals.device_type == "NEO":
             self.PIN_LED = 12
         if globals.device_type == "CM":
@@ -227,7 +216,7 @@ class Axp209HAT(BasePhysicalHAT):
 
 
     def __init__(self, displayClass):
-        self.axp = AXP209()
+        self.axp = AXP209(port)         # Pass the port number to get the right device
         self.display = displayClass(self)
         self.buttons = BUTTONS(self, self.display)
         # Blank the screen 3 seconds after showing the logo - that's long
@@ -370,16 +359,8 @@ class q3y2018HAT(Axp209HAT):
 
        
     def __init__(self, displayClass):
-#        with open("/proc/cpuinfo", encoding = 'utf8') as f:
-#            device_type = "NEO"
-#            filx = f.read()
-#            if ("Raspberry" in filx):
-#                if ("Compute Module" in filx):
-#                    device_type = "CM"
-#                else:           #all other Raspberry Pi version other than compute modules
-#                    device_type = "PI"
-#        f.close()   
-        
+
+   
         if (globals.device_type == "NEO"):
             self.PIN_L_BUTTON = 8 
             self.PIN_R_BUTTON =  10 
@@ -424,15 +405,7 @@ class q4y2018HAT(Axp209HAT):
 
         
     def __init__(self, displayClass):
-#        with open("/proc/cpuinfo", encoding = 'utf8') as f:
-#            device_type = "NEO"
-#            filx = f.read()
-#            if ("Raspberry" in filx):
-#                if ("Compute Module" in filx):
-#                    device_type = "CM"
-#                else:           #all other Raspberry Pi version other than compute modules
-#                    device_type = "PI"
-#        f.close()   
+
         
         if (globals.device_type == "NEO"):
             self.PIN_L_BUTTON = 8 
@@ -488,15 +461,7 @@ class q4y2019HAT(Axp209HAT):
 
     
     def __init__(self, displayClass):
-#        with open("/proc/cpuinfo", encoding = 'utf8') as f:
-#            device_type = "NEO"
-#            filx = f.read()
-#            if ("Raspberry" in filx):
-#                if ("Compute Module" in filx):
-#                    device_type = "CM"
-#                else:           #all other Raspberry Pi version other than compute modules
-#                    device_type = "PI"
-#        f.close()   
+
         
         if (globals.device_type == "NEO"):
             self.PIN_L_BUTTON =  8 
@@ -546,15 +511,7 @@ class q3y2021HAT(Axp209HAT):
     # Q3Y2021 - HAT 7.0.x
         
     def __init__(self, displayClass):
-#        with open("/proc/cpuinfo", encoding = 'utf8') as f:
-#            device_type = "NEO"
-#            filx = f.read()
-#            if ("Raspberry" in filx):
-#                if ("Compute Module" in filx):
-#                    device_type = "CM"
-#                else:           #all other Raspberry Pi version other than compute modules
-#                    device_type = "PI"
-#        f.close()   
+
         
         if (globals.device_type == "NEO"):
             self.PIN_L_BUTTON = 8               #PG6

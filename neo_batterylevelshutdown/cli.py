@@ -3,6 +3,7 @@
 """Console script for neo_batterylevelshutdown."""
 
 # Modified 11/05/19 JRA to detect no battery unit by asking the AXP209 whether battery exists
+# AXP209 code comes from github.com/artizirk/python-axp209
 
 import logging
 import axp209
@@ -30,21 +31,6 @@ def getHATClass():
         # No OLED. This is a standard Axp209 HAT
         logging.info("No OLED detected")
         return hats.DummyHAT
-#    device_type = "NEO"
-#    io6 = 12    #PA6
-#    PA1 = 22    #PA1
-#    with open("/proc/cpuinfo", encoding = 'utf8')as f:
-#        filx = f.read()
-#        if ("Raspberry" in filx):
-#            if ("Compute Module" in filx):
-#                device_type = "CM"
-#                io6 = 31    #GPIO6/30  
-#                PA1 = 22    #GPIO25/41                
-#            else:           #all other Raspberry Pi version other than compute modules
-#                device_type = "PI"
-#                io6 = 12    #device is Pi GPIO18
-#                PA1 = 22    #GPIO25        
-#    f.close()
     
     if globals.device_type == "NEO":
         io6 = 12  #PA6
@@ -69,7 +55,7 @@ def getHATClass():
         return hats.DummyHAT
 
     try:
-        axp = axp209.AXP209()
+        axp = axp209.AXP209(port)
         battexists = axp.battery_exists
         axp.close()
         # AXP209 found... we have HAT from Q3Y2018 or later
@@ -83,7 +69,7 @@ def getHATClass():
         GPIO.setup(PA1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         if GPIO.input(PA1) == GPIO.LOW:
             if battexists:
-                if GPIO.input(PG11) == GPIO.HIGH:
+                if GPIO.input(PG11) == GPIO.HIGH OR globals.device_type == "CM":
                     logging.info("Q4Y2018 HAT Detected") 
                     return hats.q4y2018HAT
                 else:

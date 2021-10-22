@@ -10,7 +10,7 @@
 """
 import logging
 from luma.core import cmdline, error  # pylint: disable=import-error
-
+import neo_batterylevelshutdown.globals as globals
 
 def GetReleaseVersion():
     """Read the release version"""
@@ -39,7 +39,7 @@ def get_device(actual_args=None):
                 port = 1
                 device_type = "PI"
     f.close()
-    # for NEO we use i2c-port 0. For Pi's other than compute modules we use i2c-port 1
+    # for NEO we use i2c-port 0. For Pi's other than compute modules we use i2c-port 1 or 10 for CM
     
     args = parser.parse_args(['--i2c-port', str(port)])
 
