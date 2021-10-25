@@ -55,7 +55,7 @@ def getHATClass():
         return hats.DummyHAT
 
     try:
-        axp = axp209.AXP209(port)
+        axp = axp209.AXP209(globals.port)
         battexists = axp.battery_exists
         axp.close()
         # AXP209 found... we have HAT from Q3Y2018 or later

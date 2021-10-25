@@ -216,7 +216,7 @@ class Axp209HAT(BasePhysicalHAT):
 
 
     def __init__(self, displayClass):
-        self.axp = AXP209(port)         # Pass the port number to get the right device
+        self.axp = AXP209(globals.port)         # Pass the port number to get the right device
         self.display = displayClass(self)
         self.buttons = BUTTONS(self, self.display)
         # Blank the screen 3 seconds after showing the logo - that's long

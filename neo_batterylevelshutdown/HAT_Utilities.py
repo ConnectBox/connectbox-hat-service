@@ -27,21 +27,21 @@ def get_device(actual_args=None):
     Create device from command-line arguments and return it.
     """
     device_type = "NEO"
-    port = 0    #We assume its a NEO which is port 0
+    globals.port = 0    #We assume its a NEO which is port 0
     parser = cmdline.create_parser(description='luma.examples arguments')
     with open("/proc/cpuinfo", encoding = 'utf8')as f:
         filx = f.read()
         if ("Raspberry" in filx):
             if ("Compute Module" in filx):
-                port = 10
+                globals.port = 10
                 device_type = "CM"
             else:           #all other Raspberry Pi version other than compute modules
-                port = 1
+                globals.port = 1
                 device_type = "PI"
     f.close()
     # for NEO we use i2c-port 0. For Pi's other than compute modules we use i2c-port 1 or 10 for CM
     
-    args = parser.parse_args(['--i2c-port', str(port)])
+    args = parser.parse_args(['--i2c-port', str(globals.port)])
 
     if args.config:
         # load config from file

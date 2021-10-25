@@ -41,6 +41,7 @@ def init():
     global enable_mass_storage
     global screen_enable
     global g_device
+    global port
 
   # Using a dictionary and json to store Branding stuff
   # Read the dictionary
@@ -88,12 +89,15 @@ def init():
 
   #find and set device_type global
     device_type = "NEO"
+    port = 0
     f = io.open("/proc/cpuinfo", mode="r", encoding = 'utf-8')
     filx = f.read()
 
     if ("Raspberry" in filx):
         if ("Compute Module" in filx):
             device_type = "CM"
+            port = 10
         else:           #all other Raspberry Pi version other than compute modules
             device_type = "PI"
+            port = 1
     f.close()
