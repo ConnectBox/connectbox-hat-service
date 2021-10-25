@@ -49,35 +49,35 @@ class BUTTONS:
                 self.display.showSuccessPage()              # display our success page
 
         if command == 'copy_from_usb':
-            if not usb.isUsbPresent():                  # check to see if usb is inserted
-                self.display.showNoUsbPage()            # if not, alert as this is required
+            if not usb.isUsbPresent():                      # check to see if usb is inserted
+                self.display.showNoUsbPage()                # if not, alert as this is required
                 self.display.pageStack = 'error'
-                return                                  # cycle back to menu
-            if not usb.moveMount():             # see if our remount was successful
-                self.display.showErrorPage()    # if not generate error page and exit
+                return                                      # cycle back to menu
+            if not usb.moveMount():                         # see if our remount was successful
+                self.display.showErrorPage()                # if not generate error page and exit
                 self.display.pageStack = 'error'
                 return
-            if not usb.checkSpace():            # verify that source is smaller than destination
-                self.display.showNoSpacePage()  # if not, alert as this is a problem
+            if not usb.checkSpace():                        # verify that source is smaller than destination
+                self.display.showNoSpacePage()              # if not, alert as this is a problem
                 usb.moveMount(curMount='/media/usb1', destMount='/media/usb0')
                 self.display.pageStack = 'error'
                 return
-            if not usb.copyFiles():                 # see if we copied successfully
-                self.display.showErrorPage()        # if not generate error page and exit
+            if not usb.copyFiles():                         # see if we copied successfully
+                self.display.showErrorPage()                # if not generate error page and exit
                 self.display.pageStack = 'error'
                 return
-            if not usb.unmount('/media/usb1'):      # see if we were able to unmount /media/usb1
-                self.display.showErrorPage()        # if not generate error page and exit
+            if not usb.unmount('/media/usb1'):              # see if we were able to unmount /media/usb1
+                self.display.showErrorPage()                # if not generate error page and exit
                 self.display.pageStack = 'error'
                 return
             # if we're here we successfully unmounted /media/usb1
-            if usb.isUsbPresent():  # if usb is present, have the remove it
-                self.display.showRemoveUsbPage()           # show the remove usb page
-                self.display.pageStack = 'removeUsb'  # so our controller knows what to do
-                self.command_to_reference = 'remove_usb'   # will cause another check
+            if usb.isUsbPresent():                          # if usb is present, have the remove it
+                self.display.showRemoveUsbPage()            # show the remove usb page
+                self.display.pageStack = 'removeUsb'        # so our controller knows what to do
+                self.command_to_reference = 'remove_usb'    # will cause another check
                 return
-            self.display.pageStack = 'success'  # if the usb was removed
-            self.display.showSuccessPage()      # display success page
+            self.display.pageStack = 'success'              # if the usb was removed
+            self.display.showSuccessPage()                  # display success page
 
         elif command == 'erase_folder':
             file_exists = False  # in regards to README.txt file
