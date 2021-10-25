@@ -69,7 +69,7 @@ def getHATClass():
         GPIO.setup(PA1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         if GPIO.input(PA1) == GPIO.LOW:
             if battexists:
-                if GPIO.input(PG11) == GPIO.HIGH OR globals.device_type == "CM":
+                if (GPIO.input(PG11) == GPIO.HIGH) or (globals.device_type == "CM"):
                     logging.info("Q4Y2018 HAT Detected") 
                     return hats.q4y2018HAT
                 else:
