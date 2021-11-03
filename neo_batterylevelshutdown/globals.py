@@ -8,6 +8,9 @@
 
 import io
 import json
+import signal
+from . import page_battery
+from .HAT_Utilities import get_device
 
 # need to initialize the variables outside of the init() function
 # Then the init() will fill in the correct values
@@ -28,8 +31,12 @@ font14 = 13
 font10 = 11
 g_device = "g_serial"
 
+def call_battery():
+    page_battery.PageBattery(self.display_device, self.axp)
 
-def init():
+
+
+def init(self, hat_class):
   # by defining as global, the following variables can be modified
   #  by the init() function
     global device_type
@@ -101,3 +108,9 @@ def init():
             device_type = "PI"
             port = 1
     f.close()
+    self.hat = hat_class
+    # rename this.... perhaps it doesn't even need to be stored
+    self.axp = self.hat.axp   # powerManagementDevice
+    self.display_type = 'OLED'
+    self.display_device = get_device()
+    signal.signal(signal.SIGUSR1, call_battery)
