@@ -94,6 +94,9 @@ def getHATClass():
 
     return hats.DummyHAT   
 
+def call_battery():
+    page_battery.PageBattery(self.display_device, self.axp)
+    return
 
 def getDisplayClass():
     try:
@@ -109,23 +112,27 @@ def getDisplayClass():
 
 @click.command()
 @click.option('-v', '--verbose', is_flag=True, default=False)
+
 def main(verbose):
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig(level=logging.INFO)
-
-    globals.init()
     GPIO.setmode(GPIO.BOARD)
     GPIO.setwarnings(False)
     GPIO.setup(22, GPIO.IN,pull_up_down=GPIO.PUD_DOWN)  #for CM no pin is connected see it as low.
+    globals.init()
     hatClass = getHATClass()
     displayClass = getDisplayClass()
+
+
     # displayClass = displays.OLEDA   #temp overwrite for debug - putting the overwrite here worked...
     # test to see if hatClass is hats.q1y2018HAT (no AXP209) but OLED present... 
     #  which would be a Q4Y2019HAT
     if ((hatClass == hats.q4y2019HAT) and (displayClass == displays.OLED)):
         displayClass = displays.OLEDA
+
+    signal.signal(signal.SIGUSR1, call_battery)     #This outputs the battery voltage to a file
          
     logging.info("starting main loop")
     try:

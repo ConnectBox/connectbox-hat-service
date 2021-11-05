@@ -31,12 +31,9 @@ font14 = 13
 font10 = 11
 g_device = "g_serial"
 
-def call_battery():
-    page_battery.PageBattery(self.display_device, self.axp)
 
 
-
-def init(self, hat_class):
+def init():
   # by defining as global, the following variables can be modified
   #  by the init() function
     global device_type
@@ -108,9 +105,4 @@ def init(self, hat_class):
             device_type = "PI"
             port = 1
     f.close()
-    self.hat = hat_class
-    # rename this.... perhaps it doesn't even need to be stored
-    self.axp = self.hat.axp   # powerManagementDevice
-    self.display_type = 'OLED'
-    self.display_device = get_device()
-    signal.signal(signal.SIGUSR1, call_battery)
+
