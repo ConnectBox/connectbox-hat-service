@@ -8,6 +8,7 @@
 import logging
 import axp209
 import click
+import signal
 import RPi.GPIO as GPIO  # pylint: disable=import-error
 import neo_batterylevelshutdown.hats as hats
 import neo_batterylevelshutdown.displays as displays
