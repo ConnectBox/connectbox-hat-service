@@ -42,9 +42,10 @@ def init():
     global splash_x
     global splash_y
     global splash_font
-    global enable_mass_storage
+    global enable_mass_storage      # mass storage enabled overrides g_device always but is subject to otg setting
     global screen_enable
-    global g_device
+    global g_device                 # g_device is subject to otg setting
+    global otg                      # high, low, none
     global port
 
   # Using a dictionary and json to store Branding stuff
@@ -76,7 +77,11 @@ def init():
     try:    
         g_device = js["g_device"]
     except:
-        pass    
+        pass  
+    try:
+        otg = js["otg"]
+    except:
+        pass  
 
 # check that the brand name eg: hostname hasn't changed.
 # if it did we need to update the brand and the hostname
