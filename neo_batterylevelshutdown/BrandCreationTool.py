@@ -5,10 +5,33 @@ import json
 # not that Enable_MassStorage of 1 will override g_device.  Additionally, both MassStorage and g_device are subject to otg : high, low, none
 
 # Create the dictionary
-details  = {'Brand':"ConnectBox", 'Image':"connectbox_logo.png", \
-        'Font':26,'pos_x': 7,'pos_y': 0, \
-        'Enable_MassStorage': 0, 'Screen_Enable': [1,1,1,1,1,1,1,1,1,1,1,1,1],  \
-        'g_device': "g_serial", "otg": "high"}
+details  = {'Brand':"{{ connectbox_default_hostname }}", 'Image':"{{ lcd_logo }}", \
+        'Font':{{ lcd_font_size }},'pos_x': {{ lcd_x_position}},'pos_y': {{ lcd_y_position}}, \
+        'Enable_MassStorage':{{enable_mass_storage}}, \
+        "usb0NoMount": {{ usb0NoMount }}, \
+        "Screen_Enable": [
+        {{ lcd_pages_main }},
+        {{ lcd_pages_info }},
+        {{ lcd_pages_battery }},
+        {{ lcd_pages_memory }},
+        {{ lcd_pages_stats_hour_one }},
+        {{ lcd_pages_stats_hour_two }},
+        {{ lcd_pages_stats_day_one }},
+        {{ lcd_pages_stats_day_two }},
+        {{ lcd_pages_stats_week_one }},
+        {{ lcd_pages_stats_week_two }},
+        {{ lcd_pages_stats_month_one }},
+        {{ lcd_pages_stats_month_two }},
+        {{ lcd_pages_admin }}
+        ], \
+        'g_device': "{{lcd_g_device}}", "otg": {{ otg_enable }}, \
+        "server_url": "{{ server_url }}", \
+        "server_authorization": "{{ server_authorization }}", \
+        "server_sitename": "{{ server_sitename }}", \
+        "server_siteadmin_name": "{{ server_siteadmin_name }}", \
+        "server_siteadmin_email": "{{ server_siteadmin_email }}", \
+        "server_siteadmin_phone": "{{ server_siteadmin_phone }}"
+        }
 
 # Write the dictionary
 with io.open('brand.txt', mode='w') as f:

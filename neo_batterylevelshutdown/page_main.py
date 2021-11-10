@@ -24,7 +24,7 @@ class PageMain:
 
     @staticmethod
     def get_connected_users():
-        c = subprocess.run(['iw', 'dev', 'wlan0', 'station',
+        c = subprocess.run(['iw', 'dev', '{{ client_facing_if }}', 'station',
                             'dump'], stdout=subprocess.PIPE)
         connected_user_count = len([line for line in c.stdout.decode(
             "utf-8").split('\n') if line.startswith("Station")])
