@@ -12,19 +12,67 @@
 import logging
 import os.path
 import subprocess
+import smbus2
 from PIL import Image, ImageFont, ImageDraw
 import axp209
-from .HAT_Utilities import get_device, GetReleaseVersion
 import neo_batterylevelshutdown.globals as globals
+from .HAT_Utilities import get_device, GetReleaseVersion
+
+
+
+# Start building the interactive menuing...
+
+#dev_i2c = 0x34 # for AXP209 = 0x34
+dev_i2c = 0x14  # for ATTiny88 on CM4 = 0x14
+bus = smbus2.SMBus(0)
+
+
 
 class PageMain:
     def __init__(self, device, axp):
         self.device = device
         self.axp = axp
+        global bus
+        global dev_i2c
+# Then need to create a smbus object like...
+        bus = smbus2.SMBus(globals.port)    # 0 = /dev/i2c-0 (port I2C0), 1 = /dev/i2c-1 (port I2C1), etc
+
+# Then we can use smbus commands like... (prefix commands with "bus.") 
+#
+# read_byte(dev)     / reads a byte from specified device
+# write_byte(dev,val)   / writes value val to device dev, current register
+# read_byte_data(dev,reg) / reads byte from device dev, register reg
+# write_byte_data(dev,reg,val) / write byte val to device dev, register reg 
+#
+
+    @staticmethod
+    def averageBat():
+        global bus
+        global dev_i2c
+        bat = 0
+        for reg in range (0x21, 0x29, 2):
+            value = bus.read_byte_data(dev_i2c, reg)
+            value += (bus.read_byte_data(dev_i2c, reg+1)) * 256
+            bat += value
+        bat = bat / bus.read_byte_data(dev_i2c,  0x30)
+        logging.info("Battery average is: "+str(bat))
+        return(bat)
+
+    @staticmethod
+    def averageFule():
+        global bus
+        global dev_i2c
+        fule = 0
+        for reg in range (0x41, 0x44, 1):
+             fule += bus.read_byte_data(dev_i2c, reg)
+        fule = fule / (bus.read_byte_data(dev_i2c, 0x30))
+        fule = round(fule, 0)
+        return(fule)
+
 
     @staticmethod
     def get_connected_users():
-        c = subprocess.run(['iw', 'dev', '{{ client_facing_if }}', 'station',
+        c = subprocess.run(['iw', 'dev', globals.clientIF, 'station',
                             'dump'], stdout=subprocess.PIPE)
         connected_user_count = len([line for line in c.stdout.decode(
             "utf-8").split('\n') if line.startswith("Station")])
@@ -38,6 +86,7 @@ class PageMain:
 
     # pylint: disable=too-many-locals
     def draw_page(self):
+        global bus
         # get an image
         dir_path = os.path.dirname(os.path.abspath(__file__))
         img_path = dir_path + '/assets/main_page.png'
@@ -56,11 +105,11 @@ class PageMain:
         x = globals.splash_x
         y = globals.splash_y
 
-        logging.info("Branding Name"+ globals.brand_name)          # test element for log  
-    
+        logging.info("Branding Name : "+ globals.brand_name)          # test element for log  
+
         # get a font
         font_path = dir_path + '/assets/connectbox.ttf'
-        font30 = ImageFont.truetype(font_path, font)
+        font30 = ImageFont.truetype(font_path, globals.font30)
         font20 = ImageFont.truetype(font_path, globals.font20)
         font14 = ImageFont.truetype(font_path, globals.font14)
 
@@ -78,13 +127,22 @@ class PageMain:
             acin_present = self.axp.power_input_status.acin_present
             battexists = self.axp.battery_exists
             if acin_present:
-                battgauge = self.axp.battery_gauge
+                if globals.device_type != "CM":
+                    battgauge = self.axp.battery_gauge
+                    battery_voltage = self.axp.battery_voltage
+                else:
+                    battgauge = PageMain.averageFule()
+                    battery_voltage = PageMain.averageBat()
             else:
             # if on battery power, calculate fuel based on battery voltage
             #  Fuel = (Vbatt - 3.275)/0.00767
             # simplifies to: (Vbatt(mv) - 3275) / 7.67 
-                battery_voltage = self.axp.battery_voltage
-                battgauge =  (battery_voltage - 3275) / 7.67   
+                if globals.device_type != "CM":
+                    battery_voltage = self.axp.battery_voltage
+                    battgauge =  (battery_voltage - 3275) / 7.67
+                else:
+                    battery_voltage = PageMain.averageBat()
+                    battgauge = PageMain.averageFule()
         except OSError:
             acin_present = False
             battexists = False
@@ -106,6 +164,9 @@ class PageMain:
                 d.text((43, 51), "!", font=font14, fill="black")
             else:
                 # start of battery level= 37px, end = 57px
+                battgauge = min(battgauge, 100)
+                logging.info("battery gauge is "+str( battgauge ))
+
                 x = int((57 - 37) * (battgauge / 100)) + 37
                 d.rectangle((37, 51, x, 58), fill="black")
 
@@ -127,66 +188,5 @@ if __name__ == "__main__":
         PageMain(get_device(), axp209.AXP209()).draw_page()
     except KeyboardInterrupt:
         pass
-        
-        
-class PageMainA(PageMain):
-    def __init__(self, device):
-        self.device = device
-    
-    def draw_page(self):
-        # get an image
-        dir_path = os.path.dirname(os.path.abspath(__file__))
-        img_path = dir_path + '/assets/main_page.png'
-        base = Image.open(img_path).convert('RGBA')
-        fff = Image.new(base.mode, base.size, (255,) * 4)
-        img = Image.composite(base, fff, base)
-
-        # make a blank image for the text, initialized as transparent
-        txt = Image.new('RGBA', base.size, (255, 255, 255, 0))
-
-        # get a font
-    #    font_path = dir_path + '/assets/connectbox.ttf'
-    #    font30 = ImageFont.truetype(font_path, 30)
-    #    font20 = ImageFont.truetype(font_path, 20)
-    #    font14 = ImageFont.truetype(font_path, 14)
-
-        # get a drawing context
-        d = ImageDraw.Draw(txt)
-
-        # ConnectBox Banner - get name, font size, x and y position from 
-        name = globals.brand_name
-        font = globals.splash_font
-        x = globals.splash_x
-        y = globals.splash_y
-
-        # get a font
-        font_path = dir_path + '/assets/connectbox.ttf'
-        font30 = ImageFont.truetype(font_path, font)
-        font20 = ImageFont.truetype(font_path, globals.font20)
-        font14 = ImageFont.truetype(font_path, globals.font14)
-
-        d.text((x, y), name, font=font30, fill="black")
-
-        # Image version name/number
-        d.text((38, 32), GetReleaseVersion(), font=font14, fill="black")
-
-        # connected users
-        d.text((13, 35), PageMain.get_connected_users(),
-               font=font20, fill="black")
 
 
-#        d.rectangle((64, 48, 71, 61), fill="white")  # charge symbol
-        d.rectangle((34, 48, 71, 61), fill="white")  # blank out battery and charge symbol
-
-            # cross out the battery
-#        d.line((37, 51, 57, 58), fill="black", width=2)
-#        d.line((37, 58, 57, 51), fill="black", width=2)
-
-        # cpu temp
-        d.text((105, 49), "%.0fC" % PageMain.get_cpu_temp(),
-               font=font14, fill="black")
-
-        out = Image.alpha_composite(img, txt)
-        self.device.display(out.convert(self.device.mode))
-        self.device.show()
-    

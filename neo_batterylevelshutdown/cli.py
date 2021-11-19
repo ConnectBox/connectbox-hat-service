@@ -8,12 +8,12 @@
 import logging
 import axp209
 import click
-import signal
 import RPi.GPIO as GPIO  # pylint: disable=import-error
+import neo_batterylevelshutdown.globals as globals
 import neo_batterylevelshutdown.hats as hats
 import neo_batterylevelshutdown.displays as displays
 import neo_batterylevelshutdown.HAT_Utilities as utilities
-import neo_batterylevelshutdown.globals as globals
+
 
 def getHATClass():
 
@@ -70,7 +70,7 @@ def getHATClass():
         GPIO.setup(PA1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         if GPIO.input(PA1) == GPIO.LOW:
             if battexists:
-                if (GPIO.input(PG11) == GPIO.HIGH) or (globals.device_type == "CM"):
+                if (GPIO.input(PG11) == GPIO.HIGH) or (device_type == "CM"):
                     logging.info("Q4Y2018 HAT Detected") 
                     return hats.q4y2018HAT
                 else:
@@ -122,6 +122,7 @@ def main(verbose):
     GPIO.setmode(GPIO.BOARD)
     GPIO.setwarnings(False)
     GPIO.setup(22, GPIO.IN,pull_up_down=GPIO.PUD_DOWN)  #for CM no pin is connected see it as low.
+#Initialize the Global Variables
     globals.init()
     hatClass = getHATClass()
     displayClass = getDisplayClass()
@@ -133,8 +134,7 @@ def main(verbose):
     if ((hatClass == hats.q4y2019HAT) and (displayClass == displays.OLED)):
         displayClass = displays.OLEDA
 
-    signal.signal(signal.SIGUSR1, call_battery)     #This outputs the battery voltage to a file
-         
+     
     logging.info("starting main loop")
     try:
         hatClass(displayClass).mainLoop()

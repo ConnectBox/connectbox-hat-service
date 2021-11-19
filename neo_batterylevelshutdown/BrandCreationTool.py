@@ -1,6 +1,7 @@
 # Branding file creation tool
 import io  
 import json
+import 'connectbox-pi/ansible/group_vars/brand'
 
 # not that Enable_MassStorage of 1 will override g_device.  Additionally, both MassStorage and g_device are subject to otg : high, low, none
 
@@ -13,6 +14,7 @@ details  = {'Brand':"{{ connectbox_default_hostname }}", 'Image':"{{ lcd_logo }}
         {{ lcd_pages_main }},
         {{ lcd_pages_info }},
         {{ lcd_pages_battery }},
+        {{ lcd_pages_multi_bat }},
         {{ lcd_pages_memory }},
         {{ lcd_pages_stats_hour_one }},
         {{ lcd_pages_stats_hour_two }},

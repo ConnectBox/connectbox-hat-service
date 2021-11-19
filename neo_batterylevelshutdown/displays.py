@@ -16,6 +16,7 @@ from . import page_memory
 from . import page_battery_low
 from . import page_power_down
 from . import page_display_image
+from . import page_multi_bat
 import neo_batterylevelshutdown.globals as globals
 
 
@@ -69,6 +70,7 @@ class OLED:
             page_main.PageMain(self.display_device, self.axp),
             page_info.PageInfo(self.display_device),
             page_battery.PageBattery(self.display_device, self.axp),
+            page_multi_bat.PageMulti_Bat(self.display_device, self.axp),
             page_memory.PageMemory(self.display_device),
             page_stats.PageStats(self.display_device, 'hour', 1),
             page_stats.PageStats(self.display_device, 'hour', 2),
@@ -170,13 +172,13 @@ class OLED:
 
         :return: Nothing
         '''
-        
+
         # First check to make sure the admin page stack is allowed...
         #  The last page in the normal stack is the admin page so we can simply
-        #  test if the globals.screen_enable[lastPage] is '0' and bail out in that case
+        #  test if the screen_enable[lastPage] is '0' and bail out in that case
         screenList = globals.screen_enable
         adminPage = len(self.pages) - 1
-        if screenList[adminPage == 0]:
+        if screenList[adminPage] == 0:
             return
 
         with self._curPageLock:

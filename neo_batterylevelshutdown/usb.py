@@ -33,14 +33,17 @@ class USB:
         return response == 0
 
     @staticmethod
-    def mount(devPath='/dev/sda1', newPath='/media/usb1'):
+    def mount(devPath='/dev/sda1', newPath='/media/usb11'):
         '''
         Mount the USB drive at the devPath to the specified newPath location
 
         :return: True / False
         '''
-        if not os.path.exists(devPath):
-            devPath = "/dev/sdb1"
+#   Find the first USB key in the system
+        while not os.path.exists(devPath):
+            x = ord(devPath[len(devPath)-2])
+            devPath = "/dev/sd"+chr(x+1)+"1"
+
         # try:
         logging.debug("Mounting USB at %s to %s", devPath, newPath)
         if not os.path.exists(newPath):  # see if desired mounting directory exists
@@ -51,7 +54,7 @@ class USB:
         return response == 0
 
     @staticmethod
-    def copyFiles(sourcePath='/media/usb1', destPath='/media/usb0'):
+    def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0'):
         '''
         Move files from sourcePath to destPath recursively
         :param sourcePath: place where files are
@@ -67,7 +70,7 @@ class USB:
 
         return False
 
-    def checkSpace(self, sourcePath='/media/usb1', destPath='/media/usb0'):
+    def checkSpace(self, sourcePath='/media/usb11', destPath='/media/usb0'):
         '''
         Function to make sure there is space on destination for source materials
 
@@ -87,7 +90,7 @@ class USB:
     # pylint: disable=unused-variable
     # Looks like this isn't summing subdirectories?
     @staticmethod
-    def getSize(startPath='/media/usb1'):
+    def getSize(startPath='/media/usb11'):
         '''
         Recursively get the size of a folder structure
 
@@ -117,18 +120,40 @@ class USB:
         adjustedFree = free - freeSpaceCushion
         return adjustedFree
 
-    def moveMount(self, devMount='/dev/sda1', curMount='/media/usb0', destMount='/media/usb1'):
+    def moveMount(self, devMount='/dev/sda1', curMount='/media/usb0', destMount='/media/usb11'):
         '''
         This is a wrapper for umount, mount.  This is simple and works.
         we could use mount --move  if the mount points are not within a mount point that is
         marked as shared, but we need to consider the implications of non-shared mounts before
         doing it
 
-        :param devMount: device name in the /dev listing
-        :param curMount: where usb is currently mounted
-        :param destMount: where we want the usb to be mounted
-        :return: True / False
+        Find the first USB key by device
         '''
 
-        self.unmount(curMount)
-        return self.mount(devMount, destMount)
+        while not os.path.exists(devMount):
+            x = ord(devMount[len(devMount)-2])
+            devMount = "/dev/sd"+chr(x+1)+"1"
+
+# take the file mount outuput and separate it into lines
+        mounts = str(subprocess.check_output(['df']))
+        mounts = mounts.split("\\n")
+
+# take the lines and check for the mount.
+        for line in mounts:
+            if (devMount in line) and (curMount in line):
+                x = True
+                break
+            else:
+                x = False
+
+
+        #:param devMount: device name in the /dev listing
+        #:param curMount: where usb is currently mounted
+        #:param destMount: where we want the usb to be mounted
+        #:return: True / False
+        #'''
+        if x:
+            self.unmount(curMount)
+            return self.mount(devMount, destMount)
+        else:
+            return x

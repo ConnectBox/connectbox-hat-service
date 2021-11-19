@@ -11,9 +11,9 @@ import io
 import sys
 import time
 from axp209 import AXP209, AXP209_ADDRESS
+from . import globals
 import RPi.GPIO as GPIO  # pylint: disable=import-error
 from .buttons import BUTTONS
-import neo_batterylevelshutdown.globals as globals
 
 @contextmanager
 def min_execution_time(min_time_secs):
@@ -147,29 +147,62 @@ class q1y2018HAT(BasePhysicalHAT):
     PIN_VOLT_3_84 = PG9 = 18
 
     def __init__(self, displayClass):
-        logging.info("Initializing Pins")
-        GPIO.setup(self.PIN_VOLT_3_0, GPIO.IN)
-        GPIO.setup(self.PIN_VOLT_3_45, GPIO.IN)
-        GPIO.setup(self.PIN_VOLT_3_71, GPIO.IN)
-        GPIO.setup(self.PIN_VOLT_3_84, GPIO.IN)
-        logging.info("Pin initialization complete")
-        # Run parent constructors before adding event detection
-        #  as some callbacks require objects only initialised
-        #  in parent constructors
-        super().__init__(displayClass)
+
         # The circuitry on the HAT triggers a shutdown of the 5V converter
         #  once battery voltage goes below 3.0V. It gives an 8 second grace
         #  period before yanking the power, so if we have a falling edge on
         #  PIN_VOLT_3_0, then we're about to get the power yanked so attempt
         #  a graceful shutdown immediately.
-        GPIO.add_event_detect(self.PIN_VOLT_3_0, GPIO.FALLING,
+        if (globals.device_type == "NEO"):
+            logging.info("Initializing Pins")
+            GPIO.setup(self.PIN_VOLT_3_0, GPIO.IN)
+            GPIO.setup(self.PIN_VOLT_3_45, GPIO.IN)
+            GPIO.setup(self.PIN_VOLT_3_71, GPIO.IN)
+            GPIO.setup(self.PIN_VOLT_3_84, GPIO.IN)
+            logging.info("Pin initialization complete")
+            # Run parent constructors before adding event detection
+            #  as some callbacks require objects only initialised
+            #  in parent constructors
+            super().__init__(displayClass)
+            GPIO.add_event_detect(self.PIN_VOLT_3_0, GPIO.FALLING, \
                               callback=self.shutdownDeviceCallback)
-        # We cannot perform edge detection on PG7, PG8 or PG9 because there
-        #  is no hardware hysteresis built into those level detectors, so when
-        #  charging, the charger chip causes edge transitions (mostly rising
-        #  but there are also some falling) at a rate of tens per second which
-        #  means the software (and thus the board) is consuming lots of CPU
-        #  and thus the charge rate is slower.
+            # We cannot perform edge detection on PG7, PG8 or PG9 because there
+            #  is no hardware hysteresis built into those level detectors, so when
+            #  charging, the charger chip causes edge transitions (mostly rising
+            #  but there are also some falling) at a rate of tens per second which
+            #  means the software (and thus the board) is consuming lots of CPU
+            #  and thus the charge rate is slower.
+        else:
+            if (globals.device_type =="CM"):
+                self.PIN_L_BUTTON = 5 #GPIO3/56  
+                self.PIN_R_BUTTON = 7 #GPIO4/54  
+                self.PIN_AXP_INTERRUPT_LINE = 10 #GPIO15/51
+                self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+            else:                   #device type is Pi
+                self.PIN_L_BUTTON = 8 #GPIO 14
+                self.PIN_R_BUTTON = 10 #GPIO 15
+                self.PIN_AXP_INTERRUPT_LIINE = 16 #GPIO23
+                self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method  
+            GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
+            GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
+            # Run parent constructors before adding event detection
+            #  as some callbacks require objects only initialised
+            #  in parent constructors
+            super().__init__(displayClass)
+            GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
+                              callback=self.buttons.handleButtonPress,
+                              bouncetime=125)
+            GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
+                              callback=self.buttons.handleButtonPress,
+                              bouncetime=125)
+
+    def powerOffDisplay(self, channel):
+        """Turn off the display"""
+        logging.debug("Processing press on GPIO %s (poweroff).", channel)
+        self.display.powerOffDisplay()
+        # The display is already off... no need to set the power off time
+        #  like we do in other callbacks
+
 
     def mainLoop(self):
         """
@@ -240,6 +273,9 @@ class Axp209HAT(BasePhysicalHAT):
         #  with a known state for all registers.
         for ec_reg in (0x40, 0x41, 0x42, 0x43, 0x44):
             self.axp.bus.write_byte_data(AXP209_ADDRESS, ec_reg, 0x00)
+
+        # Write the charge control 1 - limit/ current control register 
+        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x33, 0x99)
 
         # Now all interrupts are disabled, clear the previous state
         self.clearAllPreviousInterrupts()
@@ -360,7 +396,7 @@ class q3y2018HAT(Axp209HAT):
        
     def __init__(self, displayClass):
 
-   
+
         if (globals.device_type == "NEO"):
             self.PIN_L_BUTTON = 8 
             self.PIN_R_BUTTON =  10 
@@ -406,7 +442,7 @@ class q4y2018HAT(Axp209HAT):
         
     def __init__(self, displayClass):
 
-        
+
         if (globals.device_type == "NEO"):
             self.PIN_L_BUTTON = 8 
             self.PIN_R_BUTTON = 10 
@@ -462,7 +498,7 @@ class q4y2019HAT(Axp209HAT):
     
     def __init__(self, displayClass):
 
-        
+
         if (globals.device_type == "NEO"):
             self.PIN_L_BUTTON =  8 
             self.PIN_R_BUTTON = 10 
@@ -512,7 +548,7 @@ class q3y2021HAT(Axp209HAT):
         
     def __init__(self, displayClass):
 
-        
+
         if (globals.device_type == "NEO"):
             self.PIN_L_BUTTON = 8               #PG6
             self.PIN_R_BUTTON = 10              #PG7

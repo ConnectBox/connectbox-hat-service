@@ -118,6 +118,7 @@ class BUTTONS:
 
         # this section is to prevent both buttons calling this method and getting two replies
         if self.BUTTON_PRESS_BUSY:  # if flag is set that means this method is currently being used
+            logging.debug("skipping button press - BUSY flag")
             return  # skip
 
         # check the amount of time that has passed since this function has been cleared and
@@ -127,11 +128,15 @@ class BUTTONS:
             self.BUTTON_PRESS_BUSY = True  # if enough time, proceed and set the BUSY flag
 
         else:  # if not enough time, pass
+            logging.debug("return from time.time - self.button_press_cleared_time")
             return
 
         logging.debug("Handling button press")
         # get time single button was pressed along with the amount of time both buttons were pressed
         channelTime, dualTime = self.checkPressTime(channel)
+
+        logging.debug("time stamp for channel Time line 137: %s", channelTime)
+        logging.debug("time stamp for dualTime line 138: %s", dualTime)
 
         # clear the CHECK_PRESS_BUSY flag
         self.BUTTON_PRESS_BUSY = False
@@ -151,6 +156,7 @@ class BUTTONS:
         # if either button is below the press threshold, treat as normal
         elif channelTime < self.CHECK_PRESS_THRESHOLD_SEC or \
                 dualTime < self.CHECK_PRESS_THRESHOLD_SEC:
+            logging.debug("hit self.check_press_threshold_sec line 158")
             if channel == self.USABLE_BUTTONS[0]:  # this is the left button
                 if pageStack in ['confirm', 'error', 'success']: # return to admin stack
                     self.chooseCancel()
@@ -168,6 +174,7 @@ class BUTTONS:
 
         # if we have a long press (both are equal or greater than threshold) call switch pages
         elif channelTime >= self.CHECK_PRESS_THRESHOLD_SEC: # dual long push
+            logging.debug("hit dual button press time, move forward")
             self.switchPages()
 
     def checkPressTime(self, channel):

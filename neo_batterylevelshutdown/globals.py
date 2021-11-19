@@ -8,9 +8,6 @@
 
 import io
 import json
-import signal
-from . import page_battery
-from .HAT_Utilities import get_device
 
 # need to initialize the variables outside of the init() function
 # Then the init() will fill in the correct values
@@ -22,7 +19,7 @@ splash_x = 7
 splash_y = 0
 splash_font = 26
 enable_mass_storage = 0
-screen_enable = [1,1,1,1,1,1,1,1,1,1,1,1,1]
+screen_enable = [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 
 # font sizes are just specified here
 font30 = 26
@@ -30,12 +27,20 @@ font20 = 19
 font14 = 13
 font10 = 11
 g_device = "g_serial"
+clientIF = "wlan0"
+port = 0
+otg = 1
+usbnomount = 0
+
+from . import page_battery
+from .HAT_Utilities import get_device
 
 
 
 def init():
   # by defining as global, the following variables can be modified
   #  by the init() function
+
     global device_type
     global brand_name
     global logo_image
@@ -43,10 +48,12 @@ def init():
     global splash_y
     global splash_font
     global enable_mass_storage      # mass storage enabled overrides g_device always but is subject to otg setting
+    global usbnomount
     global screen_enable
     global g_device                 # g_device is subject to otg setting
     global otg                      # high, low, none
     global port
+    global clientIF
 
   # Using a dictionary and json to store Branding stuff
   # Read the dictionary
@@ -67,39 +74,50 @@ def init():
     # Just in case our brand.txt doesn't have these parameters...
     #   (for any that are missing, just keep the defaults)
     try:
+        device_type = js["Device_Type"]
+    except:
+        pass
+    try:
         enable_mass_storage = js["Enable_MassStorage"]
     except:
         pass
-    try:        
+    try:
+        usbnomount = js["usb0NoMount"]
+    except:
+        pass
+    try:
         screen_enable = js["Screen_Enable"]
     except:
         pass
-    try:    
+    try:
         g_device = js["g_device"]
     except:
-        pass  
+        pass
     try:
         otg = js["otg"]
     except:
-        pass  
+        pass
+    try:
+        clientIF = js["clientIF"]
+    except:
+        pass
 
 # check that the brand name eg: hostname hasn't changed.
 # if it did we need to update the brand and the hostname
-    f = io.open('/etc/hostname', mode="r", encoding='utf-8')
+    f = open("/etc/hostname", mode="r", encoding="utf-8")
     bname = f.read().rstrip()
     f.close()
     if (bname.lower() != brand_name.lower()):
-        brand_name = bname 
-        js["Brand"] = bname 
+        brand_name = bname
+        js["Brand"] = bname
         f = open("/usr/local/connectbox/brand.txt", 'w')
         f.write(json.dumps(js))
-        f.close() 
+        f.close()
 
 
   #find and set device_type global
     device_type = "NEO"
-    port = 0
-    f = io.open("/proc/cpuinfo", mode="r", encoding = 'utf-8')
+    f = open("/proc/cpuinfo", mode="r", encoding = 'utf-8')
     filx = f.read()
 
     if ("Raspberry" in filx):

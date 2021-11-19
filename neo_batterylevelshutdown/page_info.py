@@ -45,7 +45,8 @@ class PageInfo:
             prefix[s] = 1 << (i + 1) * 10
         for s in reversed(symbols):
             if n >= prefix[s]:
-                value = int(float(n) / prefix[s])
+                x = (float(n) / prefix[s])
+                value = str("{:3.1f}".format(x))
                 return '%s%s' % (value, s)
         return "%sB" % n
 
@@ -64,7 +65,7 @@ class PageInfo:
 
     @staticmethod
     def get_connected_users():
-        c = subprocess.run(['iw', 'dev', 'wlan0', 'station',
+        c = subprocess.run(['iw', 'dev', globals. clientIF, 'station',
                             'dump'], stdout=subprocess.PIPE)
         connected_user_count = len([line for line in c.stdout.decode(
             "utf-8").split('\n') if line.startswith("Station")])

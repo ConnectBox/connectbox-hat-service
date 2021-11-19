@@ -44,7 +44,8 @@ class PageMemory:
             prefix[s] = 1 << (i + 1) * 10
         for s in reversed(symbols):
             if n >= prefix[s]:
-                value = int(float(n) / prefix[s])
+                x = (float(n) / prefix[s])
+                value = str("{:3.1f}".format(x))
                 return '%s%s' % (value, s)
         return "%sB" % n
 

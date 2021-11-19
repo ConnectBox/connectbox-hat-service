@@ -9,23 +9,46 @@
   GeoDirk - May 2018
 ===========================================
 """
-
+import logging
 import os.path
+import smbus2
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
 import axp209
+from . import globals
 from .HAT_Utilities import get_device
-import neo_batterylevelshutdown.globals as globals
 
+
+# Start building the interactive menuing...
+
+#dev_i2c = 0x34 # for AXP209 = 0x34
+dev_i2c = 0x14  # for ATTiny88 on CM4 = 0x14
+bus = smbus2.SMBus(0)
 
 class PageBattery:
     def __init__(self, device, axp):
         self.device = device
         self.axp = axp
+        global bus
+# Then need to create a smbus object like...
 
-    # pylint: disable=too-many-locals
+        bus = smbus2.SMBus(globals.port)   # 0 = /dev/i2c-0 (port I2C0), 1 = /dev/i2c-1 (port I2C1), etc
+
+# Then we can use smbus commands like... (prefix commands with "bus.") 
+#
+# read_byte(dev)     / reads a byte from specified device
+# write_byte(dev,val)   / writes value val to device dev, current register
+# read_byte_data(dev,reg) / reads byte from device dev, register reg
+# write_byte_data(dev,reg,val) / write byte val to device dev, register reg 
+#
+# pylint: disable=too-many-locals
+
+
+
+
     def draw_page(self):
+        global bus
         dir_path = os.path.dirname(os.path.abspath(__file__))
         # find out if the unit is charging or not
         # get an image
@@ -73,6 +96,10 @@ class PageBattery:
             percent = self.axp.battery_gauge
             d.text((50, 1), "%.0f%%" %
                    percent, font=font20, fill="black")
+            if globals.device_type == "CM":
+                logging.info("Bus Battery: "+str( bus.read_byte_data(dev_i2c, 0x31)))
+                d.text((90,1), "#%.0f" %
+                   float(bus.read_byte_data(dev_i2c, 0x31)), font=font20, fill="black")		#Display the battery number
             d.text((94, 42), "%.0f" %
                    self.axp.battery_charge_current, font=font20, fill="black")
         else:
@@ -84,15 +111,19 @@ class PageBattery:
             if have_axp209:
                 # if on battery power, calculate fuel based on battery voltage
                 #  Fuel = (Vbatt - 3.275)/0.00767
-                # simplifies to: (Vbatt(mv) - 3275) / 7.67 
+                # simplifies to: (Vbatt(mv) - 3275) / 7.67
                 battery_voltage = self.axp.battery_voltage
-                percent =  (battery_voltage - 3275) / 7.67   
-                
+                percent =  (battery_voltage - 3275) / 7.67
+
                 d.text((63, 1), "%.0f%%" %
                        percent, font=font20, fill="black")
                 d.text((94, 42), "%.0f" %
                        self.axp.battery_discharge_current,
                        font=font20, fill="black")
+                if globals.device_type == "CM":
+                    logging.info("Bus Battery: "+str( bus.read_byte_data(dev_i2c, 0x31)))
+                    d.text((95,1), "#%.0f" %
+                       float(bus.read_byte_data(dev_i2c, 0x31)), font=font20, fill="black")		#Display the battery number
             else:
                 d.text((63, 1), "%.0f%%" %
                        -1, font=font20, fill="black")
