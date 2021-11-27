@@ -108,7 +108,7 @@ class BasePhysicalHAT:
         
             # Now we have determined the OTG request, so do the requested work
             if otg_mode == True:
-            l    ogging.debug("in OTG set")
+                logging.debug("in OTG set")
 
             else:    
                 logging.debug("not OTG set")
