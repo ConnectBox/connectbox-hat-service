@@ -42,11 +42,11 @@ class BasePhysicalHAT:
     def __init__(self, displayClass):
 
         if globals.device_type == "NEO":
-            self.PIN_LED = 12
+            self.PIN_LED = 6    # PA6
         if globals.device_type == "CM":
-            self.PIN_LED = 31
+            self.PIN_LED = 6    # GPIO6
         if globals.device_type == "PI":
-            self.PIN_LED = 12    
+            self.PIN_LED = 6    # GPIO6
 
 
         GPIO.setup(self.PIN_LED, GPIO.OUT)
@@ -74,7 +74,8 @@ class BasePhysicalHAT:
         self.shutdownDevice()
 
     def handleOtgSelect(self, channel):
-        logging.debug("OTG edge detected ") 
+        logging.debug("OTG edge detected ")
+        # OTG ONLY IMPLEMENTED FOR NEO HAT 7.0 so just return if not NEO 
         # disable interrupt for a bit to find if the level on channel is HIGH or LOW
         #  and based on that, choose whether to enable or disable OTG service
         # Note that this is a specific case of OTG sense being on PA0... 
@@ -92,27 +93,27 @@ class BasePhysicalHAT:
             cmd1 = cmd + " w " + hex(write_val)          # Form the command
             retval = os.system(cmd1)                     # Write the register
 
-        # we are now in input mode for the pin...
-        if GPIO.input(channel) == 0:
-            logging.debug("The OTG pin is LOW, so leaving OTG mode")
-            otg_mode = False
-        else:
-            logging.debug("The OTG pin is HIGH, so entering OTG mode")    
-            otg_mode = True
+            # we are now in input mode for the pin...
+            if GPIO.input(channel) == 0:
+                logging.debug("The OTG pin is LOW, so leaving OTG mode")
+                otg_mode = False
+            else:
+                logging.debug("The OTG pin is HIGH, so entering OTG mode")    
+                otg_mode = True
 
-        # we are through with using the OTG pin as an input... put the register back as it was
-        if (globals.device_type == "NEO"):
-            cmd2 = cmd + " w " + hex(init_val)      #form command to write the orginal value back
-            retval = os.popen(cmd2).read()          # the stdout of the command
+            # we are through with using the OTG pin as an input... put the register back as it was
+            if (globals.device_type == "NEO"):
+                cmd2 = cmd + " w " + hex(init_val)      #form command to write the orginal value back
+                retval = os.popen(cmd2).read()          # the stdout of the command
         
-        # Now we have determined the OTG request, so do the requested work
-        if otg_mode == True:
-            logging.debug("in OTG set")
+            # Now we have determined the OTG request, so do the requested work
+            if otg_mode == True:
+            l    ogging.debug("in OTG set")
 
-        else:    
-            logging.debug("not OTG set")
+            else:    
+                logging.debug("not OTG set")
         
-        # End of the OTG interrupt handler.......
+    # End of the OTG interrupt handler.......
         
 
 
@@ -139,12 +140,15 @@ class DummyHAT:
 
 
 class q1y2018HAT(BasePhysicalHAT):
+    # The circuitry on the Q1Y2018 HAT had voltage comparators to determine
+    # battery voltage. All later HATs use the AXP209 for finding voltages
+    # This HAT was ONLY made for NEO 
 
-    # Pin numbers from https://github.com/auto3000/RPi.GPIO_NP
-    PIN_VOLT_3_0 = PG6 = 8
-    PIN_VOLT_3_45 = PG7 = 10
-    PIN_VOLT_3_71 = PG8 = 16
-    PIN_VOLT_3_84 = PG9 = 18
+    # Pin numbers specified in BCM format
+    PIN_VOLT_3_0 =  198     # PG6 
+    PIN_VOLT_3_45 = 199     # PG7
+    PIN_VOLT_3_71 = 200     # PG8
+    PIN_VOLT_3_84 = 201     # PG9
 
     def __init__(self, displayClass):
 
@@ -172,29 +176,6 @@ class q1y2018HAT(BasePhysicalHAT):
             #  but there are also some falling) at a rate of tens per second which
             #  means the software (and thus the board) is consuming lots of CPU
             #  and thus the charge rate is slower.
-        else:
-            if (globals.device_type =="CM"):
-                self.PIN_L_BUTTON = 5 #GPIO3/56  
-                self.PIN_R_BUTTON = 7 #GPIO4/54  
-                self.PIN_AXP_INTERRUPT_LINE = 10 #GPIO15/51
-                self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
-            else:                   #device type is Pi
-                self.PIN_L_BUTTON = 8 #GPIO 14
-                self.PIN_R_BUTTON = 10 #GPIO 15
-                self.PIN_AXP_INTERRUPT_LIINE = 16 #GPIO23
-                self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method  
-            GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
-            GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
-            # Run parent constructors before adding event detection
-            #  as some callbacks require objects only initialised
-            #  in parent constructors
-            super().__init__(displayClass)
-            GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
-                              callback=self.buttons.handleButtonPress,
-                              bouncetime=125)
-            GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
-                              callback=self.buttons.handleButtonPress,
-                              bouncetime=125)
 
     def powerOffDisplay(self, channel):
         """Turn off the display"""
@@ -238,9 +219,9 @@ class q1y2018HAT(BasePhysicalHAT):
 class Axp209HAT(BasePhysicalHAT):
     SHUTDOWN_WARNING_PERIOD_SECS = 60
     BATTERY_CHECK_FREQUENCY_SECS = 30
-    MIN_BATTERY_THRESHOLD_PERC_SOLID = 63  # Parity with PIN_VOLT_3_84
+    MIN_BATTERY_THRESHOLD_PERC_SOLID = 63         # Parity with PIN_VOLT_3_84
     MIN_BATTERY_THRESHOLD_PERC_SINGLE_FLASH = 33  # Parity with PIN_VOLT_3_71
-    MIN_BATTERY_THRESHOLD_PERC_DOUBLE_FLASH = 3  # Parity with PIN_VOLT_3_45
+    MIN_BATTERY_THRESHOLD_PERC_DOUBLE_FLASH = 3   # Parity with PIN_VOLT_3_45
     BATTERY_WARNING_THRESHOLD_PERC = MIN_BATTERY_THRESHOLD_PERC_DOUBLE_FLASH
     BATTERY_SHUTDOWN_THRESHOLD_PERC = 1
     DISPLAY_TIMEOUT_SECS = 20
@@ -393,26 +374,15 @@ class Axp209HAT(BasePhysicalHAT):
 
 class q3y2018HAT(Axp209HAT):
 
+    # HAT 4.6.7 - This is ONLY a NEO HAT
        
     def __init__(self, displayClass):
 
-
-        if (globals.device_type == "NEO"):
-            self.PIN_L_BUTTON = 8 
-            self.PIN_R_BUTTON =  10 
-            self.PIN_AXP_INTERRUPT_LINE = 16
-            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
-        elif (globals.device_type =="CM"):
-            self.PIN_L_BUTTON = 5 #GPIO3/56  
-            self.PIN_R_BUTTON = 7 #GPIO4/54  
-            self.PIN_AXP_INTERRUPT_LINE = 10 #GPIO15/51
-            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
-        else:                   #device type is Pi
-            self.PIN_L_BUTTON = 8 #GPIO 14
-            self.PIN_R_BUTTON = 10 #GPIO 15
-            self.PIN_AXP_INTERRUPT_LIINE = 16 #GPIO23
-            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
-            
+        self.PIN_L_BUTTON =    1            #  PA1
+        self.PIN_R_BUTTON =  199            #  PG7
+#        self.PIN_AXP_INTERRUPT_LINE = 16
+        self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+           
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
         # Run parent constructors before adding event detection
@@ -436,27 +406,30 @@ class q3y2018HAT(Axp209HAT):
 
 class q4y2018HAT(Axp209HAT):
 
-    # Q4Y2018 - AXP209/OLED (Anker) Unit run specific pins
-    # Pin numbers from https://github.com/auto3000/RPi.GPIO_NP
+    # The CM4 resolves to this HAT class
 
+    # Q4Y2018 - AXP209/OLED (Anker) Unit run specific pins
+    # All pin references are now BCM format
         
     def __init__(self, displayClass):
 
-
         if (globals.device_type == "NEO"):
-            self.PIN_L_BUTTON = 8 
-            self.PIN_R_BUTTON = 10 
-            self.PIN_AXP_INTERRUPT_LINE = 16
+            self.PIN_L_BUTTON = 198             # PG6 
+            self.PIN_R_BUTTON = 199             # PG7 
+            self.PIN_AXP_INTERRUPT_LINE = 200   # PG8
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         elif (globals.device_type =="CM"):
-            self.PIN_L_BUTTON = 5 #GPIO3/56  
-            self.PIN_R_BUTTON = 7 #GPIO4/54  
-            self.PIN_AXP_INTERRUPT_LINE = 10 #GPIO15/51
+            self.PIN_L_BUTTON = 3               # GPIO3/56  
+            self.PIN_R_BUTTON = 4               # GPIO4/54  
+            self.PIN_AXP_INTERRUPT_LINE = 15    # GPIO15/51
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+        
+        # We don't currently have a HAT for RPi... so we will get here if HAT wiring is same as CM4 for GPIO
+        #  For the moment, we will assume a HAT with GPIO assignments the same as CM4
         else:                   #device type is Pi
-            self.PIN_L_BUTTON = 8 #GPIO 14
-            self.PIN_R_BUTTON = 10 #GPIO 15
-            self.PIN_AXP_INTERRUPT_LIINE = 16 #GPIO23
+            self.PIN_L_BUTTON = 3               # GPIO3
+            self.PIN_R_BUTTON = 4               # GPIO4
+            self.PIN_AXP_INTERRUPT_LIINE = 15   # GPIO15
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method            
     
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
@@ -498,23 +471,25 @@ class q4y2019HAT(Axp209HAT):
     
     def __init__(self, displayClass):
 
-
         if (globals.device_type == "NEO"):
-            self.PIN_L_BUTTON =  8 
-            self.PIN_R_BUTTON = 10 
-            self.PIN_AXP_INTERRUPT_LINE = 16
- 
+            self.PIN_L_BUTTON = 198             # PG6 
+            self.PIN_R_BUTTON = 199             # PG7 
+            self.PIN_AXP_INTERRUPT_LINE = 200   # PG8
+            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         elif (globals.device_type =="CM"):
-            self.PIN_L_BUTTON = PG6 = 5 #GPIO3/56  
-            self.PIN_R_BUTTON = PG7 = 7 #GPIO4/54  
-            self.PIN_AXP_INTERRUPT_LINE = PG8 = 10 #GPIO15/51
-
+            self.PIN_L_BUTTON = 3               # GPIO3/56  
+            self.PIN_R_BUTTON = 4               # GPIO4/54  
+            self.PIN_AXP_INTERRUPT_LINE = 15    # GPIO15/51
+            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+        
+        # We don't currently have a HAT for RPi... so we will get here if HAT wiring is same as CM4 for GPIO
+        #  For the moment, we will assume a HAT with GPIO assignments the same as CM4
         else:                   #device type is Pi
-            self.PIN_L_BUTTON = PG6 = 8 #GPIO 14
-            self.PIN_R_BUTTON = PG7 = 10 #GPIO 15
-            self.PIN_AXP_INTERRUPT_LINE = PG8 = 16 #GPIO23
-            
-        self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+            self.PIN_L_BUTTON = 3               # GPIO3
+            self.PIN_R_BUTTON = 4               # GPIO4
+            self.PIN_AXP_INTERRUPT_LIINE = 15   # GPIO15
+            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method            
+
         # Next 3 lines from Axp209HAT class
         self.display = displayClass(self)   
         self.buttons = BUTTONS(self, self.display)
@@ -544,30 +519,16 @@ class q4y2019HAT(Axp209HAT):
 
 class q3y2021HAT(Axp209HAT):
 
-    # Q3Y2021 - HAT 7.0.x
+    # Q3Y2021 - HAT 7.0.x - NEO ONLY
         
     def __init__(self, displayClass):
 
+        self.PIN_L_BUTTON = 198               #PG6
+        self.PIN_R_BUTTON = 199               #PG7
+        self.PIN_AXP_INTERRUPT_LINE = 200     #PG8
+        self.PIN_OTG_SENSE = 0                #PA0
+        self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
 
-        if (globals.device_type == "NEO"):
-            self.PIN_L_BUTTON = 8               #PG6
-            self.PIN_R_BUTTON = 10              #PG7
-            self.PIN_AXP_INTERRUPT_LINE = 16    #PG8
-            self.PIN_OTG_SENSE = 11             #PA0
-            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
-        elif (globals.device_type =="CM"):
-            self.PIN_L_BUTTON = 5 #GPIO3/56  
-            self.PIN_R_BUTTON = 7 #GPIO4/54  
-            self.PIN_AXP_INTERRUPT_LINE = 10 #GPIO15/51
-            self.PIN_OTG_SENSE = 50             # (place holder until we know better)
-            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
-        else:                   #device type is Pi
-            self.PIN_L_BUTTON = 8 #GPIO 14
-            self.PIN_R_BUTTON = 10 #GPIO 15
-            self.PIN_AXP_INTERRUPT_LIINE = 16 #GPIO23
-            self.PIN_OTG_SENSE = 11             #PA0  (place holder until we know better)
-            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method            
-    
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_AXP_INTERRUPT_LINE, GPIO.IN)

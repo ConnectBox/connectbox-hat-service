@@ -195,15 +195,7 @@ class BUTTONS:
         :param channel: The pin number that has been pressed and thus is registering a 0
         :return: time original button pressed, time both buttons were pressed
 
-        Note that the RPi.GPIO_NP_CB library invalidates the GPIO.input() function when the
-        GPIO.add_event_detect() function is invoked. To work around this we will use the
-        GPIO.remove_event_detect() function and add the GPIO.setup() function (for BOTH push button
-        pins) at the top of the checkPressTime() routine. This will make the 
-        GPIO.input() functional for the pushbuttons. Then we will re-establish the GPIO.add_event_detect()
-        for both push buttons before leaving this routine to re-enable interrupt servicing for push button
-        action. 
-       
-        '''
+       '''
 
         
         # otherChannel is the button that has not been passed in by the channel parameter.

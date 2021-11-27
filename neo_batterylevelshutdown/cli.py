@@ -17,41 +17,43 @@ import neo_batterylevelshutdown.HAT_Utilities as utilities
 
 def getHATClass():
 
-    # As 6 is set to be a pulldown GPIO.setup(hats.BasePhysicalHAT.PA6, GPIO.IN resistor on system startup by the
-    #  pa6-pulldown.service, and the HAT sets PA6 HIGH, so we check the
-    #  value of PA6, knowing non-HAT NEOs will read LOW.
-    #
     # We assume the HAT is not present if we're unable to setup the pin
     #  or read from it. That's the safe option and means that we won't
     #  immediately shutdown devices that don't have a HAT if we've incorrect
     #  detected the presence of a HAT
     try:
         # See if we can find an OLED
-        x = utilities.get_device()
+        utilities.get_device()
     except OSError:
-        # No OLED. This is a standard Axp209 HAT
+        # No OLED. Treat it as a DummyHAT
         logging.info("No OLED detected")
         return hats.DummyHAT
-    
-    if globals.device_type == "NEO":
-        io6 = 12  #PA6
-        PA1 = 22  #PA1
-        PA0 = 11  #PA0
-        PG11 = 7  #PG11
-    if globals.device_type == "CM":
-        io6 = 31  #GPIO6/30   
-        PA1 = 22  #GPIO25/41
-        PG11 = 7  #GPIO4/54
-        PA0 = 11  #GPIO17/50
-    if globals.device_type == "PI":
-        io6 = 12  #device is Pi GPIO18
-        PA1 = 22  #GPIO25
-        PG11 = 7  #GPIO4
-        PA0 = 11  #GPIO17
 
-    GPIO.setup(io6,GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+# Express all pin numbers in BCM nomenclature for compatibility with CM4
+#  (which requires BCM)
+# We will carry the original, NEO based names but use BCM pin numbers
+#  Note that PA1 is used only for version testing in NEO, so for RPi (PI and CM4)
+#   versions we specify an un-connected pin... GPIO25 
+#   PA0 only used on HAT7 for OTG sense... spec un-connected pin on others   
+    if globals.device_type == "NEO":
+        PA6 = 6     #PA6    Amber LED
+        PA1 = 1     #PA1    Test for HAT 4.6.7 (all other HATs have this pin unconnected)
+        PG11 = 203  #PG11   Test of HAT 7
+        PA0 = 0     #PA0    OTG sense (HAT7), not used on others
+    if globals.device_type == "CM":
+        PA6 = 6     #GPIO6/30   
+        PA1 = 25    #GPIO25/41
+        PG11 = 4    #GPIO4/54   Actually GPIO4 is PB2 which will be HIGH on CM4 HAT
+        PA0 = 17    #GPIO17/50
+    if globals.device_type == "PI":
+        PA6 = 6     #device is Pi GPIO18
+        PA1 = 25    #GPIO25
+        PG11 = 4    #GPIO4
+        PA0 = 17    #GPIO17
+
+    GPIO.setup(PA6,GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(PG11,GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    if GPIO.input(io6) == GPIO.LOW:
+    if GPIO.input(PA6) == GPIO.LOW:
         logging.info("NEO HAT not detected")
         return hats.DummyHAT
 
@@ -62,15 +64,17 @@ def getHATClass():
         # AXP209 found... we have HAT from Q3Y2018 or later
         # Test PA1... 
         #    HIGH => Q3Y2018 == HAT 4.6.7
-        #    LOW =>          == HAT 5.0.0; 5.1.1 (with or w/o battery); HAT 6; HAT 7
+        #    LOW =>          == HAT 5.0.0; 5.1.1 (with or w/o battery); HAT 6; HAT 7; CM4
         # Test PG11...
-        #    HIGH => Q4Y2018 == HAT 5.0.0; 5.1.1 (with or w/o battery); HAT 6
+        #    HIGH => Q4Y2018 == HAT 5.0.0; 5.1.1 (with or w/o battery); HAT 6; CM4
         #    LOW  => Q3Y2021 == HAT 7 
     
         GPIO.setup(PA1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         if GPIO.input(PA1) == GPIO.LOW:
             if battexists:
-                if (GPIO.input(PG11) == GPIO.HIGH) or (device_type == "CM"):
+                if (GPIO.input(PG11) == GPIO.HIGH):
+                # This would include CM4 HAT as "PG11" is assigned to GPIO4
+                #  and that is wired to PB2 (normally HIGH) 
                     logging.info("Q4Y2018 HAT Detected") 
                     return hats.q4y2018HAT
                 else:
@@ -84,10 +88,13 @@ def getHATClass():
                 logging.info("Q42019 HAT Detected")
                 return hats.q4y2019HAT
 
+        # PA1 is HIGH, so this is HAT 4.6.7
         logging.info("Q3Y2018 HAT Detected")
         return hats.q3y2018HAT
+
     except OSError:
         # There is no AXP209 on the Q12018 HAT
+        #  so this is either a real Q1Y2018 HAT or we have a bare processor 
         logging.info("Q1Y2018 HAT Detected")
         return hats.q1y2018HAT
     except KeyboardInterrupt:
@@ -119,9 +126,9 @@ def main(verbose):
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig(level=logging.INFO)
-    GPIO.setmode(GPIO.BOARD)
+# Use BCM pin numbering scheme for compatibility with CM4        
+    GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
-    GPIO.setup(22, GPIO.IN,pull_up_down=GPIO.PUD_DOWN)  #for CM no pin is connected see it as low.
 #Initialize the Global Variables
     globals.init()
     hatClass = getHATClass()
