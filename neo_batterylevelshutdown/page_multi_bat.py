@@ -142,7 +142,7 @@ class PageMulti_Bat:
             # percent charge left
             # if on battery power, calculate fuel based on battery voltage
             #  Fuel = (Vbatt - 3.275)/0.00767
-            percent = averagefuel()
+            percent = averageFuel()
         else:
             # discharging or AXP209 not present i.e. not doing it's job
             # cover the charging symbol & in arrow
@@ -153,7 +153,7 @@ class PageMulti_Bat:
             #  Fuel = (Vbatt - 3.275)/0.00767
             # simplifies to: (Vbatt(mv) - 3275) / 7.67 
             battery_voltage = averageBat()
-            percent = averagefuel()
+            percent = averageFuel()
 
         # draw battery fill lines
         if not have_axp209 or not self.axp.battery_exists:
