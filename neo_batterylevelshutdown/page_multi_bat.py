@@ -40,19 +40,19 @@ def averageBat():
     bat = round(bat, 0)
     return(bat)
 
-def averageFule():
+def averageFuel():
     global bus
     global dev_i2c
-    fule = 0
-    for reg in range (0x41, 0x44, 1):
-         fule += bus.read_byte_data(dev_i2c, reg)
-    fule = fule / (bus.read_byte_data(dev_i2c, 0x30))
-    fule = round(fule, 0)
-    return(fule)
+    fuel = 0
+    for reg in range (0x41, 0x45, 1):
+         fuel += bus.read_byte_data(dev_i2c, reg)
+    fuel = fuel / (bus.read_byte_data(dev_i2c, 0x30))
+    fuel = round(fuel, 0)
+    return(fuel)
 
 
 def readBat(x):
-# reading batteries 1 - 4 for their voltage
+# reading battery (valid 1 - 4) for their voltage
 # read the 5 volt input at 5
 
     global bus
@@ -66,18 +66,18 @@ def readBat(x):
     else: value = 0
     return(value)
 
-def readFule(x):
-# reading batteries 1 - 4 for their fule
+def readfuel(x):
+# reading battery (valid 1 - 4 ) for the fuel
 
     global bus
     global dev_i2c
-    if x>0 and x<4:
+    if x>0 and x<5:
         x -= 1 
         reg= 0x41+x
         logging.debug("read battery %i fuel register start %i ", x+1, reg)
-        fule = bus.read_byte_data(dev_i2c, reg)
-    else: fule = 0
-    return(fule)
+        fuel = bus.read_byte_data(dev_i2c, reg)
+    else: fuel = 0
+    return(fuel)
 
 
 
@@ -142,7 +142,7 @@ class PageMulti_Bat:
             # percent charge left
             # if on battery power, calculate fuel based on battery voltage
             #  Fuel = (Vbatt - 3.275)/0.00767
-            percent = averageFule()
+            percent = averagefuel()
         else:
             # discharging or AXP209 not present i.e. not doing it's job
             # cover the charging symbol & in arrow
@@ -153,7 +153,7 @@ class PageMulti_Bat:
             #  Fuel = (Vbatt - 3.275)/0.00767
             # simplifies to: (Vbatt(mv) - 3275) / 7.67 
             battery_voltage = averageBat()
-            percent = averageFule()
+            percent = averagefuel()
 
         # draw battery fill lines
         if not have_axp209 or not self.axp.battery_exists:

@@ -59,15 +59,15 @@ class PageMain:
         return(bat)
 
     @staticmethod
-    def averageFule():
+    def averageFuel():
         global bus
         global dev_i2c
-        fule = 0
-        for reg in range (0x41, 0x44, 1):
-             fule += bus.read_byte_data(dev_i2c, reg)
-        fule = fule / (bus.read_byte_data(dev_i2c, 0x30))
-        fule = round(fule, 0)
-        return(fule)
+        fuel = 0
+        for reg in range (0x41, 0x45, 1):
+             fuel += bus.read_byte_data(dev_i2c, reg)
+        fuel = fuel / (bus.read_byte_data(dev_i2c, 0x30))
+        fuel = round(fuel, 0)
+        return(fuel)
 
 
     @staticmethod
@@ -131,7 +131,7 @@ class PageMain:
                     battgauge = self.axp.battery_gauge
                     battery_voltage = self.axp.battery_voltage
                 else:
-                    battgauge = PageMain.averageFule()
+                    battgauge = PageMain.averageFuel()
                     battery_voltage = PageMain.averageBat()
             else:
             # if on battery power, calculate fuel based on battery voltage
@@ -142,7 +142,7 @@ class PageMain:
                     battgauge =  (battery_voltage - 3275) / 7.67
                 else:
                     battery_voltage = PageMain.averageBat()
-                    battgauge = PageMain.averageFule()
+                    battgauge = PageMain.averageFuel()
         except OSError:
             acin_present = False
             battexists = False
