@@ -45,16 +45,30 @@ class PageMain:
 # write_byte_data(dev,reg,val) / write byte val to device dev, register reg 
 #
 
+ #handle the occassional failure of i2c read (ioctl errno 121)
+    @staticmethod
+    def i2c_read(device, reg):
+        value = -1
+        i = 1
+        while (value == -1) and (i < 10):
+            try:
+                value = bus.read_byte_data(device, reg)
+                return (value)
+            except:
+                i += 1
+        return (-1)      # return -1 if we have 10 successive read failures      
+
+
     @staticmethod
     def averageBat():
         global bus
         global dev_i2c
         bat = 0
         for reg in range (0x21, 0x29, 2):
-            value = bus.read_byte_data(dev_i2c, reg)
-            value += (bus.read_byte_data(dev_i2c, reg+1)) * 256
+            value = PageMain.i2c_read(dev_i2c, reg)
+            value += (PageMain.i2c_read(dev_i2c, reg+1)) * 256
             bat += value
-        bat = bat / bus.read_byte_data(dev_i2c,  0x30)
+        bat = bat / PageMain.i2c_read(dev_i2c,  0x30)
         logging.info("Battery average is: "+str(bat))
         return(bat)
 
@@ -64,8 +78,8 @@ class PageMain:
         global dev_i2c
         fuel = 0
         for reg in range (0x41, 0x45, 1):
-             fuel += bus.read_byte_data(dev_i2c, reg)
-        fuel = fuel / (bus.read_byte_data(dev_i2c, 0x30))
+             fuel += PageMain.i2c_read(dev_i2c, reg)
+        fuel = fuel / (PageMain.i2c_read(dev_i2c, 0x30))
         fuel = round(fuel, 0)
         return(fuel)
 

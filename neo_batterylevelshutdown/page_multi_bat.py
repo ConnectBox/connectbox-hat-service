@@ -28,15 +28,29 @@ dev_i2c = 0x14
 bus = smbus2.SMBus(0)
 
 
+# handle the occassional failure of i2c read (ioctl errno 121)
+def i2c_read(device, reg):
+    global bus
+
+    value = -1
+    i = 1
+    while (value == -1) and (i < 10):
+        try:
+            value = bus.read_byte_data(device, reg)
+            return (value)
+        except:
+            i += 1
+    return (-1)      # return -1 if we have 10 successive read failures      
+
 def averageBat():
     global bus
     global dev_i2c
     bat = 0
     for reg in range (0x21, 0x29, 2):
-         value = bus.read_byte_data(dev_i2c, reg)
-         value += (bus.read_byte_data(dev_i2c, reg+1)) * 256
+         value = i2c_read(dev_i2c, reg)
+         value += (i2c_read(dev_i2c, reg+1)) * 256
          bat += value
-    bat = bat / (bus.read_byte_data(dev_i2c, 0x30))
+    bat = bat / (i2c_read(dev_i2c, 0x30))
     bat = round(bat, 0)
     return(bat)
 
@@ -45,8 +59,8 @@ def averageFuel():
     global dev_i2c
     fuel = 0
     for reg in range (0x41, 0x45, 1):
-         fuel += bus.read_byte_data(dev_i2c, reg)
-    fuel = fuel / (bus.read_byte_data(dev_i2c, 0x30))
+         fuel += i2c_read(dev_i2c, reg)
+    fuel = fuel / (i2c_read(dev_i2c, 0x30))
     fuel = round(fuel, 0)
     return(fuel)
 
@@ -61,8 +75,8 @@ def readBat(x):
         x -= 1 
         reg= 0x21+(x*2)
         logging.debug("read battery %i register start %i ", x+1, reg)
-        value = bus.read_byte_data(dev_i2c, reg)
-        value += (bus.read_byte_data(dev_i2c, reg+1)) * 256
+        value = i2c_read(dev_i2c, reg)
+        value += (i2c_read(dev_i2c, reg+1)) * 256
     else: value = 0
     return(value)
 
@@ -75,7 +89,7 @@ def readfuel(x):
         x -= 1 
         reg= 0x41+x
         logging.debug("read battery %i fuel register start %i ", x+1, reg)
-        fuel = bus.read_byte_data(dev_i2c, reg)
+        fuel = i2c_read(dev_i2c, reg)
     else: fuel = 0
     return(fuel)
 

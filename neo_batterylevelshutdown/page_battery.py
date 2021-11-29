@@ -45,6 +45,18 @@ class PageBattery:
 # pylint: disable=too-many-locals
 
 
+# handle the occassional failure of i2c read (ioctl errno 121)
+    def i2c_read(device, reg):
+        value = -1
+        i = 1
+        while (value == -1) and (i < 10):
+            try:
+                value = bus.read_byte_data(device, reg)
+                return (value)
+            except:
+                i += 1
+        return (-1)      # return -1 if we have 10 successive read failures      
+
 
 
     def draw_page(self):
@@ -97,9 +109,9 @@ class PageBattery:
             d.text((50, 1), "%.0f%%" %
                    percent, font=font20, fill="black")
             if globals.device_type == "CM":
-                logging.info("Bus Battery: "+str( bus.read_byte_data(dev_i2c, 0x31)))
+                logging.info("Bus Battery: "+str( PageBattery.i2c_read(dev_i2c, 0x31)))
                 d.text((90,1), "#%.0f" %
-                   float(bus.read_byte_data(dev_i2c, 0x31)), font=font20, fill="black")		#Display the battery number
+                   float(PageBattery.i2c_read(dev_i2c, 0x31)), font=font20, fill="black")		#Display the battery number
             d.text((94, 42), "%.0f" %
                    self.axp.battery_charge_current, font=font20, fill="black")
         else:
@@ -121,9 +133,9 @@ class PageBattery:
                        self.axp.battery_discharge_current,
                        font=font20, fill="black")
                 if globals.device_type == "CM":
-                    logging.info("Bus Battery: "+str( bus.read_byte_data(dev_i2c, 0x31)))
+                    logging.info("Bus Battery: "+str( PageBattery.i2c_read(dev_i2c, 0x31)))
                     d.text((95,1), "#%.0f" %
-                       float(bus.read_byte_data(dev_i2c, 0x31)), font=font20, fill="black")		#Display the battery number
+                       float(PageBattery.i2c_read(dev_i2c, 0x31)), font=font20, fill="black")		#Display the battery number
             else:
                 d.text((63, 1), "%.0f%%" %
                        -1, font=font20, fill="black")
