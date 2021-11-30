@@ -90,13 +90,13 @@ class PageMemory:
         usage = PageMemory.mem_usage()
         d.text((50, 21), "%.0f%%" %
                (100 - usage.percent), font=font20, fill="black")
-        d.text((85, 21), "%s" % PageMemory.bytes2human(usage.available),
+        d.text((85, 21), "%s" % PageMemory.bytes2human(usage.free),
                font=font20, fill="black")
 
         # disk usage
         usage = PageMemory.disk_usage('/media/usb0')
         d.text((50, 42), "%.0f%%" % usage.percent, font=font20, fill="black")
-        d.text((85, 42), "%s" % PageMemory.bytes2human(usage.total),
+        d.text((85, 42), "%s" % PageMemory.bytes2human(usage.free),
                font=font20, fill="black")
 
         out = Image.alpha_composite(img, txt)

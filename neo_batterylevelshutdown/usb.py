@@ -17,9 +17,10 @@ class USB:
         Returns if there is a USB plugged into specified devPath
         :return: True / False
         '''
-        if not os.path.exists(devPath):
-            devPath="/dev/sdb1"
-        logging.debug("Checking to see if usb is mounted")
+#   Find the first USB key in the system
+        while not os.path.exists(devPath) and x<ord(':'):
+            x = ord(devPath[len(devPath)-2])
+            devPath = "/dev/sd"+chr(x+1)+"1"
         return os.path.exists(devPath)
 
     @staticmethod
@@ -40,7 +41,7 @@ class USB:
         :return: True / False
         '''
 #   Find the first USB key in the system
-        while not os.path.exists(devPath):
+        while not os.path.exists(devPath) and x<ord(':'):
             x = ord(devPath[len(devPath)-2])
             devPath = "/dev/sd"+chr(x+1)+"1"
 
@@ -61,14 +62,27 @@ class USB:
         :param destPath:  where we want to copy them to
         :return:  True / False
         '''
-
-        if os.path.exists(sourcePath) and os.path.exists(destPath):
-            logging.debug("Copying tree")
-            copy_tree(sourcePath, destPath)
-            logging.debug("Done copying")
-            return True
-
-        return False
+        y = 0
+        if os.path.exsists(destPath):
+            while os.path.exists(sourcePath):
+                if os.path.exists(sourcePath) and os.path.exists(destPath):
+                    logging.debug("Copying tree: "+sourePath)
+                    copy_tree(sourcePath, destPath)
+                    y = 1
+                    logging.debug("Done copying to: "+destPath)
+#   Find the next USB key in the system to copy to destination
+                if len(sourcePath==12): sourcePath = "/media/usb0"
+                x = ord(sourcePath[len(sourcePath)-2])+1
+                sourcePath = '/media/usb'+chr(x)
+                while not os.path.exists(sourcePath) and x < ord(':'):
+                    x = ord(sourcePath[len(sourcePath)-2])
+                    sourcePath = "/dev/usb"+chr(x+1)
+            if y == 1:
+                return True
+            else:
+                return False
+        else:
+            return False
 
     def checkSpace(self, sourcePath='/media/usb11', destPath='/media/usb0'):
         '''
@@ -78,15 +92,21 @@ class USB:
         :param destPath:  path to the destination
         :return: True / False
         '''
-        if os.path.exists(sourcePath) and os.path.exists(destPath):
-            sourceSize = self.getSize(sourcePath)
-            destSize = self.getFreeSpace(destPath)
+        destSize = self.getFreeSpace(destPath)
+        sourceSize = 0
+        while os.path.exists(sourcePath):
+            sourceSize += self.getSize(sourcePath)
+            if len(sourcePath) == 12:
+                sourcePath = '/media/usb0'
+            x = ord(sourcePath[len(sourcePath - 2)])+1
+            sourcePath = '/media/usb'+chr(x)
+            while not os.path.exsists(sourcePath) and x < ord(':'):
+                x = ord(sourcePath[len(sourcePath)-2])
+                sourcePath = "/dev/usb"+chr(x+1) 
             logging.debug("Source size: %s bytes, destination size: %s bytes",
                           sourceSize, destSize)
-            return destSize >= sourceSize
-
-        return False
-
+        return destSize >= sourceSize
+        
     # pylint: disable=unused-variable
     # Looks like this isn't summing subdirectories?
     @staticmethod
@@ -157,3 +177,16 @@ class USB:
             return self.mount(devMount, destMount)
         else:
             return x
+
+
+    def getDev(curMount):
+        '''
+        This is a method of getting the device for the mount point
+        '''
+
+        mnts = os.subprocess.run(['df'], stdout=subprocess.PIPE, universal_newlines=True)
+        lines = mnts.stdout
+        for line in lines:
+            if curMount in line:
+                return line.split[' '],1)
+        return ''

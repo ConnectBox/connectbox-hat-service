@@ -59,23 +59,32 @@ class BUTTONS:
                 return
             if not usb.checkSpace():                        # verify that source is smaller than destination
                 self.display.showNoSpacePage()              # if not, alert as this is a problem
-                usb.moveMount(curMount='/media/usb1', destMount='/media/usb0')
+                usb.moveMount(curMount='/media/usb11', destMount='/media/usb0')
                 self.display.pageStack = 'error'
                 return
             if not usb.copyFiles():                         # see if we copied successfully
                 self.display.showErrorPage()                # if not generate error page and exit
                 self.display.pageStack = 'error'
                 return
-            if not usb.unmount('/media/usb1'):              # see if we were able to unmount /media/usb1
+            if not usb.unmount('/media/usb11'):             # see if we were able to unmount /media/usb11
                 self.display.showErrorPage()                # if not generate error page and exit
                 self.display.pageStack = 'error'
                 return
-            # if we're here we successfully unmounted /media/usb1
-            if usb.isUsbPresent():                          # if usb is present, have the remove it
-                self.display.showRemoveUsbPage()            # show the remove usb page
-                self.display.pageStack = 'removeUsb'        # so our controller knows what to do
-                self.command_to_reference = 'remove_usb'    # will cause another check
-                return
+            # if we're here we successfully unmounted /media/usb11 lets check for more
+            curMount='/media/usb1'
+            x = 0
+            while os.path.exists(curMount) and x < ord(':')
+                curDev = usb.getDev(curMount)
+                if not usb.unmount(curMount):
+                    self.display.showErrorPage()
+                    self.display.pageStack = 'error'
+                    return
+                while usb.isUsbPresent(curDev):               # if usb is present, have the remove it
+                    self.display.showRemoveUsbPage()            # show the remove usb page
+                self.display.showSuccessPage()              # display our success page
+                x = ord(curMount[len(curMount)-2])
+                x +=1
+                curMount = '/media/usb'+chr(x)
             self.display.pageStack = 'success'              # if the usb was removed
             self.display.showSuccessPage()                  # display success page
 
