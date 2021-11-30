@@ -188,5 +188,5 @@ class USB:
         lines = mnts.stdout
         for line in lines:
             if curMount in line:
-                return line.split[' '],1)
+                return line.split([' '],1)
         return ''
