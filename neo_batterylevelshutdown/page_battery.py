@@ -82,18 +82,22 @@ class PageBattery:
 
         # See if we have a responsive AXP209
         try:
-            _ = self.axp.battery_exists
+            bat_exists = self.axp.battery_exists
+            bat_voltage = self.axp.battery_voltage
             have_axp209 = True
         except OSError:
             have_axp209 = False
 
         # draw text, full opacity
         if have_axp209:
+            if not bat_exists:
+                bat_voltage = 0
             d.text((5, 42), "%.0f" %
-                   int(self.axp.battery_voltage), font=font20, fill="black")
+                       int(bat_voltage), font=font20, fill="black")
             d.text((52, 42), "%.1f" %
-                   self.axp.internal_temperature, font=font20, fill="black")
-        else:
+                       self.axp.internal_temperature, font=font20, fill="black")
+
+        else:       # no AXP209
             # Act like there's no battery present
             d.text((5, 42), "%.0f" %
                    -1, font=font20, fill="black")

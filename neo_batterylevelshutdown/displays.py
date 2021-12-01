@@ -105,6 +105,7 @@ class OLED:
         #  manage timeouts and timed display power-downs, so we leave that
         #  as an exercise for anyone using this class
         self.drawLogo()
+        time.sleep(3)       # display logo screen for 3 seconds
 
     def getAdminPageName(self):
         return self.adminPageNames[self.adminPages.index(self._curPage)]
@@ -299,60 +300,15 @@ class OLED:
         )
 
 
-class OLEDA(OLED):      # why is OLED"" in red? Because camel case was expected (but OLED is really the name of the class)
+    # Function to redraw the current page for use in 
+    # refreshing the page during long display times
+    def redrawCurrentPage(self):
+        with self._curPageLock:
+            self._curPage.draw_page()
 
-# Since we have made this a sub-class of class OLED, we only need to re-define the __init__() function
-#  to get a new self.statusPages variable which uses a new page 1 (fuel gauge info) and
-#  which eliminates page 3 (full battery info)
 
-    def __init__(self, hat_class):
-        logging.info("In __init__ of OLEDA")
-        
-        self.hat = hat_class
-        # rename this.... perhaps it doesn't even need to be stored
-#        self.axp = self.hat.axp   # powerManagementDevice
-        self.display_type = 'OLED'
-        self.display_device = get_device()
-        self.blank_page = page_none.PageBlank(self.display_device)
-        self.low_battery_page = \
-            page_battery_low.PageBatteryLow(self.display_device)
-        self.power_down_page = \
-            page_power_down.PagePowerDown(self.display_device)
-        self.statusPages = [
-            page_main.PageMainA(self.display_device),  # new page 
-            page_info.PageInfo(self.display_device),
-            page_memory.PageMemory(self.display_device),
-            page_stats.PageStats(self.display_device, 'hour', 1),
-            page_stats.PageStats(self.display_device, 'hour', 2),
-            page_stats.PageStats(self.display_device, 'day', 1),
-            page_stats.PageStats(self.display_device, 'day', 2),
-            page_stats.PageStats(self.display_device, 'week', 1),
-            page_stats.PageStats(self.display_device, 'week', 2),
-            page_stats.PageStats(self.display_device, 'month', 1),
-            page_stats.PageStats(self.display_device, 'month', 2),
-            page_display_image.PageDisplayImage(self.display_device, 'show_admin.png'),
-        ]
-        self.adminPages = [
-            page_display_image.PageDisplayImage(self.display_device, 'copy_from_usb.png'),
-            page_display_image.PageDisplayImage(self.display_device, 'erase_folder.png'),
-            page_display_image.PageDisplayImage(self.display_device, 'exit.png'),  # MUST be last
-        ]
-        self.adminPageNames = [
-            'copy_from_usb',
-            'erase_folder',
-            'exit'
-        ]
 
-        self.pages = self.statusPages
-        self.pageStack = 'status'
 
-        self._curPage = self.pages[self.STARTING_PAGE_INDEX]
-        # callbacks run in another thread, so we need to lock access to the
-        #  current page variable as it can be modified from the main loop
-        #  and from callbacks
-        self._curPageLock = threading.Lock()
-        # draw the py logo - classes containing an OLED display
-        #  manage timeouts and timed display power-downs, so we leave that
-        #  as an exercise for anyone using this class
-        self.drawLogo()
+
+
 

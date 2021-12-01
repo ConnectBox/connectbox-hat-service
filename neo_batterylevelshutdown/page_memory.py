@@ -86,12 +86,15 @@ class PageMemory:
         d.text((50, 1), "%.0f%%" % PageMemory.cpu_usage(),
                font=font20, fill="black")
 
-        # memory usage
+        # memory usage - update 11/30/21 - display as memory USED not REMAINING
         usage = PageMemory.mem_usage()
         d.text((50, 21), "%.0f%%" %
-               (100 - usage.percent), font=font20, fill="black")
-        d.text((85, 21), "%s" % PageMemory.bytes2human(usage.free),
+               (usage.percent), font=font20, fill="black")
+        d.text((85, 21), "%s" % PageMemory.bytes2human(usage.available),
                font=font20, fill="black")
+        # memory icon left pixel x = 12, right pixel x = 29 
+        xl = ((usage.percent)/100)*16 + 12  # calculate x start position of white block overlay
+        d.rectangle((xl, 25, 29, 33), fill="white")
 
         # disk usage
         usage = PageMemory.disk_usage('/media/usb0')
