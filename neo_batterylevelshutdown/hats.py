@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 # hats.py
-# Modified 10/17/19 by JRA to add new class q4y2019HAT (HAT 5.0.9 board with OLED but no AXP209) ie, the NoBatt version
+# Modified 10/17/19 by JRA to add new class q4y2019HAT (HAT 5.0.9 board with OLED but no battery) ie, the NoBatt version
+#  11/30/21 JRA - Q4Y2019 Hat class removed - no battery instance handled in battery pages
 
 from contextlib import contextmanager
 import logging
@@ -461,61 +462,6 @@ class q4y2018HAT(Axp209HAT):
                               callback=self.shutdownDeviceCallback)
                               
 
-class q4y2019HAT(Axp209HAT):
-
-    # Q4Y2019 - nomenclature for a Q4Y2018 HAT without a battery
-    #  This code a hack of copying Q4Y2018 code, parenting direct from BasePhysicalHAT and including
-    #   the interrupt code. Also borrowed from the Axp209HAT class, all the display stuff
-    # Pin numbers from https://github.com/auto3000/RPi.GPIO_NP
-
-    
-    def __init__(self, displayClass):
-
-        if (globals.device_type == "NEO"):
-            self.PIN_L_BUTTON = 198             # PG6 
-            self.PIN_R_BUTTON = 199             # PG7 
-            self.PIN_AXP_INTERRUPT_LINE = 200   # PG8
-            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
-        elif (globals.device_type =="CM"):
-            self.PIN_L_BUTTON = 3               # GPIO3/56  
-            self.PIN_R_BUTTON = 4               # GPIO4/54  
-            self.PIN_AXP_INTERRUPT_LINE = 15    # GPIO15/51
-            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
-        
-        # We don't currently have a HAT for RPi... so we will get here if HAT wiring is same as CM4 for GPIO
-        #  For the moment, we will assume a HAT with GPIO assignments the same as CM4
-        else:                   #device type is Pi
-            self.PIN_L_BUTTON = 3               # GPIO3
-            self.PIN_R_BUTTON = 4               # GPIO4
-            self.PIN_AXP_INTERRUPT_LIINE = 15   # GPIO15
-            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method            
-
-        # Next 3 lines from Axp209HAT class
-        self.display = displayClass(self)   
-        self.buttons = BUTTONS(self, self.display)
-        self.displayPowerOffTime = time.time() + 3
-        self.DISPLAY_TIMEOUT_SECS = 20
-
-        GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
-        GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
-        GPIO.setup(self.PIN_AXP_INTERRUPT_LINE, GPIO.IN)
-        # Run parent constructors before adding event detection
-        #  as some callbacks require objects only initialised
-        #  in parent constructors
-        super().__init__(displayClass)
-        GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
-                              callback=self.buttons.handleButtonPress,
-                              bouncetime=125)
-        GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
-                              callback=self.buttons.handleButtonPress,
-                              bouncetime=125)
-        
-        # For the Q4Y2019HAT, the power switch is tied to the IRQ line and so
-        #   when moved to the OFF position, will pull the "AXP interrupt line"
-        #   low, even though there is NO AXP209 present                      
-        # The desired action here is always to shutdown
-        GPIO.add_event_detect(self.PIN_AXP_INTERRUPT_LINE, GPIO.FALLING,
-                              callback=self.shutdownDeviceCallback)
 
 class q3y2021HAT(Axp209HAT):
 

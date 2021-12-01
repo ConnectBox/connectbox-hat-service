@@ -141,44 +141,34 @@ class PageMulti_Bat:
 
         # See if we have a responsive AXP209
         try:
-            _ = self.axp.battery_exists
+            bat_exists = self.axp.battery_exists
             have_axp209 = True
         except OSError:
             have_axp209 = False
 
         # draw text, full opacity
-        d.text((68, 1),(str(averageBat()/1000)), font=font20, fill="black")
-
-        if have_axp209 and self.axp.power_input_status.acin_present:
-            # charging
-            # cover the out arrow
-            d.rectangle((47, 4, 62, 14), fill="white")  # out arrow
-            # percent charge left
-            # if on battery power, calculate fuel based on battery voltage
-            #  Fuel = (Vbatt - 3.275)/0.00767
-            percent = averageFuel()
+        if bat_exists:
+            d.text((68, 1),(str(averageBat()/1000)), font=font20, fill="black")
         else:
-            # discharging or AXP209 not present i.e. not doing it's job
-            # cover the charging symbol & in arrow
-            d.rectangle((119, 0, 127, 16), fill="white")  # charge symbol
-            d.rectangle((0, 4, 14, 14), fill="white")  # in arrow
-            # percent charge left
-            # if on battery power, calculate fuel based on battery voltage
-            #  Fuel = (Vbatt - 3.275)/0.00767
-            # simplifies to: (Vbatt(mv) - 3275) / 7.67 
+            d.text((68, 1),("0.000"), font=font20, fill="black")
+            
+        # page_multi_bat.py should only be called if we have CM4 HAT, which includes AXP209
+        #  so we should ALWAYS have "have_axp209" true (unless our HAT is broken)
+        if have_axp209:
+            if self.axp.power_input_status.acin_present:
+            # charging -- cover the "out" arrow
+                d.rectangle((47, 4, 62, 14), fill="white")  # out arrow
+            else:
+                # discharging --- cover the charging symbol & "in" arrow
+                d.rectangle((119, 0, 127, 16), fill="white")  # charge symbol
+                d.rectangle((0, 4, 14, 14), fill="white")     # "in" arrow
+
+        if bat_exists:
             battery_voltage = averageBat()
-            percent = averageFuel()
-
-        # draw battery fill lines
-        if not have_axp209 or not self.axp.battery_exists:
-            # cross out the battery
-            d.line((20, 5, 38, 12), fill="black", width=2)
-            d.line((20, 12, 38, 5), fill="black", width=2)
-        else:
+            # calculate fuel based on battery voltage
+            #  Fuel = (Vbatt - 3.275)/0.00767
             # get the percent filled and draw a rectangle
-            # percent = self.axp.battery_gauge
-
-            percent = min(percent, 100)
+            percent = min(averageFuel(), 100)
             if percent < 10:
                 d.rectangle((20, 5, 22, 12), fill="black")
                 d.text((15, 2), "!", font=font14, fill="black")
@@ -187,11 +177,27 @@ class PageMulti_Bat:
                 x = int((38 - 20) * (percent / 100)) + 20
                 # print("X:" + str(x))
                 d.rectangle((20, 5, x, 12), fill="black")
+        else:
+            battery_voltage = 0
+            percent = 0    
+            # cross out the battery
+            d.line((20, 5, 38, 12), fill="black", width=2)
+            d.line((20, 12, 38, 5), fill="black", width=2)
 
-        d.text((10, 18),(str(readBat(1)/1000)), font=font20, fill="black")
-        d.text((10, 42),(str(readBat(2)/1000)), font=font20, fill="black")
-        d.text((75, 18),(str(readBat(3)/1000)), font=font20, fill="black")
-        d.text((75, 42),(str(readBat(4)/1000)), font=font20, fill="black")
+        # Read voltages of all 4 battery positions from the ATTiny
+        # Any voltage < 0.5V (500 mV) or > 6000 we will call noise 
+        #  and display battery voltage 0
+        # Note that readBat() function accepts battery numbers 1 -> 4 (not 0 -> 3)
+        v_bat = [0,0,0,0]
+        for n in range(4):
+            v_bat[n] = readBat(n+1)
+            if (v_bat[n] < 500) or (v_bat[n] > 6000):
+                v_bat[n] = 0
+
+        d.text((10, 18),(str(v_bat[0]/1000)), font=font20, fill="black")    # battery #1
+        d.text((10, 42),(str(v_bat[1]/1000)), font=font20, fill="black")    # battery #2
+        d.text((75, 18),(str(v_bat[2]/1000)), font=font20, fill="black")    # battery #3
+        d.text((75, 42),(str(v_bat[3]/1000)), font=font20, fill="black")    # battery #4
 
         out = Image.alpha_composite(img, txt)
         self.device.display(out.convert(self.device.mode))
