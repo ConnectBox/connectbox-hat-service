@@ -17,8 +17,9 @@ class USB:
         Returns if there is a USB plugged into specified devPath
         :return: True / False
         '''
+        x = ord('a')
 #   Find the first USB key in the system
-        while not os.path.exists(devPath) and x<ord(':'):
+        while not os.path.exists(devPath) and (x < ord('k')):
             x = ord(devPath[len(devPath)-2])
             devPath = "/dev/sd"+chr(x+1)+"1"
         return os.path.exists(devPath)
@@ -40,10 +41,11 @@ class USB:
 
         :return: True / False
         '''
+        x = ord(devPath[len(devPath -2)])
 #   Find the first USB key in the system
-        while not os.path.exists(devPath) and x<ord(':'):
-            x = ord(devPath[len(devPath)-2])
-            devPath = "/dev/sd"+chr(x+1)+"1"
+        while not os.path.exists(devPath) and (x < ord('k')):
+            x = ord(devPath[len(devPath)-2]) + 1
+            devPath = "/dev/sd"+chr(x)+"1"
 
         # try:
         logging.debug("Mounting USB at %s to %s", devPath, newPath)
@@ -63,8 +65,9 @@ class USB:
         :return:  True / False
         '''
         y = 0
+        x = ord('0')
         if os.path.exsists(destPath):
-            while os.path.exists(sourcePath):
+            while os.path.exists(sourcePath) and (x < ord(':')):
                 if os.path.exists(sourcePath) and os.path.exists(destPath):
                     logging.debug("Copying tree: "+sourePath)
                     copy_tree(sourcePath, destPath)
@@ -72,11 +75,11 @@ class USB:
                     logging.debug("Done copying to: "+destPath)
 #   Find the next USB key in the system to copy to destination
                 if len(sourcePath==12): sourcePath = "/media/usb0"
-                x = ord(sourcePath[len(sourcePath)-2])+1
+                x = ord(sourcePath[len(sourcePath)-2]) + 1
                 sourcePath = '/media/usb'+chr(x)
-                while not os.path.exists(sourcePath) and x < ord(':'):
-                    x = ord(sourcePath[len(sourcePath)-2])
-                    sourcePath = "/dev/usb"+chr(x+1)
+                while not os.path.exists(sourcePath) and (x < ord(':')):
+                    x = ord(sourcePath[len(sourcePath)-2]) + 1
+                    sourcePath = "/dev/usb"+chr(x)
             if y == 1:
                 return True
             else:
@@ -100,11 +103,13 @@ class USB:
                 sourcePath = '/media/usb0'
             x = ord(sourcePath[len(sourcePath - 2)])+1
             sourcePath = '/media/usb'+chr(x)
-            while not os.path.exsists(sourcePath) and x < ord(':'):
-                x = ord(sourcePath[len(sourcePath)-2])
-                sourcePath = "/dev/usb"+chr(x+1) 
+            while not os.path.exsists(sourcePath) and (x< ord(':')):
+                x = ord(sourcePath[len(sourcePath)-2]) + 1
+                sourcePath = "/dev/usb"+chr(x) 
             logging.debug("Source size: %s bytes, destination size: %s bytes",
                           sourceSize, destSize)
+        logging.debug("total source size: %s bytes, total destination size %s bytes", 
+                      surceSize, destSize)
         return destSize >= sourceSize
         
     # pylint: disable=unused-variable
@@ -150,9 +155,9 @@ class USB:
         Find the first USB key by device
         '''
 
-        while not os.path.exists(devMount):
-            x = ord(devMount[len(devMount)-2])
-            devMount = "/dev/sd"+chr(x+1)+"1"
+        while not os.path.exists(devMount) and (x < chr('k')):
+            x = ord(devMount[len(devMount)-2]) + 1
+            devMount = "/dev/sd"+chr(x)+"1"
 
 # take the file mount outuput and separate it into lines
         mounts = str(subprocess.check_output(['df']))
@@ -183,10 +188,16 @@ class USB:
         '''
         This is a method of getting the device for the mount point
         '''
+# take the file mount outuput and separate it into lines
+        mounts = str(subprocess.check_output(['df']))
+        mounts = mounts.split("\\n")
 
-        mnts = os.subprocess.run(['df'], stdout=subprocess.PIPE, universal_newlines=True)
-        lines = mnts.stdout
-        for line in lines:
-            if curMount in line:
-                return line.split([' '],1)
-        return ''
+# take the lines and check for the mount.
+        for line in mounts:
+            if (curMount in line):
+                x = line.split(" ", 1).rstrip(" ")
+                break
+            else:
+                x = ""
+
+        return x

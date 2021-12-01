@@ -72,8 +72,8 @@ class BUTTONS:
                 return
             # if we're here we successfully unmounted /media/usb11 lets check for more
             curMount='/media/usb1'
-            x = 0
-            while os.path.exists(curMount) and x < ord(':')
+            x = ord('1')
+            while os.path.exists(curMount) and (x < ord(':'))
                 curDev = usb.getDev(curMount)
                 if not usb.unmount(curMount):
                     self.display.showErrorPage()
