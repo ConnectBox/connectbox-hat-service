@@ -147,7 +147,7 @@ class PageMulti_Bat:
             have_axp209 = False
 
         # draw text, full opacity
-        d.text((68, 1),(str(averageBat()/1000)), font=font20, fill="black")
+        d.text((68, 2),(str(averageBat()/1000)+"V"), font=font14, fill="black")
 
         if have_axp209 and self.axp.power_input_status.acin_present:
             # charging
@@ -188,10 +188,10 @@ class PageMulti_Bat:
                 # print("X:" + str(x))
                 d.rectangle((20, 5, x, 12), fill="black")
 
-        d.text((10, 18),(str(readBat(1)/1000)), font=font20, fill="black")
-        d.text((10, 42),(str(readBat(2)/1000)), font=font20, fill="black")
-        d.text((75, 18),(str(readBat(3)/1000)), font=font20, fill="black")
-        d.text((75, 42),(str(readBat(4)/1000)), font=font20, fill="black")
+        d.text((15, 21),(str(readBat(1)/1000)+"V"), font=font14, fill="black")
+        d.text((15, 46),(str(readBat(2)/1000)+"V"), font=font14, fill="black")
+        d.text((80, 21),(str(readBat(3)/1000)+"V"), font=font14, fill="black")
+        d.text((80, 46),(str(readBat(4)/1000)+"V"), font=font14, fill="black")
 
         out = Image.alpha_composite(img, txt)
         self.device.display(out.convert(self.device.mode))

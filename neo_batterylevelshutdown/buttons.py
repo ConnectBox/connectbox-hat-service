@@ -52,41 +52,49 @@ class BUTTONS:
                 self.display.showNoUsbPage()                # if not, alert as this is required
                 self.display.pageStack = 'error'
                 return                                      # cycle back to menu
-            if not usb.moveMount():                         # see if our remount was successful
+            if not usb.moveMount():                         # see if our remount was successful this will also set automount in pause if successful
                 self.display.showErrorPage()                # if not generate error page and exit
                 self.display.pageStack = 'error'
                 return
             if not usb.checkSpace():                        # verify that source is smaller than destination
                 self.display.showNoSpacePage()              # if not, alert as this is a problem
                 usb.moveMount(curMount='/media/usb11', destMount='/media/usb0')
+                try: os.remove('/usr/local/connectbox/PauseMount')
+                except:
+                    pass
                 self.display.pageStack = 'error'
                 return
             if not usb.copyFiles():                         # see if we copied successfully
                 self.display.showErrorPage()                # if not generate error page and exit
                 self.display.pageStack = 'error'
+                try: os.remove('/usr/local/connectbox/PauseMount')
+                except:
+                    pass
                 return
             if not usb.unmount('/media/usb11'):             # see if we were able to unmount /media/usb11
                 self.display.showErrorPage()                # if not generate error page and exit
                 self.display.pageStack = 'error'
+                try: os.remove('/usr/local/connectbox/PauseMount')
+                except:
+                    pass
                 return
-            # if we're here we successfully unmounted /media/usb11 lets check for more
-            curMount='/media/usb1'
-            x = ord('1')
-            while os.path.exists(curMount) and (x < ord(':')):
-                curDev = usb.getDev(curMount)
-                if not usb.unmount(curMount):
-                    self.display.showErrorPage()
-                    self.display.pageStack = 'error'
-                    return
-                while usb.isUsbPresent(curDev):               # if usb is present, have the remove it
+            # if we're here we successfully unmounted /media/usb11 lets check for more we have not yet restarted auto mount
+            curDev='/dev/sda1'                              # now we remove all the usb keys in the system
+            x = ord('a')
+            while os.path.exists(curDev) and (x < ord('k')):
+                while usb.isUsbPresent(curDev):                 # if usb is present, have the remove it
                     self.display.showRemoveUsbPage()            # show the remove usb page
-                self.display.showSuccessPage()              # display our success page
-                x = ord(curMount[len(curMount)-2])
+                    self.display.pageStack = 'success'          # if the usb was removed  
+                    self.display.showSuccessPage()              # display our success page
+                x = ord(curDev[len(curDev)-2])
                 x +=1
-                curMount = '/media/usb'+chr(x)
-            self.display.pageStack = 'success'              # if the usb was removed
-            self.display.showSuccessPage()                  # display success page
-
+                curDev = '/dev/sd'+chr(x)+'1'
+            try: os.remove('/usr/local/connectbox/PauseMount')
+            except:
+               pass
+            self.display.pageStack = 'success'                  # if the usb was removed  
+            self.display.showSuccessPage()                      # wERE DONE
+            return
         elif command == 'erase_folder':
             file_exists = False  # in regards to README.txt file
             if usb.isUsbPresent():
@@ -110,6 +118,7 @@ class BUTTONS:
             logging.debug("Life is good!")
             self.display.pageStack = 'success'
             self.display.showSuccessPage()
+            return
 
     def handleButtonPress(self, channel):
         '''

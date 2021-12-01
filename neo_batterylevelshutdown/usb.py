@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
 
 import logging
 import os
+import time
 import subprocess
 from distutils.dir_util import copy_tree
 
@@ -17,11 +17,6 @@ class USB:
         Returns if there is a USB plugged into specified devPath
         :return: True / False
         '''
-        x = ord('a')
-#   Find the first USB key in the system
-        while not os.path.exists(devPath) and (x < ord('k')):
-            x = ord(devPath[len(devPath)-2])
-            devPath = "/dev/sd"+chr(x+1)+"1"
         return os.path.exists(devPath)
 
     @staticmethod
@@ -41,7 +36,7 @@ class USB:
 
         :return: True / False
         '''
-        x = ord(devPath[len(devPath -2)])
+        x = ord(devPath[len(devPath)-2])
 #   Find the first USB key in the system
         while not os.path.exists(devPath) and (x < ord('k')):
             x = ord(devPath[len(devPath)-2]) + 1
@@ -60,26 +55,36 @@ class USB:
     def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0'):
         '''
         Move files from sourcePath to destPath recursively
+        To do this we need to turn off automount temporarily by creating a file
+        /usr/local/connectbox/PauseMount
+
+        We must delete this if we exit at any point
+
         :param sourcePath: place where files are
         :param destPath:  where we want to copy them to
         :return:  True / False
         '''
+        with open('/usr/local/connectbox/PauseMount', "w") as fp:
+            pass
+        fp.close()
+        time.sleep(2)  # give time for Pause of the Mount
         y = 0
         x = ord('0')
-        if os.path.exsists(destPath):
+        if os.path.exists(destPath):
             while os.path.exists(sourcePath) and (x < ord(':')):
                 if os.path.exists(sourcePath) and os.path.exists(destPath):
-                    logging.debug("Copying tree: "+sourePath)
+                    logging.debug("Copying tree: "+sourcePath)
                     copy_tree(sourcePath, destPath)
                     y = 1
                     logging.debug("Done copying to: "+destPath)
 #   Find the next USB key in the system to copy to destination
-                if len(sourcePath==12): sourcePath = "/media/usb0"
-                x = ord(sourcePath[len(sourcePath)-2]) + 1
+                if len(sourcePath)==12: sourcePath = "/media/usb0"
+                x = ord(sourcePath[len(sourcePath)-1]) + 1
                 sourcePath = '/media/usb'+chr(x)
                 while not os.path.exists(sourcePath) and (x < ord(':')):
-                    x = ord(sourcePath[len(sourcePath)-2]) + 1
-                    sourcePath = "/dev/usb"+chr(x)
+                    x = ord(sourcePath[len(sourcePath)-1]) + 1
+                    sourcePath = "/dev/usb"+chr(x
+
             if y == 1:
                 return True
             else:
@@ -101,15 +106,15 @@ class USB:
             sourceSize += self.getSize(sourcePath)
             if len(sourcePath) == 12:
                 sourcePath = '/media/usb0'
-            x = ord(sourcePath[len(sourcePath - 2)])+1
+            x = ord(sourcePath[len(sourcePath) - 1])+1
             sourcePath = '/media/usb'+chr(x)
-            while not os.path.exsists(sourcePath) and (x< ord(':')):
-                x = ord(sourcePath[len(sourcePath)-2]) + 1
+            while not os.path.exists(sourcePath) and (x< ord(':')):
+                x = ord(sourcePath[len(sourcePath)-1]) + 1
                 sourcePath = "/dev/usb"+chr(x) 
             logging.debug("Source size: %s bytes, destination size: %s bytes",
                           sourceSize, destSize)
         logging.debug("total source size: %s bytes, total destination size %s bytes", 
-                      surceSize, destSize)
+                      sourceSize, destSize)
         return destSize >= sourceSize
         
     # pylint: disable=unused-variable
@@ -154,8 +159,8 @@ class USB:
 
         Find the first USB key by device
         '''
-
-        while not os.path.exists(devMount) and (x < chr('k')):
+        x = ord(devMount[len(devMount)-2])
+        while not os.path.exists(devMount) and (x < ord('k')):
             x = ord(devMount[len(devMount)-2]) + 1
             devMount = "/dev/sd"+chr(x)+"1"
 
@@ -178,6 +183,10 @@ class USB:
         #:return: True / False
         #'''
         if x:
+            with open('/usr/local/connectbox/PauseMount', "w") as fp:
+                pass
+            fp.close()
+            time.sleep(2)  # give time for Pause of the Mount
             self.unmount(curMount)
             return self.mount(devMount, destMount)
         else:
