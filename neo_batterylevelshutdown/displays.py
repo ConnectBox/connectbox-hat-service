@@ -105,6 +105,7 @@ class OLED:
         #  manage timeouts and timed display power-downs, so we leave that
         #  as an exercise for anyone using this class
         self.drawLogo()
+        time.sleep(3)       # display logo screen for 3 seconds
 
     def getAdminPageName(self):
         return self.adminPageNames[self.adminPages.index(self._curPage)]
@@ -297,5 +298,17 @@ class OLED:
         self.display_device.display(
             background.convert(self.display_device.mode)
         )
+
+
+    # Function to redraw the current page for use in 
+    # refreshing the page during long display times
+    def redrawCurrentPage(self):
+        with self._curPageLock:
+            self._curPage.draw_page()
+
+
+
+
+
 
 

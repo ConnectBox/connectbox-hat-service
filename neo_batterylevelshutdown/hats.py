@@ -225,7 +225,7 @@ class Axp209HAT(BasePhysicalHAT):
     MIN_BATTERY_THRESHOLD_PERC_DOUBLE_FLASH = 3   # Parity with PIN_VOLT_3_45
     BATTERY_WARNING_THRESHOLD_PERC = MIN_BATTERY_THRESHOLD_PERC_DOUBLE_FLASH
     BATTERY_SHUTDOWN_THRESHOLD_PERC = 1
-    DISPLAY_TIMEOUT_SECS = 20
+    DISPLAY_TIMEOUT_SECS = 60
     # possibly should be moved elsewhere
 
 
@@ -339,6 +339,12 @@ class Axp209HAT(BasePhysicalHAT):
                 # Perhaps power off the display
                 if time.time() > self.displayPowerOffTime:
                     self.display.powerOffDisplay()
+
+    # Perhaps here we add a call to update the current page
+    #  self.display.redrawCurrentPage()
+    #   PERHAPS ADD TEST TO DO THIS ONLY FOR PAGES 0 -> 4
+                #logging.info("... redraw current page")
+                self.display.redrawCurrentPage()
 
                 # Check battery and possibly shutdown or show low battery page
                 # Do this less frequently than updating LEDs. We could do
