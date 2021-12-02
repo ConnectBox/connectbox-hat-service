@@ -83,9 +83,8 @@ class USB:
                 sourcePath = '/media/usb'+chr(x)
                 while not os.path.exists(sourcePath) and (x < ord(':')):
                     x = ord(sourcePath[len(sourcePath)-1]) + 1
-                    sourcePath = "/dev/usb"+chr(x
-
-            if y == 1:
+                    sourcePath = "/dev/usb"+chr(x)
+            if (y == 1):
                 return True
             else:
                 return False
