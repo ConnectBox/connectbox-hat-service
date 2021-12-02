@@ -59,7 +59,7 @@ def getHATClass():
 
     try:
         axp = axp209.AXP209(globals.port)
-        battexists = axp.battery_exists
+    # moved the battexists = axp.battery_exists test to the individual battery display pages
         axp.close()
         # AXP209 found... we have HAT from Q3Y2018 or later
         # Test PA1... 
@@ -71,26 +71,18 @@ def getHATClass():
     
         GPIO.setup(PA1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         if GPIO.input(PA1) == GPIO.LOW:
-            if battexists:
-                if (GPIO.input(PG11) == GPIO.HIGH):
-                # This would include CM4 HAT as "PG11" is assigned to GPIO4
-                #  and that is wired to PB2 (normally HIGH) 
-                    logging.info("Q4Y2018 HAT Detected") 
-                    return hats.q4y2018HAT
-                else:
-                    logging.info("Q3Y2021 HAT Detected")
-                    return hats.q3y2021HAT
-        # we have a non-battery HAT... we call all non-battery HATS "Q42019"
-        #   Note that if we really want to use features of HAT 7 in a non-battery
-        #    version, we will need to expand this search tree and create yet anotheer
-        #    hat class.               
+            if (GPIO.input(PG11) == GPIO.HIGH):
+            # This would include CM4 HAT as "PG11" is assigned to GPIO4
+            #  and that is wired to PB2 (normally HIGH) 
+                logging.info("Q4Y2018 HAT Detected") 
+                return hats.q4y2018HAT
             else:
-                logging.info("Q42019 HAT Detected")
-                return hats.q4y2019HAT
-
+                logging.info("Q3Y2021 HAT Detected")
+                return hats.q3y2021HAT
+        else:
         # PA1 is HIGH, so this is HAT 4.6.7
-        logging.info("Q3Y2018 HAT Detected")
-        return hats.q3y2018HAT
+            logging.info("Q3Y2018 HAT Detected")
+            return hats.q3y2018HAT
 
     except OSError:
         # There is no AXP209 on the Q12018 HAT
@@ -133,14 +125,6 @@ def main(verbose):
     globals.init()
     hatClass = getHATClass()
     displayClass = getDisplayClass()
-
-
-    # displayClass = displays.OLEDA   #temp overwrite for debug - putting the overwrite here worked...
-    # test to see if hatClass is hats.q1y2018HAT (no AXP209) but OLED present... 
-    #  which would be a Q4Y2019HAT
-    if ((hatClass == hats.q4y2019HAT) and (displayClass == displays.OLED)):
-        displayClass = displays.OLEDA
-
      
     logging.info("starting main loop")
     try:
