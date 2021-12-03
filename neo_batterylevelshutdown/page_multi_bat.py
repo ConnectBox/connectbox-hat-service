@@ -133,9 +133,12 @@ class PageMulti_Bat:
         txt = Image.new('RGBA', base.size, (255, 255, 255, 0))
 
         # get a font
-        font_path = dir_path + '/assets/connectbox.ttf'
-        font20 = ImageFont.truetype(font_path, globals.font20)
-        font14 = ImageFont.truetype(font_path, globals.font14)
+        font_path = dir_path + '/assets/HaxM-10.pil'
+        font10 = ImageFont.load(font_path)
+        font_path = dir_path + '/assets/HaxM-12.pil'
+        font14 = ImageFont.load(font_path)
+        font_path = dir_path + '/assets/HaxM-13.pil'
+        font20 = ImageFont.load(font_path)
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
@@ -148,20 +151,22 @@ class PageMulti_Bat:
 
         # draw text, full opacity
         if bat_exists:
-            d.text((68, 2),(str(averageBat()/1000)+"V"), font=font14, fill="black")
+        # format with 2 decimals
+            b_voltage = averageBat()/1000
+            v_string = "{:.2f}V"                
+            d.text((68, 2),(v_string.format(b_voltage)), font=font14, fill="black")
         else:
-            d.text((68, 2),("0.000V"), font=font14, fill="black")
+            d.text((68, 2),("0.00V"), font=font14, fill="black")
            
         # page_multi_bat.py should only be called if we have CM4 HAT, which includes AXP209
         #  so we should ALWAYS have "have_axp209" true (unless our HAT is broken)
-        if have_axp209:
-            if self.axp.power_input_status.acin_present:
-            # charging -- cover the "out" arrow
-                d.rectangle((47, 4, 62, 14), fill="white")  # out arrow
-            else:
-                # discharging --- cover the charging symbol & "in" arrow
-                d.rectangle((119, 0, 127, 16), fill="white")  # charge symbol
-                d.rectangle((0, 4, 14, 14), fill="white")     # "in" arrow
+        if self.axp.power_input_status.acin_present:
+        # charging -- cover the "out" arrow
+            d.rectangle((47, 4, 62, 14), fill="white")  # out arrow
+        else:
+            # discharging --- cover the charging symbol & "in" arrow
+            d.rectangle((119, 0, 127, 16), fill="white")  # charge symbol
+            d.rectangle((0, 4, 14, 14), fill="white")     # "in" arrow
 
         if bat_exists:
             battery_voltage = averageBat()
@@ -188,16 +193,24 @@ class PageMulti_Bat:
         # Any voltage < 0.5V (500 mV) or > 6000 we will call noise 
         #  and display battery voltage 0
         # Note that readBat() function accepts battery numbers 1 -> 4 (not 0 -> 3)
-        v_bat = [0,0,0,0]
+        v_bat = ["0V","0V","0V","0V"]
         for n in range(4):
-            v_bat[n] = readBat(n+1)
-            if (v_bat[n] < 500) or (v_bat[n] > 6000):
-                v_bat[n] = 0
+            voltage = readBat(n+1)
+            if (voltage < 500) or (voltage > 6000):
+                voltage = 0
+            # format with 2 decimals
+            b_voltage = voltage/1000
+            v_string = "{:.2f}V"
+            v_bat[n] = v_string.format(b_voltage)
 
-        d.text((15, 21),(str(v_bat[0]/1000)+"V"), font=font14, fill="black")    # battery #1
-        d.text((15, 46),(str(v_bat[1]/1000)+"V"), font=font14, fill="black")    # battery #2
-        d.text((80, 21),(str(v_bat[2]/1000)+"V"), font=font14, fill="black")    # battery #3
-        d.text((80, 46),(str(v_bat[3]/1000)+"V"), font=font14, fill="black")    # battery #4
+        d.text((3, 18),"1", font=font10, fill="black")    # battery #1
+        d.text((17, 22),v_bat[0], font=font14, fill="black")    # battery #1
+        d.text((3, 39),"2", font=font10, fill="black")    # battery #1
+        d.text((17, 43),v_bat[1], font=font14, fill="black")    # battery #2
+        d.text((67, 18),"3", font=font10, fill="black")    # battery #1
+        d.text((82, 22),v_bat[2], font=font14, fill="black")    # battery #3
+        d.text((67, 39),"4", font=font10, fill="black")    # battery #1
+        d.text((82, 43),v_bat[3], font=font14, fill="black")    # battery #4
 
         out = Image.alpha_composite(img, txt)
         self.device.display(out.convert(self.device.mode))

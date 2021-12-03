@@ -77,8 +77,8 @@ class PageMemory:
         txt = Image.new('RGBA', base.size, (255, 255, 255, 0))
 
         # get a font
-        font_path = dir_path + '/assets/connectbox.ttf'
-        font20 = ImageFont.truetype(font_path, globals.font20)
+        font_path = dir_path + '/assets/HaxM-12.pil'
+        font20 = ImageFont.load(font_path)
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
@@ -88,18 +88,19 @@ class PageMemory:
 
         # memory usage - update 11/30/21 - display as memory USED not REMAINING
         usage = PageMemory.mem_usage()
-        d.text((50, 21), "%.0f%%" %
+        d.text((50, 23), "%.0f%%" %
                (usage.percent), font=font20, fill="black")
-        d.text((85, 21), "%s" % PageMemory.bytes2human(usage.available),
+        d.text((85, 23), "%s" % PageMemory.bytes2human(usage.available),
                font=font20, fill="black")
         # memory icon left pixel x = 12, right pixel x = 29 
-        xl = ((usage.percent)/100)*16 + 12  # calculate x start position of white block overlay
-        d.rectangle((xl, 25, 29, 33), fill="white")
+        #  uncomment the next two lines to make gauge for ram
+#        xl = ((usage.percent)/100)*16 + 12  # calculate x start position of white block overlay
+#        d.rectangle((xl, 25, 29, 33), fill="white")
 
         # disk usage
         usage = PageMemory.disk_usage('/media/usb0')
-        d.text((50, 42), "%.0f%%" % usage.percent, font=font20, fill="black")
-        d.text((85, 42), "%s" % PageMemory.bytes2human(usage.free),
+        d.text((50, 46), "%.0f%%" % usage.percent, font=font20, fill="black")
+        d.text((85, 46), "%s" % PageMemory.bytes2human(usage.free),
                font=font20, fill="black")
 
         out = Image.alpha_composite(img, txt)

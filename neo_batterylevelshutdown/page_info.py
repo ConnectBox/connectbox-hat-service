@@ -87,17 +87,20 @@ class PageInfo:
         txt = Image.new('RGBA', base.size, (255, 255, 255, 0))
 
         # get a font
-        font_path = dir_path + '/assets/connectbox.ttf'
-        font30 = ImageFont.truetype(font_path, globals.font30)
-        font20 = ImageFont.truetype(font_path, globals.font20)
+        font_path = dir_path + '/assets/HaxM-12.pil'
+        font14 = ImageFont.load(font_path)
+        font_path = dir_path + '/assets/HaxM-13.pil'
+        font20 = ImageFont.load(font_path)
+        font_path = dir_path + '/assets/HaxN-17.pil'
+        font30 = ImageFont.load(font_path)
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
         # uptime
-        d.text((47, 0), PageInfo.uptime(), font=font20, fill="black")
+        d.text((35, 2), PageInfo.uptime(), font=font14, fill="black")
 
         # connected users
-        d.text((20, 30), PageInfo.get_connected_users(),
+        d.text((20, 33), PageInfo.get_connected_users(),
                font=font30, fill="black")
 
         # network stats

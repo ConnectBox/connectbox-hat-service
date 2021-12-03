@@ -74,9 +74,10 @@ class PageBattery:
         txt = Image.new('RGBA', base.size, (255, 255, 255, 0))
 
         # get a font
-        font_path = dir_path + '/assets/connectbox.ttf'
-        font20 = ImageFont.truetype(font_path, globals.font20)
-        font14 = ImageFont.truetype(font_path, globals.font14)
+        font_path = dir_path + '/assets/HaxM-12.pil'
+        font14 = ImageFont.load(font_path)
+        font_path = dir_path + '/assets/HaxM-13.pil'
+        font20 = ImageFont.load(font_path)
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
@@ -92,16 +93,16 @@ class PageBattery:
         if have_axp209:
             if not bat_exists:
                 bat_voltage = 0
-            d.text((5, 42), "%.0f" %
+            d.text((3, 44), "%.0f" %
                        int(bat_voltage), font=font20, fill="black")
-            d.text((52, 42), "%.1f" %
+            d.text((47, 44), "%.1f" %
                        self.axp.internal_temperature, font=font20, fill="black")
 
         else:       # no AXP209
             # Act like there's no battery present
-            d.text((5, 42), "%.0f" %
+            d.text((5, 44), "%.0f" %
                    -1, font=font20, fill="black")
-            d.text((52, 42), "%.1f" %
+            d.text((52, 44), "%.1f" %
                    -1, font=font20, fill="black")
 
         if have_axp209 and self.axp.power_input_status.acin_present:
@@ -110,13 +111,13 @@ class PageBattery:
             d.rectangle((47, 4, 62, 14), fill="white")  # out arrow
             # percent charge left
             percent = self.axp.battery_gauge
-            d.text((50, 1), "%.0f%%" %
+            d.text((63, 2), "%.0f%%" %
                    percent, font=font20, fill="black")
             if globals.device_type == "CM":
                 logging.info("Bus Battery: "+str( PageBattery.i2c_read(dev_i2c, 0x31)))
-                d.text((90,1), "#%.0f" %
+                d.text((95,2), "#%.0f" %
                    float(PageBattery.i2c_read(dev_i2c, 0x31)), font=font20, fill="black")		#Display the battery number
-            d.text((94, 42), "%.0f" %
+            d.text((97, 44), "%.0f" %
                    self.axp.battery_charge_current, font=font20, fill="black")
         else:
             # discharging or AXP209 not present i.e. not doing it's job
@@ -131,19 +132,19 @@ class PageBattery:
                 battery_voltage = self.axp.battery_voltage
                 percent =  (battery_voltage - 3275) / 7.67
 
-                d.text((63, 1), "%.0f%%" %
+                d.text((63, 2), "%.0f%%" %
                        percent, font=font20, fill="black")
-                d.text((94, 42), "%.0f" %
+                d.text((97, 44), "%.0f" %
                        self.axp.battery_discharge_current,
                        font=font20, fill="black")
                 if globals.device_type == "CM":
                     logging.info("Bus Battery: "+str( PageBattery.i2c_read(dev_i2c, 0x31)))
-                    d.text((95,1), "#%.0f" %
+                    d.text((95,2), "#%.0f" %
                        float(PageBattery.i2c_read(dev_i2c, 0x31)), font=font20, fill="black")		#Display the battery number
             else:
-                d.text((63, 1), "%.0f%%" %
+                d.text((63, 2), "%.0f%%" %
                        -1, font=font20, fill="black")
-                d.text((94, 42), "%.0f" %
+                d.text((97, 44), "%.0f" %
                        -1, font=font20, fill="black")
 
         # draw battery fill lines

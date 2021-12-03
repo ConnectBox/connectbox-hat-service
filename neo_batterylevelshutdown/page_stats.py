@@ -59,9 +59,10 @@ class PageStats:
         txt = Image.new('RGBA', base.size, (255, 255, 255, 0))
 
         # get a font
-        font_path = dir_path + '/assets/connectbox.ttf'
-        font20 = ImageFont.truetype(font_path, globals.font20)
-        font10 = ImageFont.truetype(font_path, globals.font10)
+        font_path = dir_path + '/assets/HaxM-10.pil'
+        font10 = ImageFont.load(font_path)
+        font_path = dir_path + '/assets/HaxM-13.pil'
+        font20 = ImageFont.load(font_path)
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
@@ -75,9 +76,9 @@ class PageStats:
                 count = 0
 
                 if self.page_num == 1:
-                    d.text((107, 18), 'p1', font=font20, fill="black")
+                    d.text((107, 22), 'p1', font=font20, fill="black")
                 else:
-                    d.text((107, 18), 'p2', font=font20, fill="black")
+                    d.text((107, 22), 'p2', font=font20, fill="black")
 
                 # check to see if we have data or not
                 for p in data[self.dt_range]:
