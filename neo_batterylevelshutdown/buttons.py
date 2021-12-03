@@ -48,17 +48,21 @@ class BUTTONS:
                 self.display.showSuccessPage()              # display our success page
 
         if command == 'copy_from_usb':
-            if not usb.isUsbPresent():                      # check to see if usb is inserted
+            x = ord("0")
+            while not usb.isUsbPresent('/media/usb'+chr(x)) and (x < ord(":")): # check to see if usb is inserted
+                x += 1
+            if x == ord(":"):    
                 self.display.showNoUsbPage()                # if not, alert as this is required
                 self.display.pageStack = 'error'
                 return                                      # cycle back to menu
-            if not usb.moveMount():                         # see if our remount was successful this will also set automount in pause if successful
+            dev = '/media/usb'+chr(x)
+            if not usb.moveMount(self, (usb.getDev(dev)), dev, '/media/usb11'): # see if our remount was successful this will also set automount in pause if successful
                 self.display.showErrorPage()                # if not generate error page and exit
                 self.display.pageStack = 'error'
                 return
             if not usb.checkSpace():                        # verify that source is smaller than destination
                 self.display.showNoSpacePage()              # if not, alert as this is a problem
-                usb.moveMount(curMount='/media/usb11', destMount='/media/usb0')
+                usb.moveMount(self, usb.getDev('/media/usb11'), '/media/usb11', '/media/usb0')
                 try: os.remove('/usr/local/connectbox/PauseMount')
                 except:
                     pass
@@ -89,15 +93,16 @@ class BUTTONS:
                 x = ord(curDev[len(curDev)-2])
                 x +=1
                 curDev = '/dev/sd'+chr(x)+'1'
+            self.display.pageStack = 'success'                  # if the usb was removed  
+            self.display.showSuccessPage()                      # wERE DONE
             try: os.remove('/usr/local/connectbox/PauseMount')
             except:
                pass
-            self.display.pageStack = 'success'                  # if the usb was removed  
-            self.display.showSuccessPage()                      # wERE DONE
             return
         elif command == 'erase_folder':
             file_exists = False  # in regards to README.txt file
-            if usb.isUsbPresent():
+            usbMount = usb.getDev('/media/usb0')
+            if usb.isUsbPresent(usbMount) and usbMount != "" :
                 self.display.pageStack = 'error'
                 self.display.showRemoveUsbPage()
                 return

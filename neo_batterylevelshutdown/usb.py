@@ -83,9 +83,9 @@ class USB:
                 sourcePath = '/media/usb'+chr(x)
                 while not os.path.exists(sourcePath) and (x < ord(':')):
                     x = ord(sourcePath[len(sourcePath)-1]) + 1
-                    sourcePath = "/dev/usb"+chr(x
-
-            if y == 1:
+                    sourcePath = "/dev/usb"+chr(x)
+                    
+            if (y == 1):
                 return True
             else:
                 return False
@@ -176,12 +176,13 @@ class USB:
             else:
                 x = False
 
-
+        '''
         #:param devMount: device name in the /dev listing
         #:param curMount: where usb is currently mounted
         #:param destMount: where we want the usb to be mounted
         #:return: True / False
-        #'''
+        '''
+
         if x:
             with open('/usr/local/connectbox/PauseMount', "w") as fp:
                 pass
@@ -193,7 +194,7 @@ class USB:
             return x
 
 
-    def getDev(curMount):
+    def getDev(self, curMount):
         '''
         This is a method of getting the device for the mount point
         '''
@@ -204,9 +205,10 @@ class USB:
 # take the lines and check for the mount.
         for line in mounts:
             if (curMount in line):
-                x = line.split(" ", 1).rstrip(" ")
+                x = line.split(" ", 1)
+                x = x[0].rstrip(" ")
+                x = ''.join(x)
                 break
             else:
                 x = ""
-
         return x
