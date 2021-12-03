@@ -101,7 +101,8 @@ class BUTTONS:
             return
         elif command == 'erase_folder':
             file_exists = False  # in regards to README.txt file
-            if usb.isUsbPresent():
+            usbMount = usb.getDev('/media/usb0')
+            if usb.isUsbPresent(usbMount) and usbMount != "" :
                 self.display.pageStack = 'error'
                 self.display.showRemoveUsbPage()
                 return
