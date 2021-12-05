@@ -43,7 +43,9 @@ setup(
     url='https://github.com/ConnectBox/connectbox-hat-service/neo_batterylevelshutdown',
     packages=['neo_batterylevelshutdown'],
     package_data={'neo_batterylevelshutdown': ['assets/*.png',
-                                               'assets/connectbox.ttf',]},
+                                               'assets/connectbox.ttf',
+                                               'assets/*.pbm',
+                                               'assets/*.pil',]},
     entry_points={
         'console_scripts': [
             'neo_batterylevelshutdown=neo_batterylevelshutdown.cli:main'
