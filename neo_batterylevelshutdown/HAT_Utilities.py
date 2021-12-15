@@ -40,6 +40,7 @@ def get_device(actual_args=None):
             else:           #all other Raspberry Pi version other than compute modules
                 port = 1
                 device_type = "PI"
+        else: globals.screen_enable[3]='0'    #Just make sure that we have only one battery for NEO
     f.close()
     # for NEO we use i2c-port 0. For Pi's other than compute modules we use i2c-port 1 or 10 for CM
     

@@ -60,36 +60,46 @@ class USB:
 
         We must delete this if we exit at any point
 
-        :param sourcePath: place where files are
+        :param sourcePath: place where files are if it is '/media/usb0' then thats all that is copied, if it
+        :  something other than /media/usb0 it will looop through the usb's excluding 0 to copy to the dest (/media/usb0)
         :param destPath:  where we want to copy them to
         :return:  True / False
         '''
+        logging.info("Copying from: "+sourcePath+" to: "+destPath)
         with open('/usr/local/connectbox/PauseMount', "w") as fp:
             pass
         fp.close()
         time.sleep(2)  # give time for Pause of the Mount
         y = 0
-        x = ord('0')
+        if sourcePath != '/media/usb11':
+            x = ord(sourcePath[len(sourcePath)-1])
+            while (not os.path.exists('/media/usb'+chr(x))) and x < ord(':'):
+                x +=1
+        else: x = ord('0')
         if os.path.exists(destPath):
             while os.path.exists(sourcePath) and (x < ord(':')):
                 if os.path.exists(sourcePath) and os.path.exists(destPath):
-                    logging.debug("Copying tree: "+sourcePath)
+                    logging.info("Copying tree: "+sourcePath+" to: "+destPath)
                     copy_tree(sourcePath, destPath)
                     y = 1
                     logging.debug("Done copying to: "+destPath)
 #   Find the next USB key in the system to copy to destination
-                if len(sourcePath)==12: sourcePath = "/media/usb0"
-                x = ord(sourcePath[len(sourcePath)-1]) + 1
-                sourcePath = '/media/usb'+chr(x)
-                while not os.path.exists(sourcePath) and (x < ord(':')):
+                if sourcePath != '/media/usb0':
+                    if len(sourcePath)==12: sourcePath = "/media/usb0"
                     x = ord(sourcePath[len(sourcePath)-1]) + 1
-                    sourcePath = "/dev/usb"+chr(x)
-                    
+                    sourcePath = '/media/usb'+chr(x)
+                    while not os.path.exists(sourcePath) and (x < ord(':')):
+                        x = ord(sourcePath[len(sourcePath)-1]) + 1
+                        sourcePath = "/media/usb"+chr(x)
+
             if (y == 1):
+                logging.info("Everything copied all done")
                 return True
             else:
+                logging.info("nothing copied alll done")
                 return False
         else:
+            logging.info("failed destination path")
             return False
 
     def checkSpace(self, sourcePath='/media/usb11', destPath='/media/usb0'):
@@ -100,23 +110,27 @@ class USB:
         :param destPath:  path to the destination
         :return: True / False
         '''
+        logging.info("Starting the Space Check")
         destSize = self.getFreeSpace(destPath)
         sourceSize = 0
         while os.path.exists(sourcePath):
             sourceSize += self.getSize(sourcePath)
-            if len(sourcePath) == 12:
-                sourcePath = '/media/usb0'
-            x = ord(sourcePath[len(sourcePath) - 1])+1
-            sourcePath = '/media/usb'+chr(x)
-            while not os.path.exists(sourcePath) and (x< ord(':')):
-                x = ord(sourcePath[len(sourcePath)-1]) + 1
-                sourcePath = "/dev/usb"+chr(x) 
-            logging.debug("Source size: %s bytes, destination size: %s bytes",
-                          sourceSize, destSize)
-        logging.debug("total source size: %s bytes, total destination size %s bytes", 
-                      sourceSize, destSize)
-        return destSize >= sourceSize
-        
+            logging.info("got source size as : "+str(sourceSize)+" Path is: "+sourcePath)
+            if sourcePath != "/media/usb0":
+                if len(sourcePath) == 12:
+                   sourcePath = '/media/usb0'
+                x = ord(sourcePath[len(sourcePath) - 1])+1
+                sourcePath = '/media/usb'+chr(x)
+                while not os.path.exists(sourcePath) and (x< ord(':')):
+                   x = ord(sourcePath[len(sourcePath)-1]) + 1
+                   sourcePath = "/dev/usb"+chr(x) 
+                logging.info("Source size:"+str(sourceSize)+"  bytes, destination size:"+str(destSize)+" Now looking at:"+sourcePath)
+            else:
+                logging.info("total source size:"+str(sourceSize)+"  bytes, total destination size "+str(destSize))
+                return(destSize, sourceSize)
+        logging.info("total source size:"+str(sourceSize)+"  bytes, total destination size "+str(destSize))
+        return (destSize, sourceSize)
+
     # pylint: disable=unused-variable
     # Looks like this isn't summing subdirectories?
     @staticmethod
@@ -212,3 +226,28 @@ class USB:
             else:
                 x = ""
         return x
+
+
+
+    def getMount(self, curDev):
+        '''
+        This is a method of getting the device for the mount point
+        '''
+# take the file mount outuput and separate it into lines
+        mounts = str(subprocess.check_output(['df']))
+        mounts = mounts.split("\\n")
+
+# take the lines and check for the mount.
+        for line in mounts:
+            if (curDev in line):
+                x = line.split("%", 1)
+                x = x[1].rstrip(" ")
+                x = x.lstrip(" ")
+                x = ''.join(x)
+                break
+            else:
+                x = ""
+        return x
+
+
+

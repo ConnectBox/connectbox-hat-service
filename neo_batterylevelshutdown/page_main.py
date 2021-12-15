@@ -10,7 +10,7 @@
 ===========================================
 """
 import logging
-import os.path
+import os
 import subprocess
 import smbus2
 from PIL import Image, ImageFont, ImageDraw
@@ -101,6 +101,9 @@ class PageMain:
     # pylint: disable=too-many-locals
     def draw_page(self):
         global bus
+        try: os.remove('/usr/local/connectbox/PauseMount')
+        except:
+           pass
         # get an image
         dir_path = os.path.dirname(os.path.abspath(__file__))
         img_path = dir_path + '/assets/main_page.png'

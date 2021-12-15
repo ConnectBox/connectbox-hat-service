@@ -14,7 +14,6 @@ import neo_batterylevelshutdown.hats as hats
 import neo_batterylevelshutdown.displays as displays
 import neo_batterylevelshutdown.HAT_Utilities as utilities
 
-
 def getHATClass():
 
     # We assume the HAT is not present if we're unable to setup the pin
@@ -36,10 +35,10 @@ def getHATClass():
 #   versions we specify an un-connected pin... GPIO25 
 #   PA0 only used on HAT7 for OTG sense... spec un-connected pin on others   
     if globals.device_type == "NEO":
-        PA6 = 6     #PA6    Amber LED
-        PA1 = 1     #PA1    Test for HAT 4.6.7 (all other HATs have this pin unconnected)
-        PG11 = 203  #PG11   Test of HAT 7
-        PA0 = 0     #PA0    OTG sense (HAT7), not used on others
+        PA6 = 12    #PA6    Amber LED pin #
+        PA1 = 22    #PA1    Test for HAT 4.6.7 (all other HATs have this pin unconnected) pin #
+        PG11 = 7    #PG11   Test of HAT 7 pin #
+        PA0 = 11    #PA0    OTG sense (HAT7), not used on others pin #
     if globals.device_type == "CM":
         PA6 = 6     #GPIO6/30   
         PA1 = 25    #GPIO25/41
@@ -114,15 +113,18 @@ def getDisplayClass():
 @click.option('-v', '--verbose', is_flag=True, default=False)
 
 def main(verbose):
-    if verbose:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(level=logging.INFO)
-# Use BCM pin numbering scheme for compatibility with CM4        
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setwarnings(False)
+#    if verbose:
+    logging.basicConfig(level=logging.DEBUG)
+#   else:
+#        logging.basicConfig(level=logging.INFO)
+
 #Initialize the Global Variables
     globals.init()
+# Use BCM pin numbering scheme for compatibility with CM4 and use Board compatability for NEO
+    if globals.device_type == "NEO": GPIO.setmode(GPIO.BOARD)
+    else: GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+
     hatClass = getHATClass()
     displayClass = getDisplayClass()
      

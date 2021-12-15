@@ -17,6 +17,7 @@ from . import page_battery_low
 from . import page_power_down
 from . import page_display_image
 from . import page_multi_bat
+
 import neo_batterylevelshutdown.globals as globals
 
 
@@ -85,11 +86,13 @@ class OLED:
         self.adminPages = [
             page_display_image.PageDisplayImage(self.display_device, 'copy_from_usb.png'),
             page_display_image.PageDisplayImage(self.display_device, 'erase_folder.png'),
-            page_display_image.PageDisplayImage(self.display_device, 'exit.png'),  # MUST be last
+            page_display_image.PageDisplayImage(self.display_device, 'copy_to_usb.png'),      
+            page_display_image.PageDisplayImage(self.display_device, 'exit.png')             #must be last
         ]
         self.adminPageNames = [
             'copy_from_usb',
             'erase_folder',
+            'copy_to_usb',
             'exit'
         ]
 
@@ -120,6 +123,14 @@ class OLED:
                                                                 'remove_usb.png')
             self._curPage.draw_page()
 
+    def showInsertUsbPage(self):
+        with self._curPageLock:
+            logging.debug("Showing insert usb page")
+            self._curPage = page_display_image.PageDisplayImage(self.display_device,
+                                                                'insert_usb_key.png')
+            self._curPage.draw_page()
+
+
     def showNoUsbPage(self):
         with self._curPageLock:
             logging.debug("Showing no usb page")
@@ -127,11 +138,14 @@ class OLED:
                                                                 'error_no_usb.png')
             self._curPage.draw_page()
 
-    def showNoSpacePage(self):
+    def showNoSpacePage(self,a,b):
         with self._curPageLock:
             logging.debug("Showing no space page")
-            self._curPage = page_display_image.PageDisplayImage(self.display_device,
-                                                                'error_no_space.png')
+            if a == 1: self._curPage = page_display_image.PageDisplayImage(self.display_device,
+                                                                'error_no_space.png',b)
+            else: self._curPage = page_display_image.PageDisplayImage(self.display_device,
+                                                                'error_no_space2.png',b)
+
             self._curPage.draw_page()
 
     def showWaitPage(self):
@@ -262,7 +276,7 @@ class OLED:
             self._curPage = self.power_down_page
             self._curPage.draw_page()
             logging.debug("Transitioned to page %s", self._curPage)
-        
+
 
     def hideLowBatteryWarning(self):
         if self._curPage == self.low_battery_page:
@@ -272,7 +286,7 @@ class OLED:
         if self._curPage == self.blank_page:
             # nothing to do
             return
-        if self.pageStack == 'wait':  # we do not want to reset if we're on a wait screen
+        if self.pageStack == 'wait'or self.pageStack == 'remove_usb' :  # we do not want to reset if we're on a wait screen
             self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS  # reset
             return  # keep waiting
         if self.pageStack != 'status':  # if we're not on the default status pages

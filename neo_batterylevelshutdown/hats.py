@@ -36,14 +36,13 @@ def min_execution_time(min_time_secs):
 class BasePhysicalHAT:
     
     LED_CYCLE_TIME_SECS = 5
-#    PA6 = 12
 
     # pylint: disable=unused-argument
     # This is a standard interface - it's ok not to use
     def __init__(self, displayClass):
 
         if globals.device_type == "NEO":
-            self.PIN_LED = 6    # PA6
+            self.PIN_LED = 12    # PA6
         if globals.device_type == "CM":
             self.PIN_LED = 6    # GPIO6
         if globals.device_type == "PI":
@@ -145,11 +144,18 @@ class q1y2018HAT(BasePhysicalHAT):
     # battery voltage. All later HATs use the AXP209 for finding voltages
     # This HAT was ONLY made for NEO 
 
-    # Pin numbers specified in BCM format
-    PIN_VOLT_3_0 =  198     # PG6 
-    PIN_VOLT_3_45 = 199     # PG7
-    PIN_VOLT_3_71 = 200     # PG8
-    PIN_VOLT_3_84 = 201     # PG9
+    if globals.device_type == "NEO":
+        # Pin numbers specified in BCM format
+        PIN_VOLT_3_0 =  8       # PG6 
+        PIN_VOLT_3_45 = 10      # PG7
+        PIN_VOLT_3_71 = 16      # PG8
+        PIN_VOLT_3_84 = 18      # PG9
+    else:
+        # Pin numbers specified in BCM format
+        PIN_VOLT_3_0 =  198     # PG6 
+        PIN_VOLT_3_45 = 199     # PG7
+        PIN_VOLT_3_71 = 200     # PG8
+        PIN_VOLT_3_84 = 201     # PG9
 
     def __init__(self, displayClass):
 
@@ -385,11 +391,18 @@ class q3y2018HAT(Axp209HAT):
        
     def __init__(self, displayClass):
 
-        self.PIN_L_BUTTON =    1            #  PA1
-        self.PIN_R_BUTTON =  199            #  PG7
-#        self.PIN_AXP_INTERRUPT_LINE = 16
-        self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+        if globals.device_type == "NEO":
+            self.PIN_L_BUTTON =   22            #  PA1
+            self.PIN_R_BUTTON =   10            #  PG7
+    #        self.PIN_AXP_INTERRUPT_LINE = 16
+            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+        else:
+            self.PIN_L_BUTTON =    1            #  PA1
+            self.PIN_R_BUTTON =  199            #  PG7
+    #        self.PIN_AXP_INTERRUPT_LINE = 16
+            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
            
+
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
         # Run parent constructors before adding event detection
@@ -421,9 +434,9 @@ class q4y2018HAT(Axp209HAT):
     def __init__(self, displayClass):
 
         if (globals.device_type == "NEO"):
-            self.PIN_L_BUTTON = 198             # PG6 
-            self.PIN_R_BUTTON = 199             # PG7 
-            self.PIN_AXP_INTERRUPT_LINE = 200   # PG8
+            self.PIN_L_BUTTON = 8               # PG6 
+            self.PIN_R_BUTTON = 10              # PG7 
+            self.PIN_AXP_INTERRUPT_LINE = 16    # PG8
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         elif (globals.device_type =="CM"):
             self.PIN_L_BUTTON = 3               # GPIO3/56  
@@ -475,11 +488,19 @@ class q3y2021HAT(Axp209HAT):
         
     def __init__(self, displayClass):
 
-        self.PIN_L_BUTTON = 198               #PG6
-        self.PIN_R_BUTTON = 199               #PG7
-        self.PIN_AXP_INTERRUPT_LINE = 200     #PG8
-        self.PIN_OTG_SENSE = 0                #PA0
-        self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+        if globals.device_type == "NEO":
+            self.PIN_L_BUTTON = 8                 #PG6
+            self.PIN_R_BUTTON = 10                #PG7
+            self.PIN_AXP_INTERRUPT_LINE = 16      #PG8
+            self.PIN_OTG_SENSE = 11               #PA0
+            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+        else:
+            self.PIN_L_BUTTON = 198               #PG6
+            self.PIN_R_BUTTON = 199               #PG7
+            self.PIN_AXP_INTERRUPT_LINE = 200     #PG8
+            self.PIN_OTG_SENSE = 0                #PA0
+            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+
 
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
