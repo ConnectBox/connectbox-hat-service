@@ -263,7 +263,7 @@ class BUTTONS:
             while x < ord('k'):
                 if usb.isUsbPresent(dev):		             #find the first usb key
                     logging.info("try copying to "+dev+" at location: "+usb.getMount(dev)+" from '/media/usb0'")
-                    if not usb.copyFiles('/media/usb0', usb.getMount(dev)): # see if we copied successfully
+                    if not shutil.copy('/media/usb0', dev,*): # see if we copied successfully
                         self.display.showErrorPage()                      # if not generate error page and exit
                         self.display.pageStack = 'error'
                         logging.info("ok we failed to copy to "+dev+" at mount point "+(usb.getMount(dev)))
