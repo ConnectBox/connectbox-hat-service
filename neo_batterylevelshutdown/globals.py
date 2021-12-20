@@ -86,20 +86,7 @@ def init():
     except:
         pass
     try:
-        screen_enable = [js["lcd_pages_main"],
-                        js["lcd_pages_info"],
-                        js["lcd_pages_battery"],
-                        js["lcd_pages_multi_bat"],
-                        js["lcd_pages_memory"],
-                        js["lcd_pages_stats_hour_one"],
-                        js["lcd_pages_stats_hour_two"],
-                        js["lcd_pages_stats_day_one"],
-                        js["lcd_pages_stats_day_two"],
-                        js["lcd_pages_stats_week_one"],
-                        js["lcd_pages_stats_week_two"],
-                        js["lcd_pages_stats_month_one"],
-                        js["lcd_pages_stats_month_two"],
-                        js["lcd_pages_admin"]]
+        screen_enable = js["Screen_Enable"]
     except:
         pass
     try:

@@ -148,11 +148,11 @@ class OLED:
 
             self._curPage.draw_page()
 
-    def showWaitPage(self):
+    def showWaitPage(self,a):
         with self._curPageLock:
-            logging.debug("Showing wait page")
+            logging.debug("Showing wait page "+str(a))
             self._curPage = page_display_image.PageDisplayImage(self.display_device,
-                                                                'wait.png')
+                                                                'wait.png',a)
             self._curPage.draw_page()
 
     def showConfirmPage(self):
@@ -170,11 +170,11 @@ class OLED:
                                                                 'success.png')
             self._curPage.draw_page()
 
-    def showErrorPage(self):
+    def showErrorPage(self,a):
         with self._curPageLock:
             logging.debug("Showing error page")
             self._curPage = page_display_image.PageDisplayImage(self.display_device,
-                                                                'error.png')
+                                                                'error.png',a)
 
             self._curPage.draw_page()
 
