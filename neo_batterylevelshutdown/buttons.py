@@ -1,13 +1,12 @@
-
 # -*- coding: utf-8 -*-
 
 import subprocess
-import tempfile
+import sys
 import shutil
 import time
 import logging
 import os
-import RPi.GPIO as GPIO  # pylint: disable=import-error
+import RPi.GPIO as GPIO                        # pylint: disable=import-error from .usb import USB from . import page_display_image import
 from .usb import USB
 from . import page_display_image
 import neo_batterylevelshutdown.globals as globals
@@ -28,6 +27,7 @@ class BUTTONS:
         self.USABLE_BUTTONS = self.hat.USABLE_BUTTONS
         self.command_to_reference = ''
         self.l = []
+
 
     # pylint: disable=too-many-branches, too-many-branches, too-many-return-statements, too-many-statements
     def executeCommands(self, command):
@@ -179,7 +179,7 @@ class BUTTONS:
 
             self.display.pageStack = 'confirm'
             self.display.showConfirmPage()
-            time.sleep(3)
+            time.sleep(1)
             with open('/usr/local/connectbox/PauseMount','w') as fp:
                 pass
             fp.close()
@@ -265,76 +265,90 @@ class BUTTONS:
 
 
             # we think we have keys to work with if we go forward from here.
-
-            self.display.showWaitPage("Copying Now")
-            y = [0,0,0]
             l = []
+            y = [0,0,0]
+            self.display.showWaitPage("Copying Now")
             x = ord('a')
             dev = '/dev/sd'+chr(x)+"1"
-            logging.debug("Ready to start the copies")
+            logging.info("Ready to start the copies")
             while x < ord('k'):
                 if usb.isUsbPresent(dev):		             #find the first usb key
-                    f = tempfile.TemporaryFile()
-                    try:
-                        f.write(bytes("", 'utf-8'))
-                        f.seek(0)
-                    finally:
-                        y[2] = usb.getMount(dev)+'/'
-                        try:
-                            z = subprocess.Popen('cp -r -P /media/usb0/* '+str(y[2]), shell = True, stdout=f)
-                            y[0] = z
-                            y[1] = f
-                            l.append(list(y))
-                            logging.info("try copying from /media/usb0/* to location: "+y[2]+" Response was z, Y[0], Y[1] "+str(z)+", "+str(y[0])+", "+str(y[1]))
-                        except OSError:
-                            y[0] = 0
-                            y[1] = ""
+                    y[0] = subprocess.Popen(("/usr/bin/cp -r /media/usb0/* "+usb.getMount(dev)+"/"), shell=True)
+                    y[1] = usb.getMount(dev)+"/"
+                    y[2] = y[0].pid+1
+                    l.append(y)
+                    logging.info("started copy from /media/usb0/* to "+y[1]+" as pid: "+str(y[2]))
                 x +=1
                 dev = '/dev/sd'+chr(x)+'1'
-            logging.info("output of process matrix is: "+str(l))
-            x = 0
-            y = [0,0,0]
-            while y in l:
-                if y[0] == 0:
-                    self.display.showErrorPage("Failed on "+y[2])     # if not generate error page and exit
-                    self.display.pageStack = 'error'
-                    logging.info("ok we failed to copy to "+y[2]+" at mount point "+(usb.getMount(y[2])))
-                    if usb.isUsbPresent('/media/usb11') and usb.getMount(usb.getDev('/media/usb11')) == '/media/usb11':
-                        os.command('unmount '+usb.getDev('/media/usb11'))
-                        os.command('unmount /media/usb11')
-                        os.command('rmdir -f /media/usb11')
-                        logging.debug("we failed on the move of /media/usb11 -> /media/usb0")
-                        self.disiplay.showErrorPage("Failed on /media/usb11 remount")
-                        self.display.pageStack = 'error'
-                    y[1].close()                                     #Close the file handler for this event
-                    y[1] = ""                                        #null this event
-                else:
-                    logging.info("we suceeded in starting copying to device"+y[2])
+
+#            x = 0
+#            y = [0,0,0]
+#            while y in l:
+#                if y[0] == 0 or x ==1:
+#                    self.display.showErrorPage("Failed on /media/usb"+y[1])     # if not generate error page and exit
+#                    self.display.pageStack = 'error'
+#                   logging.info("ok we failed to copy to "+y[1]+" at mount point "+(usb.getMount("/media/usb"+y[1])))
+#                    x =1
+#                    try:
+#                        os.kill(y[2],-9)
+#                    except:
+#                        pass
+#                    if usb.isUsbPresent('/media/usb11') and (usb.getDev('/media/usb11')+"/") == y[1]:
+#                        os.command('unmount '+usb.getDev('/media/usb11'))
+#                        os.command('unmount /media/usb11')
+#                        os.command('rmdir -f /media/usb11')
+#                        logging.debug("we failed on the move of /media/usb11 -> /media/usb0")
+#                        self.disiplay.showErrorPage("Failed on /media/usb11 remount")
+#                        self.display.pageStack = 'error'
+#                    y[1] = ""                                        #null this event
+#            if x ==1:
+#                try: os.remove('/usr/local/connectbox/PauseMount')
+#                except:
+#                    pass 
+#                return
 
             # Ok we started all the copyies now we need to check for closure of the copy
-            z = 0
+            logging.info("Starting end of copy testing, lenth of l is "+str(len(l))+"value of: "+str(l))
+            y=[0,0,0]
+            yy = 0
             x = 0
-            y = [0,0,0]
-            while not x:
-                for y  in l:
-                    if y[1] != "":
-                       if y[0].poll() <= 0:                          #Check if we have a finished copy
-                           (result, errors)= y[0].communicate()
-                           logging.info("finished with copy on "+y[2]+"output was "+y[1].read()+" result: "+str(result)+" errors: "+str(errors))
-                           y[1].close
-                           y[1]=""
-                for y in l:                                          #Check to see if everyone is finished
-                    if y[1]== "": x =1
-                    else:
-                        x = 0
-                z += 1
-                if (z % 100) == 0:
-                    logging.debug("Ok were still waiting for process to finish"+str(z))
-                if x == 0 :
-                    time.sleep(10)
-
+            w = subprocess.Popen(("/usr/bin/ps -ae | /usr/bin/grep cp"), shell=True,  stdout=subprocess.PIPE, universal_newlines=True)
+            wo, errs = w.communicate()
+            w.kill()
+            logging.info("ps is showing "+wo)
+            logging.info("l is showing"+str(l))
+            while x == 0:
+                w = subprocess.Popen(("/usr/bin/ps -ae | /usr/bin/grep cp"), shell=True,  stdout=subprocess.PIPE, universal_newlines=True)
+                wo, errs = w.communicate()
+                w.kill()
+                while  yy < len(l):
+                     y=l[yy]
+                     logging.info("y values are: "+str(y[0])+", "+str(y[1])+", "+str(y[2]))
+                     if y[2] != 0:
+                         logging.info("testing for "+str(y[2]))
+                         if (str(y[2]) not in wo) or (((wo.split(str(y[2]))[1]).split("<")[1]).split(">")[0] == 'defunct'):
+                             logging.info("We finished the copy from /media/usb0 to "+y[1])
+                             try:
+                                 os.kill(y[2],-9)
+                                 os.kill(y[2]-1,-9)
+                             except:
+                                 pass
+                             y[2] = 0
+                             y[1] = "" 
+                             y[0] = 0
+                             l[yy] = y
+                             x = 1;
+                         else:
+                             x = 0;
+                             logging.info("testing failed")
+                     yy+= 1
+                yy = 0
+                if x==1:
+                     while y in l:
+                          if y[2]!= 0:
+                              x = 0
+                logging.info("looping on x="+str(x))
             os.sync()
-
             logging.info("Ok now we want to remove all the usb keys")
             curDev='/dev/sda1'
             x = ord('a')
@@ -347,7 +361,7 @@ class BUTTONS:
                 self.display.showRemoveUsbPage()        #show the remove usb page
                 self.display.pageStack = 'removeUsb'    #show we removed the usb key
                 self.command_to_reference = 'remove_usb'
-                time.sleep(1)                           #Wait a second for the removeal
+                time.sleep(3)                           #Wait a second for the removeal
                 while (not usb.isUsbPresent(curDev)) and x < ord("k"):
                     x += 1                              # lets look at the next one
                     curDev = '/dev/sd'+chr(x)+'1'       #create the next curdev
@@ -358,8 +372,8 @@ class BUTTONS:
             try: os.remove('/usr/local/connectbox/PauseMount')
             except:
                 pass 
-            self.display.pageStack = 'success'              # if the usb was removed
-            self.display.showSuccessPage()                  # display success page
+            self.display.pageStack = 'success'          # if the usb was removed
+            self.display.showSuccessPage()              # display success page
             os.sync()
             return
 

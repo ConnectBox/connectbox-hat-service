@@ -51,9 +51,9 @@ class PageDisplayImage:
 
         #device that is offending
         if self.devicename != "":
-            if imageName=='wait.png':
+            if self.imageName=='wait.png':
                 d.text((5, 30), "{:<}".format(self.devicename), font=font14, fill="black")
-            elif imageName== 'error.png':
+            elif self.imageName== 'error.png':
                 d.text((5, 30), "{:<}".format(self.devicename), font=font14, fill="black")
             else:
                 d.text((33, 38), "{:<}".format(self.devicename), font=font14, fill="black")
