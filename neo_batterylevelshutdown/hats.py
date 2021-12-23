@@ -140,9 +140,64 @@ class DummyHAT:
         logging.info("There is no HAT, so there's nothing to do")
 
 
+
+class cm4wHAT(BasePhysicalHAT):
+    # This is a CM4 unit without an AXP209 (Wilhelm proto)
+    SHUTDOWN_WARNING_PERIOD_SECS = 60
+    DISPLAY_TIMEOUT_SECS = 120
+    # possibly should be moved elsewhere
+
+    def __init__(self, displayClass):
+        self.PIN_L_BUTTON = 3               # GPIO3/56  
+        self.PIN_R_BUTTON = 4               # GPIO4/54  
+        self.PIN_AXP_INTERRUPT_LINE = 15    # GPIO15/51
+        self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+        GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
+        GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
+        GPIO.setup(self.PIN_AXP_INTERRUPT_LINE, GPIO.IN)
+
+        self.display = displayClass(self)
+        self.buttons = BUTTONS(self, self.display)
+        # Run parent constructors before adding event detection
+        #  as some callbacks require objects only initialised
+        #  in parent constructors
+        super().__init__(displayClass)
+
+        GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
+                              callback=self.buttons.handleButtonPress,
+                              bouncetime=125)
+        GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
+                              callback=self.buttons.handleButtonPress,
+                              bouncetime=125)
+
+
+
+        # Blank the screen 3 seconds after showing the logo - that's long
+        #  enough. While displayPowerOffTime is read and written from both
+        #  callback threads and the main loop, there's no TOCTOU race
+        #  condition because we're only ever setting an absolute value rather
+        #  than incrementing i.e. we're not referencing the old value
+        self.displayPowerOffTime = time.time() + 3
+
+    def mainLoop(self):
+        while True:
+            # The following ensures that the while loop only executes once every 
+            #  LED_CYCLE_TIME_SECS...
+            with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
+                # Perhaps power off the display
+                if time.time() > self.displayPowerOffTime:
+                    self.display.powerOffDisplay()
+
+    # Perhaps here we add a call to update the current page
+    #  self.display.redrawCurrentPage()
+    #   PERHAPS ADD TEST TO DO THIS ONLY FOR PAGES 0 -> 4
+                #logging.info("... redraw current page")
+                self.display.redrawCurrentPage()
+
+
 class q1y2018HAT(BasePhysicalHAT):
     # The circuitry on the Q1Y2018 HAT had voltage comparators to determine
-    # battery voltage. All later HATs use the AXP209 for finding voltages
+    # battery voltage. All later HATs the AXP209 for finding voltages
     # This HAT was ONLY made for NEO 
 
     # Pin numbers specified in BCM format

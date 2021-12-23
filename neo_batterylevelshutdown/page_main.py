@@ -134,33 +134,37 @@ class PageMain:
         # connected users
         d.text((13, 35), PageMain.get_connected_users(),
                font=font20, fill="black")
-
-        try:
-            # The AXP209 can disappear - degrade gracefully if that
-            #  happens.
-            acin_present = self.axp.power_input_status.acin_present
-            battexists = self.axp.battery_exists
-            if acin_present:
-                if globals.device_type != "CM":
-                    battgauge = self.axp.battery_gauge
-                    battery_voltage = self.axp.battery_voltage
+        if self.axp != None:
+            try:
+                # The AXP209 can disappear - degrade gracefully if that
+                #  happens.
+                acin_present = self.axp.power_input_status.acin_present
+                battexists = self.axp.battery_exists
+                if acin_present:
+                    if globals.device_type != "CM":
+                        battgauge = self.axp.battery_gauge
+                        battery_voltage = self.axp.battery_voltage
+                    else:
+                        battgauge = PageMain.averageFuel()
+                        battery_voltage = PageMain.averageBat()
                 else:
-                    battgauge = PageMain.averageFuel()
-                    battery_voltage = PageMain.averageBat()
-            else:
-            # if on battery power, calculate fuel based on battery voltage
-            #  Fuel = (Vbatt - 3.275)/0.00767
-            # simplifies to: (Vbatt(mv) - 3275) / 7.67 
-                if globals.device_type != "CM":
-                    battery_voltage = self.axp.battery_voltage
-                    battgauge =  (battery_voltage - 3275) / 7.67
-                else:
-                    battery_voltage = PageMain.averageBat()
-                    battgauge = PageMain.averageFuel()
-        except OSError:
+                # if on battery power, calculate fuel based on battery voltage
+                #  Fuel = (Vbatt - 3.275)/0.00767
+                # simplifies to: (Vbatt(mv) - 3275) / 7.67 
+                    if globals.device_type != "CM":
+                        battery_voltage = self.axp.battery_voltage
+                        battgauge =  (battery_voltage - 3275) / 7.67
+                    else:
+                        battery_voltage = PageMain.averageBat()
+                        battgauge = PageMain.averageFuel()
+            except OSError:
+                acin_present = False
+                battexists = False
+                battgauge = -1
+        else:
             acin_present = False
             battexists = False
-            battgauge = -1
+            battgauge = -1        
 
         if not acin_present:
             # not charging - cover up symbol

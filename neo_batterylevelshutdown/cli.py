@@ -85,6 +85,10 @@ def getHATClass():
             return hats.q3y2018HAT
 
     except OSError:
+        # We either have Q1Y2018 HAT or if CM4, we have Wilhelm proto circuit
+        if globals.device_type == "CM":
+            logging.info("CM4wHAT (CM4 Wilhelm... no AXP209)")
+            return hats.cm4wHAT
         # There is no AXP209 on the Q12018 HAT
         #  so this is either a real Q1Y2018 HAT or we have a bare processor 
         logging.info("Q1Y2018 HAT Detected")
@@ -125,6 +129,10 @@ def main(verbose):
     globals.init()
     hatClass = getHATClass()
     displayClass = getDisplayClass()
+
+    # handle CM4 with OLED but no AXP209
+    if (hatClass == hats.cm4wHAT) and (displayClass == displays.OLED):
+        displayClass = displays.OLED_x
      
     logging.info("starting main loop")
     try:
