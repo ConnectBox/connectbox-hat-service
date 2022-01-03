@@ -114,7 +114,7 @@ def getDisplayClass():
 
 def main(verbose):
 #    if verbose:
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 #   else:
 #        logging.basicConfig(level=logging.INFO)
 
