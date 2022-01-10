@@ -85,6 +85,10 @@ class BasePhysicalHAT:
         #
         # Register calculation from Allwinner_H3_Datasheet_v1.1.pdf page 316 ff
         #   Base address = 0x01c20800 ... PA0 is in bits 2:0 of offset 0x00
+        # globals.otg =0 for normal logic high to enable OTG and 1 for inverted OTG
+        if globals.otg='none':
+            retval = os.popen(modprobe -r g_serial)     #make sure there is no g_serial loaded by default.
+            return
         if (globals.device_type == "NEO"):
             cmd = "devmem2 0x01c20800"      #set up to read the config value for PA0
             retval = os.popen(cmd).read()   # the stdout of the command
@@ -94,7 +98,7 @@ class BasePhysicalHAT:
             retval = os.system(cmd1)                     # Write the register
 
             # we are now in input mode for the pin...
-            if GPIO.input(channel) == 0:
+            if (GPIO.input(channel) ^ globals.otg) == 0:  #we have xored with the globals.otg value
                 logging.debug("The OTG pin is LOW, so leaving OTG mode")
                 otg_mode = False
             else:
@@ -107,12 +111,27 @@ class BasePhysicalHAT:
                 retval = os.popen(cmd2).read()          # the stdout of the command
         
             # Now we have determined the OTG request, so do the requested work
-            if otg_mode == True:
+            if otg_mode == 1:
                 logging.debug("in OTG set")
+                retval = os.popen("grep "+globals.g_device+" /proc/modules").read()
+                if retval = ""
+                  return
+                elif globals.g_device == "g_serial"
+                  retval = os.popen("modprobe"+globals.g_device).read()
+                else:
+                  retval: = os.popen("modinfo "+globals.g_device+" "+globals.enable_mass_storage).read()
+                
+                if retval.find("FATAL"):
+                    logging.debug("Modprobe operation on "+globals.g_device+" "+globals.enable_mass_storage+" Failed!")
 
             else:    
                 logging.debug("not OTG set")
-        
+                retval = os.popen("grep "+globals.g_device+" /proc/modules").read()
+                if retval.find("filename"):
+                    retval = os.popen("modprobe -r "+globals.g_device).read()
+                    if retval.find("FATAL"):
+                        logging.debug("modprobe operation to remove "+globals.g_device+" failed!")
+        return
     # End of the OTG interrupt handler.......
         
 

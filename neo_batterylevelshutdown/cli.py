@@ -8,6 +8,7 @@
 import logging
 import axp209
 import click
+import os
 import RPi.GPIO as GPIO  # pylint: disable=import-error
 import neo_batterylevelshutdown.globals as globals
 import neo_batterylevelshutdown.hats as hats
@@ -108,15 +109,78 @@ def getDisplayClass():
         logging.info("No OLED detected")
         return displays.DummyDisplay
 
+def fixfiles(a, c)
+    
+
+    return
+
+
+def getNetworkClass():
+    # this module is designed to get the available interfaces and define which interface is the client facing one and which is the
+    # network facing interface.  The client interface is the AP interface and is based on either RTL8812AU or RTL8812BU or RTL88192U  The
+    # network facing interface will use the on board BMC wifi module as long as an AP module is present.  If no AP module is present it will become
+    # the AP although this is not optimal.  But this is useful for modules such as the RaspberryPi Zero W.
+    i = 0
+    netwk=[]
+    res = ""
+    a = ""
+    b = ""
+    try:
+        res = os.popen("lshw -C network").read()
+    while l in res:
+        if l.find("logical name: wlan")
+            a = l.split("wlan")[0]                                  #split out the wlan number from the line
+        if a != "":
+            if l.find("driver="):
+                b = l.split("driver=")[2].split(" ")[0]             #Split out the driver from the configuration line
+                netwk.append(('wlan'+a),b)                          #add the wlan# and driver to the list
+                a = ""
+                b = ""
+    AP = ""                                                         #access point interface
+    CI = ""                                                         #client interface
+    Rbt = 0                                                         #reboot set to no            
+    if len(netwk) == 1:                                             #only one wlan interface AP only
+        a = "wlan"+netwk[0]
+        b = netwk[1]
+        logging.info("single interface "+a+" with driver "+b)
+        # now we need to update the files for a single AP and no client
+        AP = a;
+        rbt = fixfiles(AP,CI)                                       #Go for fixing all the file entries
+    elif len(netwk) > 0:                                            #multiple wlan's so both AP and client interfaces
+        logging.info("wlan "+netwk[0][0]+" with driver "+netwk[0][1])
+        logging.info("wlan"+netwk[1][0]+" with driver "+netwk[1][1])
+            # we have an rtl driver on this first wlan
+        if "rtl" in netwk[0][0]:                                    #if we have an rtl on the first wlan we will use it for AP
+            AP = 'wlan'+netwk[0][0]
+                              #regardless of what we have we will use it for AP since we have no others
+        if "rtl" in netwk[1][1]:                                    #if we have an rtl on the second wlan we will use it for AP
+            if AP== "":
+                AP = 'wlan'+netwk[1][0]                         #interface 2 has the rtl and will be AP
+                CI = 'wlan'+netwk[0][0]                         #interface 1 is on board or other andd will be the client side for network
+            else:
+                CI = 'wlan'+netwk[1][0]                         #intreface 2 will be the Client network connection even if it is an rtl device
+        if len(netwk) >=3:
+            logging.info("we have more interfaces so they must be manually managed")  # if we have more than 2 interfaces then they must be manually managed.
+        rbt = fixfiles(AP,CI)                                       #Go for fixing all the file entries            
+    else:                                                           # we don't have even 1 interface
+        logging.info("We have no wlan interfaces we can't function this way")
+        Rbt = 1                                                     # we will reboot and try again.
+    if Rbt == 1:
+        os.popen("reboot")
+    return
+
+
+
+
 
 @click.command()
 @click.option('-v', '--verbose', is_flag=True, default=False)
 
 def main(verbose):
-#    if verbose:
-    logging.basicConfig(level=logging.INFO)
-#   else:
-#        logging.basicConfig(level=logging.INFO)
+    if verbose:
+        logging.basicConfig(level=logging.INFO)
+    else:
+         logging.basicConfig(level=logging.DEBUG)
 
 #Initialize the Global Variables
     globals.init()
@@ -125,6 +189,8 @@ def main(verbose):
     else: GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
 
+# Go find the netowrk interfaces and seteup the wans
+    getNetworkClass()
     hatClass = getHATClass()
     displayClass = getDisplayClass()
      

@@ -18,7 +18,7 @@ logo_image = "PH_image"
 splash_x = 7
 splash_y = 0
 splash_font = 26
-enable_mass_storage = 0
+enable_mass_storage = ""        # additive to the g_device paramater
 screen_enable = [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 
 # font sizes are just specified here
@@ -26,11 +26,11 @@ font30 = 26
 font20 = 19
 font14 = 13
 font10 = 11
-g_device = "g_serial"
+g_device = "g_serial"           # blank for no g_device on OTG
 clientIF = "wlan0"
 port = 0
-otg = 1
-usbnomount = 0
+otg = 0                         # 'none', 0 for normal positive OTG mode, 1 for inverted OTG mode
+usbnomount = 0                  # enables and dissables auto mount.
 
 from . import page_battery
 from .HAT_Utilities import get_device
@@ -74,7 +74,7 @@ def init():
     # Just in case our brand.txt doesn't have these parameters...
     #   (for any that are missing, just keep the defaults)
     try:
-        device_type = js["Device_Type"]
+        device_type = js["Device_type"]
     except:
         pass
     try:
@@ -86,7 +86,22 @@ def init():
     except:
         pass
     try:
-        screen_enable = js["Screen_Enable"]
+        screen_enable = [
+            js['lcd_pages.main'],
+            js['lcd_pages_info'],
+            js['lcd_pages_battery'],
+            js['lcd_pages_multi_bat'],
+            js['lcd_pages_memory'],
+            js['lcd_pages_stats_hour_one'],
+            js['lcd_pages_stats_hour_two'],
+            js['lcd_pages_stats_day_one'],
+            js['lcd_pages_stats_day_two'],
+            js['lcd_pages_stats_week_one'],
+            js['lcd_pages_stats_week_two'],
+            js['lcd_pages_stats_month_one'],
+            js['lcd_pages_stats_month_two'],
+            js['lcd_pages_admin'],
+        ]
     except:
         pass
     try:
