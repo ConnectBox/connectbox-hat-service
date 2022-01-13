@@ -15,16 +15,13 @@ import neo_batterylevelshutdown.hats as hats
 import neo_batterylevelshutdown.displays as displays
 import neo_batterylevelshutdown.HAT_Utilities as utilities
 
-hatClass = 0
-
-
 def getHATClass():
     logging.debug("Entering get Hat Class")
     # We assume the HAT is not present if we're unable to setup the pin
     #  or read from it. That's the safe option and means that we won't
     #  immediately shutdown devices that don't have a HAT if we've incorrect
     #  detected the presence of a HAT
-
+    d = 0
     try:
         # See if we can find an OLED
         utilities.get_device()
@@ -33,6 +30,7 @@ def getHATClass():
         logging.debug("No OLED detected, We are retuning a Dummy HAT")
         return hats.DummyHAT
 
+    logging.debug("Ok we passed the utiities.get.device() for the display")
 # Express all pin numbers in BCM nomenclature for compatibility with CM4
 #  (which requires BCM)
 # We will carry the original, NEO based names but use BCM pin numbers
@@ -102,13 +100,14 @@ def call_battery():
     page_battery.PageBattery(self.display_device, self.axp)
     return
 
-# the OLED is already set from the hat class test.  No need to retest.
-
-def getDisplayClass(hatClass):
+def getDisplayClass():
     logging.debug("Entering get Display Class")
-    if hatClass != hats.DummyHAT and hatClass !=0:
-        return displays.OLED
-    else:
+    try:
+        # See if we can find an OLED
+        utilities.get_device()
+        return display.OLED
+    except:
+        # No OLED. This is a standard Axp209 HAT
         logging.info("No OLED detected")
         return displays.DummyDisplay
 
@@ -356,8 +355,8 @@ def main(verbose):
     getNetworkClass()        #sets up the AP and Client interfaces
     logging.debug("Finished netowrk class")
     hatClass = getHATClass()
-    displayClass =getDisplayClass(hatClass)
-    logging.debug("display Class is: "+str(displayClass))
+    logging.debug("finished hat class")
+    displayClass = getDisplayClass()
     logging.debug("finished display class starting main loop")
     try:
         hatClass(displayClass).mainLoop()

@@ -54,13 +54,16 @@ def get_device(actual_args=None):
         # load config from file
         config = cmdline.load_config(args.config)
         args = parser.parse_args(config + actual_args)
+    logging.debug("now we will try to connect to the display")
     # create device
-    logging.info("now we will try to connect to the display "+str(args))
     try:
         device = cmdline.create_device(args)
     except error.Error as e:
-        parser.error(e)
+        logging.debug("We caught an error and are going to parse it")
+        return -1
+#        parser.error(e)
 
+    logging.debug("now we will return with the device")
     return device
 
 
