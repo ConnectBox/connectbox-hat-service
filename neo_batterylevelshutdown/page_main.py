@@ -23,8 +23,8 @@ from .HAT_Utilities import get_device, GetReleaseVersion
 # Start building the interactive menuing...
 
 #dev_i2c = 0x34 # for AXP209 = 0x34
-dev_i2c = 0x14  # for ATTiny88 on CM4 = 0x14
-bus = smbus2.SMBus(0)
+#dev_i2c = 0x14  # for ATTiny88 on CM4 = 0x14
+#bus = smbus2.SMBus(0)
 
 
 

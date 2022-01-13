@@ -24,8 +24,8 @@ from .HAT_Utilities import get_device
 
 # for AXP209 = 0x34
 # for ATTiny88 on CM4 = 0x14
-dev_i2c = 0x14
-bus = smbus2.SMBus(0)
+#dev_i2c = 0x14
+#bus = smbus2.SMBus(0)
 
 
 # handle the occassional failure of i2c read (ioctl errno 121)
