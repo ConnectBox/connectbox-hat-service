@@ -24,7 +24,7 @@ from .HAT_Utilities import get_device
 
 dev_i2c = 0x34 # for AXP209 = 0x34
 #dev_i2c = 0x14  # for ATTiny88 on CM4 = 0x14
-bus = smbus2.SMBus(globals.port)
+#bus = smbus2.SMBus(globals.port)
 
 class PageBattery:
     def __init__(self, device, axp):
