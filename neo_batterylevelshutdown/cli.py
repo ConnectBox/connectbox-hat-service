@@ -7,6 +7,7 @@
 
 import logging
 import axp209
+import time
 import click
 import os
 import RPi.GPIO as GPIO  # pylint: disable=import-error
@@ -128,36 +129,52 @@ def fixfiles(a, c):
         f.close()
     except:
         pass
-    logging.info("wificonf.txt holds "+ct[0]+" and "+ct[1]+" for passed paramaters "+a+" and "+c)
-    if a in ct[0] and c in ct[1]:
+    logging.info("wificonf.txt holds "+ct[0]+" and "+ct[1]+" for detected paramaters (AP, Client) "+a+" and "+c)
+    if a == ct[0] and c == ct[1]:
         logging.info("Skipped file reconfiguration as the configuration is the same")
         return
-
+    
 # Lets start with the /etc/network/interface folder
-    f = open('/etc/network/interfaces','r', encoding='utf-8')
+    f = open('/etc/network/interfaces.j2','r', encoding='utf-8')
     g = open('/etc/network/interfaces.tmp','w', encoding='utf-8')
     x = 0
+    skip_rest = 0
     l = ""
     n = ""
     for y,l in enumerate(f):
-        if 'wlan' in l:
+        if skip_rest == 0:
+            if 'wlan' in l:
             m = l.split('wlan')
-            if x< 4:
+                if x< 4:                                  #Set this number to 1 less than the number of wlan references in text before the client code in /etc/network/interfaces.j2
                 n = m[0]+a                            #insert the AP wlan
-                logging.debug("on interface line were setting $1: "+n)
+#                    logging.debug("on interface line were setting $1: "+n)
                 x +=1
             else:
-                n = m[0]+c
-                logging.debug("on interface line were setting $2: "+n)
-                x += 1
-            while m[1][0].isnumeric():
-                m[1] = m[1][1:]                   #Remove numeric characters
-            n = str(n + m[1])
-        else:
-            n = str(l)
-        g.write(n)
+                if c=="":
+                        m[0] = '#'+m[0]+'wlan'+str(int(a)+1)
 
-    f.flush()
+                    else:
+                        if "#" == m[0][0]:
+                            while m[0][0]=="#":
+                        m[0]=m[0][1:]
+                    n = m[0]+c
+#                   logging.debug("on interface line were setting $2: "+n)
+                x += 1
+                while m[1][0].isnumeric():
+                    m[1] = m[1][1:]                   #Remove numeric characters
+            n = str(n + m[1])
+            else:
+                if "#CLIENTIF#" in l and c == "":
+                    skip_rest=1
+                if x>4 and 'wpa-conf' in l:               #See above... but set it 1 less than the number of wlan references for AP in text file interfaces.
+                if l.find("wpa-conf") >= 0:
+                    if c != "":
+                        while l[0] == "#":
+                                l =  l[1:]
+                        if c == "" and l[0] != "#":
+                            l = "#" + l
+            n = str(l)
+            g.write(n)
     g.flush()
     f.close()
     g.close()
@@ -174,7 +191,7 @@ def fixfiles(a, c):
         if 'interface=wlan' in l:
              m = l.split('interface=wlan')
              n = str(m[0]+'interface='+a)
-             logging.debug("on dnsmasq were setting $1: "+n)
+#             logging.debug("on dnsmasq were setting $1: "+n)
              x += 1
              while m[1][0].isnumeric():
                    m[1] = m[1][1:]
@@ -183,7 +200,6 @@ def fixfiles(a, c):
              n = str(l)
         g.write(n)
 
-    f.flush()
     g.flush()
     f.close()
     g.close()
@@ -199,7 +215,7 @@ def fixfiles(a, c):
         if 'interface=wlan' in l:
              m = l.split('interface=wlan')
              n = str(m[0]+'interface='+a)
-             logging.debug("on hostapd were setting $1: "+n)
+#             logging.debug("on hostapd were setting $1: "+n)
              x += 1
              while m[1][0].isnumeric():
                    m[1] = m[1][1:]
@@ -208,7 +224,6 @@ def fixfiles(a, c):
              n = str(l)
         g.write(n)
 
-    f.flush()
     g.flush()
     f.close()
     g.close()
@@ -224,36 +239,33 @@ def fixfiles(a, c):
         f.close()
     except:
         pass
+    os.system("sync")                                #we will ensure we clear all files and pending write data
 
-# Now we are done with hostapd.conf
+# Now we are done with the network/interface.tmp, dnsmasq.tmp and hostapd.tmp file creations time to put them into action.
 
-    if a != "":
+    if at != "":
+         logging.info("taking interface down "+str(at))
          os.system("ifdown "+a)
-    if c != "":
+
+    if ct != "":
+         logging.info("taking interface down "+str(ct))
          os.system("ifdown "+c)
-    os.system("systemctl stop dnsmasq.serice")
-    os.system("systemctl stop networking.serice")
-    os.system("systemctl stop dhcpcd.service")
+    time.sleep(10)
+
     logging.info("We have taken the interfaces down now")
+    os.system("mv /etc/network/interfaces /etc/network/interfaces.bak")
     os.system("mv /etc/hostapd/hostapd.conf /etc/hostapd/hostapd.bak")
     os.system("mv /etc/dnsmasq.conf /etc/dnsmasq.bak")
-    os.system("mv /etc/network/interfaces /etc/network/interfaces.bak")
 
     os.system("mv /etc/hostapd/hostapd.tmp /etc/hostapd/hostapd.conf")
     os.system("mv /etc/dnsmasq.tmp /etc/dnsmasq.conf")
     os.system("mv /etc/network/interfaces.tmp /etc/network/interfaces")
-#    os.system("rm /etc/hostapd/hhostapd.tmp")
-#    os.system("rm /etc/dnsmasq.tmp")
-#    os.system("rm /etc/network/interfaces.tmp")
+
+
     logging.info("We have completed the file copy copleteions")
-    os.system("systemctl start networking.service")
-    os.system("systemctl start dhcpcd.service")
-    os.system("systemctl start dnsmasq.service")
-    if a != "":
-        os.system("ifup "+a)
-    if c != "":
-        os.system("ifup "+c)
-    logging.info("We have brought up the interfaces again")
+    logging.info("we will reboot to setup the new interfaces")
+    os.system("reboot")
+
     return 0
 
 
@@ -357,8 +369,8 @@ def main(verbose):
     logging.debug("Finished netowrk class")
     hatClass = getHATClass()
     displayClass =getDisplayClass(hatClass)
-    logging.debug("display Class is: "+str(displayClass))
-    logging.debug("finished display class starting main loop")
+#    logging.debug("display Class is: "+str(displayClass))
+#    logging.debug("finished display class starting main loop")
     try:
         hatClass(displayClass).mainLoop()
     except KeyboardInterrupt:
