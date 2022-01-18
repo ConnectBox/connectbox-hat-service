@@ -12,77 +12,20 @@
 import logging
 import os
 import subprocess
-import smbus2
 from PIL import Image, ImageFont, ImageDraw
 import axp209
 import neo_batterylevelshutdown.globals as globals
 from .HAT_Utilities import get_device, GetReleaseVersion
+import neo_batterylevelshutdown.multiBat_Utilities as mb_utilities
 
 
 
 # Start building the interactive menuing...
 
-dev_i2c = 0x34 # for AXP209 = 0x34
-#dev_i2c = 0x14  # for ATTiny88 on CM4 = 0x14
-#bus = smbus2.SMBus(globals.port)
-
-
-
 class PageMain:
     def __init__(self, device, axp):
         self.device = device
         self.axp = axp
-        global bus
-        global dev_i2c
-# Then need to create a smbus object like...
-        bus = smbus2.SMBus(globals.port)    # 0 = /dev/i2c-0 (port I2C0), 1 = /dev/i2c-1 (port I2C1), etc
-
-# Then we can use smbus commands like... (prefix commands with "bus.") 
-#
-# read_byte(dev)     / reads a byte from specified device
-# write_byte(dev,val)   / writes value val to device dev, current register
-# read_byte_data(dev,reg) / reads byte from device dev, register reg
-# write_byte_data(dev,reg,val) / write byte val to device dev, register reg 
-#
-
- #handle the occassional failure of i2c read (ioctl errno 121)
-    @staticmethod
-    def i2c_read(device, reg):
-        value = -1
-        i = 1
-        while (value == -1) and (i < 10):
-            try:
-                value = bus.read_byte_data(device, reg)
-                return (value)
-            except:
-                i += 1
-        return (-1)      # return -1 if we have 10 successive read failures      
-
-
-    @staticmethod
-    def averageBat():
-        global bus
-        global dev_i2c
-        bat = 0
-        for reg in range (0x21, 0x29, 2):
-            value = PageMain.i2c_read(dev_i2c, reg)
-            value += (PageMain.i2c_read(dev_i2c, reg+1)) * 256
-            bat += value
-        bat = bat / PageMain.i2c_read(dev_i2c,  0x30)
-        logging.info("Battery average is: "+str(bat))
-        return(bat)
-
-    @staticmethod
-    def averageFuel():
-        global bus
-        global dev_i2c
-        fuel = 0
-        for reg in range (0x41, 0x45, 1):
-             fuel += PageMain.i2c_read(dev_i2c, reg)
-        fuel = fuel / (PageMain.i2c_read(dev_i2c, 0x30))
-        fuel = round(fuel, 0)
-        return(fuel)
-
 
     @staticmethod
     def get_connected_users():
@@ -100,7 +43,6 @@ class PageMain:
 
     # pylint: disable=too-many-locals
     def draw_page(self):
-        global bus
         try: os.remove('/usr/local/connectbox/PauseMount')
         except:
            pass
@@ -148,8 +90,8 @@ class PageMain:
                     battgauge = self.axp.battery_gauge
                     battery_voltage = self.axp.battery_voltage
                 else:
-                    battgauge = PageMain.averageFuel()
-                    battery_voltage = PageMain.averageBat()
+                    battgauge = mb_utilities.averageFuel()
+                    battery_voltage = mb_utilities.averageBat()
             else:
             # if on battery power, calculate fuel based on battery voltage
             #  Fuel = (Vbatt - 3.275)/0.00767
@@ -158,8 +100,8 @@ class PageMain:
                     battery_voltage = self.axp.battery_voltage
                     battgauge =  (battery_voltage - 3275) / 7.67
                 else:
-                    battery_voltage = PageMain.averageBat()
-                    battgauge = PageMain.averageFuel()
+                    battery_voltage = mb_utilities.averageBat()
+                    battgauge = mb_utilities.averageFuel()
         except OSError:
             acin_present = False
             battexists = False

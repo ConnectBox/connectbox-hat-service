@@ -11,11 +11,16 @@ import os.path
 import io
 import sys
 import time
+
+#JRA - 011322
+import smbus2
+
 from axp209 import AXP209, AXP209_ADDRESS
 from . import globals
 import RPi.GPIO as GPIO  # pylint: disable=import-error
 from .buttons import BUTTONS
-
+import neo_batterylevelshutdown.multiBat_Utilities as mb_utilities
+    
 @contextmanager
 def min_execution_time(min_time_secs):
     """
@@ -256,8 +261,8 @@ class Axp209HAT(BasePhysicalHAT):
     # possibly should be moved elsewhere
 
 
-
     def __init__(self, displayClass):
+
         self.axp = AXP209(globals.port)         # Pass the port number to get the right device
         self.display = displayClass(self)
         self.buttons = BUTTONS(self, self.display)
@@ -358,6 +363,8 @@ class Axp209HAT(BasePhysicalHAT):
             self.axp.bus.write_byte_data(AXP209_ADDRESS, stat_reg, 0xFF)
         logging.debug("IRQ records cleared")
 
+
+
     def mainLoop(self):
         while True:
             # The following ensures that the while loop only executes once every 
@@ -367,6 +374,30 @@ class Axp209HAT(BasePhysicalHAT):
                 if time.time() > self.displayPowerOffTime:
                     self.display.powerOffDisplay()
 
+
+    # Read the battery in use number from ATTiny, read the voltage from AXP209, re-read the battery number
+    #  (make sure battery didn't change), write the battery voltage/16 to ATTiny
+    #  and to local array bat_voltage[]
+                result = batteryNumber = mb_utilities.i2c_read(0x31)
+                logging.debug("read of battery number = %i ",batteryNumber)
+                if (result != -1):          # valid read of ATTiny so ATTiny handling battery switching
+                    batteryVoltage = int(self.axp.battery_voltage)
+                    wr_scaled = int(batteryVoltage/16)
+                    if (wr_scaled > 0xFF):
+                        wr_scaled = 0xFF
+                    reread = mb_utilities.i2c_read(0x31)
+                    if (batteryNumber == reread):
+                        wr_result = mb_utilities.i2c_write(0x20+batteryNumber, wr_scaled)
+                        mb_utilities.v_array_write(batteryNumber, wr_scaled)      # save battery voltage
+                        mb_utilities.v_array_write(0, batteryNumber)              # put battery number in offset 0
+                        logging.debug("save bat_voltage[%i] = %i ", batteryNumber, wr_scaled)
+
+                else:       # no ATTiny, so CM4 handling battery selection
+                    # code here to have CM4 check for which batteries are present and
+                    #  which battery is in use; read the voltage of the battery and store
+                    #  in the global array for use by the page_multi_bat.py code (and possibly others)
+                    pass    # This is a stub for now    
+ 
     # Perhaps here we add a call to update the current page
     #  self.display.redrawCurrentPage()
     #   PERHAPS ADD TEST TO DO THIS ONLY FOR PAGES 0 -> 4

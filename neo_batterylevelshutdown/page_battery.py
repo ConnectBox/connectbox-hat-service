@@ -11,56 +11,27 @@
 """
 import logging
 import os.path
-import smbus2
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
 import axp209
 from . import globals
 from .HAT_Utilities import get_device
+import neo_batterylevelshutdown.multiBat_Utilities as mb_utilities
 
 
 # Start building the interactive menuing...
 
-dev_i2c = 0x34 # for AXP209 = 0x34
-#dev_i2c = 0x14  # for ATTiny88 on CM4 = 0x14
-bus = smbus2.SMBus(globals.port)
 
 class PageBattery:
     def __init__(self, device, axp):
         self.device = device
         self.axp = axp
-        global bus
-# Then need to create a smbus object like...
 
-        bus = smbus2.SMBus(globals.port)   # 0 = /dev/i2c-0 (port I2C0), 1 = /dev/i2c-1 (port I2C1), etc
-
-# Then we can use smbus commands like... (prefix commands with "bus.") 
-#
-# read_byte(dev)     / reads a byte from specified device
-# write_byte(dev,val)   / writes value val to device dev, current register
-# read_byte_data(dev,reg) / reads byte from device dev, register reg
-# write_byte_data(dev,reg,val) / write byte val to device dev, register reg 
-#
 # pylint: disable=too-many-locals
 
 
-# handle the occassional failure of i2c read (ioctl errno 121)
-    def i2c_read(device, reg):
-        value = -1
-        i = 1
-        while (value == -1) and (i < 10):
-            try:
-                value = bus.read_byte_data(device, reg)
-                return (value)
-            except:
-                i += 1
-        return (-1)      # return -1 if we have 10 successive read failures      
-
-
-
     def draw_page(self):
-        global bus
         dir_path = os.path.dirname(os.path.abspath(__file__))
         # find out if the unit is charging or not
         # get an image
@@ -89,7 +60,7 @@ class PageBattery:
         except OSError:
             have_axp209 = False
 
-        # draw text, full opacity
+        # draw text, VOLTAGE & TEMPERATURE, full opacity
         if have_axp209:
             if not bat_exists:
                 bat_voltage = 0
@@ -105,6 +76,8 @@ class PageBattery:
             d.text((52, 44), "%.1f" %
                    -1, font=font20, fill="black")
 
+        # CHARGING - COVER THE BATTERY OUT ARROW
+        #  Display Fuel, Battery Number (for CM4), Charge Current
         if have_axp209 and self.axp.power_input_status.acin_present:
             # charging
             # cover the out arrow
@@ -114,11 +87,14 @@ class PageBattery:
             d.text((63, 2), "%.0f%%" %
                    percent, font=font20, fill="black")
             if globals.device_type == "CM":
-                logging.info("Bus Battery: "+str( PageBattery.i2c_read(dev_i2c, 0x31)))
+                logging.info("Bus Battery: "+str(mb_utilities.bat_number()))
                 d.text((95,2), "#%.0f" %
-                   float(PageBattery.i2c_read(dev_i2c, 0x31)), font=font20, fill="black")		#Display the battery number
-            d.text((97, 44), "%.0f" %
+                   float(mb_utilities.bat_number()), font=font20, fill="black")		#Display the battery number
+            d.text((92, 44), "%.0f" %
                    self.axp.battery_charge_current, font=font20, fill="black")
+
+        # DISCHARGING - COVER THE BATTERY IN ARROW
+        #  Display Fuel, Battery Number (CM4), Battery Current    
         else:
             # discharging or AXP209 not present i.e. not doing it's job
             # cover the charging symbol & in arrow
@@ -134,17 +110,17 @@ class PageBattery:
 
                 d.text((63, 2), "%.0f%%" %
                        percent, font=font20, fill="black")
-                d.text((97, 44), "%.0f" %
+                d.text((92, 44), "%.0f" %
                        self.axp.battery_discharge_current,
                        font=font20, fill="black")
                 if globals.device_type == "CM":
-                    logging.info("Bus Battery: "+str( PageBattery.i2c_read(dev_i2c, 0x31)))
+                    logging.info("Bus Battery: "+str(mb_utilities.bat_number()))
                     d.text((95,2), "#%.0f" %
-                       float(PageBattery.i2c_read(dev_i2c, 0x31)), font=font20, fill="black")		#Display the battery number
+                       float(mb_utilities.bat_number()), font=font20, fill="black")		#Display the battery number
             else:
                 d.text((63, 2), "%.0f%%" %
                        -1, font=font20, fill="black")
-                d.text((97, 44), "%.0f" %
+                d.text((92, 44), "%.0f" %
                        -1, font=font20, fill="black")
 
         # draw battery fill lines
