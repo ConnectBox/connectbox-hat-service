@@ -130,7 +130,7 @@ def fixfiles(a, c):
     except:
         pass
     logging.info("wificonf.txt holds "+ct[0]+" and "+ct[1]+" for detected paramaters (AP, Client) "+a+" and "+c)
-    if a == ct[0] and c == ct[1]:
+    if ("AccessPointIF="+ a) == ct[0] and ("ClientIF="+ c) == ct[1]:
         logging.info("Skipped file reconfiguration as the configuration is the same")
         return
     
@@ -232,8 +232,8 @@ def fixfiles(a, c):
 #  Now lets make sure we write out the configuration for future
     try:
         f = open("/usr/local/connectbox/wificonf.txt", 'w')
-        f.write(a+"\n")
-        f.write(c+"\n")
+        f.write("AccessPointIF="+ a +"\n")
+        f.write("ClientIF="+ c +"\n")
         f.write("####END####\n")
         f.flush()
         f.close()
