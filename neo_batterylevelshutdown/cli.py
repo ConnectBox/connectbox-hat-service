@@ -144,36 +144,36 @@ def fixfiles(a, c):
     for y,l in enumerate(f):
         if skip_rest == 0:
             if 'wlan' in l:
-            m = l.split('wlan')
-                if x< 4:                                  #Set this number to 1 less than the number of wlan references in text before the client code in /etc/network/interfaces.j2
-                n = m[0]+a                            #insert the AP wlan
+                m = l.split('wlan')
+                if x< 6:                                  #Set this number to 1 less than the number of wlan references in text before the client code in /etc/network/interfaces.j2
+                    n = m[0]+a                            #insert the AP wlan
 #                    logging.debug("on interface line were setting $1: "+n)
-                x +=1
-            else:
-                if c=="":
+                    x +=1
+                else:
+                    if c=="":
                         m[0] = '#'+m[0]+'wlan'+str(int(a)+1)
 
                     else:
                         if "#" == m[0][0]:
                             while m[0][0]=="#":
-                        m[0]=m[0][1:]
-                    n = m[0]+c
+                                m[0]=m[0][1:]
+                        n = m[0]+c
 #                   logging.debug("on interface line were setting $2: "+n)
                 x += 1
                 while m[1][0].isnumeric():
                     m[1] = m[1][1:]                   #Remove numeric characters
-            n = str(n + m[1])
+                n = str(n + m[1])
             else:
                 if "#CLIENTIF#" in l and c == "":
                     skip_rest=1
-                if x>4 and 'wpa-conf' in l:               #See above... but set it 1 less than the number of wlan references for AP in text file interfaces.
-                if l.find("wpa-conf") >= 0:
-                    if c != "":
-                        while l[0] == "#":
+                if x>5 and 'wpa-conf' in l:               #See above... but set it 1 less than the number of wlan references for AP in text file interfaces.
+                    if (l.find("wpa-conf") >= 0) or (l.find("iface") >=0):
+                        if c != "":
+                            while l[0] == "#":
                                 l =  l[1:]
                         if c == "" and l[0] != "#":
                             l = "#" + l
-            n = str(l)
+                n = str(l)
             g.write(n)
     g.flush()
     f.close()
