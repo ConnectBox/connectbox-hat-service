@@ -118,7 +118,7 @@ def getDisplayClass(hatClass):
 
 def fixfiles(a, c):
 # This function is called to fix the files and restart the network interfaces based on what we have loaded.  AP represents the Wlan that will serve as the Access point.  CI is the ethernet interface which may or may not be there
-# in a standard configuration.
+# in a standard configuration. The values of a and c are numbers only.
     logging.debug("Entering fix files")
     at = ""
     ct = ["",""]
@@ -130,14 +130,15 @@ def fixfiles(a, c):
     except:
         pass
     logging.info("wificonf.txt holds "+ct[0]+" and "+ct[1]+" for detected paramaters (AP, Client) "+a+" and "+c)
-    if ("AccessPointIF="+ a) == ct[0] and ("ClientIF="+ c) == ct[1]:
+    if ("AccessPointIF=wlan"+ a) == ct[0] and (("ClientIF=wlan"+ c == ct[1] and c!="") | (c == "" and ct[1] == "ClientIF=")):
         logging.info("Skipped file reconfiguration as the configuration is the same")
         return
-    
+
 # Lets start with the /etc/network/interface folder
     f = open('/etc/network/interfaces.j2','r', encoding='utf-8')
     g = open('/etc/network/interfaces.tmp','w', encoding='utf-8')
     x = 0
+    wlan_num  = 3                                        #number of wlanX references in the AP side before the #CLIENT# in /etc/network/interfaces.j2 text file
     skip_rest = 0
     l = ""
     n = ""
@@ -145,34 +146,29 @@ def fixfiles(a, c):
         if skip_rest == 0:
             if 'wlan' in l:
                 m = l.split('wlan')
-                if x< 6:                                  #Set this number to 1 less than the number of wlan references in text before the client code in /etc/network/interfaces.j2
-                    n = m[0]+a                            #insert the AP wlan
+                if x< (wlan_num+1):                       #Set this number to 1 more than the number of wlan references in text before the client code in /etc/network/interfaces.j2
+                    n = m[0]+'wlan'+a                     #insert the AP wlan
 #                    logging.debug("on interface line were setting $1: "+n)
-                    x +=1
                 else:
                     if c=="":
                         m[0] = '#'+m[0]+'wlan'+str(int(a)+1)
-
                     else:
                         if "#" == m[0][0]:
                             while m[0][0]=="#":
                                 m[0]=m[0][1:]
-                        n = m[0]+c
+                    n = m[0]+'wlan'+c
 #                   logging.debug("on interface line were setting $2: "+n)
                 x += 1
                 while m[1][0].isnumeric():
-                    m[1] = m[1][1:]                   #Remove numeric characters
+                    m[1] = m[1][1:]                        #Remove numeric characters
                 n = str(n + m[1])
             else:
-                if "#CLIENTIF#" in l and c == "":
-                    skip_rest=1
-                if x>5 and 'wpa-conf' in l:               #See above... but set it 1 less than the number of wlan references for AP in text file interfaces.
-                    if (l.find("wpa-conf") >= 0) or (l.find("iface") >=0):
-                        if c != "":
-                            while l[0] == "#":
-                                l =  l[1:]
-                        if c == "" and l[0] != "#":
-                            l = "#" + l
+                if "#CLIENTIF#" in l:                      #if we hit here and have no client ie: c="" then we skip the rest fo the file
+                    if c == "":
+                        skip_rest=1
+                else:
+                    if x > (wlan_num)  and l != "\n" and c =="" :     #See above... but set it to the number of AP wlan references in text file interfaces.  if its  a line in the AP section without wlan we justg pass it through 
+                        l = "#" + l                                   # if for some reason we don't have a #ClIENTIF# reverence theen we comment out all of the client iff c=""
                 n = str(l)
             g.write(n)
     g.flush()
@@ -190,7 +186,7 @@ def fixfiles(a, c):
     for y,l in enumerate(f):
         if 'interface=wlan' in l:
              m = l.split('interface=wlan')
-             n = str(m[0]+'interface='+a)
+             n = str(m[0]+'interface=wlan'+a)
 #             logging.debug("on dnsmasq were setting $1: "+n)
              x += 1
              while m[1][0].isnumeric():
@@ -214,7 +210,7 @@ def fixfiles(a, c):
     for y,l in enumerate(f):
         if 'interface=wlan' in l:
              m = l.split('interface=wlan')
-             n = str(m[0]+'interface='+a)
+             n = str(m[0]+'interface=wlan'+a)
 #             logging.debug("on hostapd were setting $1: "+n)
              x += 1
              while m[1][0].isnumeric():
@@ -232,8 +228,11 @@ def fixfiles(a, c):
 #  Now lets make sure we write out the configuration for future
     try:
         f = open("/usr/local/connectbox/wificonf.txt", 'w')
-        f.write("AccessPointIF="+ a +"\n")
-        f.write("ClientIF="+ c +"\n")
+        f.write("AccessPointIF=wlan"+ a +"\n")
+        if c=="":
+            f.write("ClientIF="+"\n")
+        else:
+            f.write("ClientIF=wlan"+ c +"\n")
         f.write("####END####\n")
         f.flush()
         f.close()
@@ -243,13 +242,13 @@ def fixfiles(a, c):
 
 # Now we are done with the network/interface.tmp, dnsmasq.tmp and hostapd.tmp file creations time to put them into action.
 
-    if at != "":
-         logging.info("taking interface down "+str(at))
-         os.system("ifdown "+a)
+    if a != "":
+         logging.info("taking interface down wlan"+a)
+         os.system("ifdown wlan"+a)
 
-    if ct != "":
-         logging.info("taking interface down "+str(ct))
-         os.system("ifdown "+c)
+    if c != "":
+         logging.info("taking interface down wlan"+c)
+         os.system("ifdown wlan"+c)
     time.sleep(10)
 
     logging.info("We have taken the interfaces down now")
@@ -291,8 +290,8 @@ def getNetworkClass():
             if a != "":
                 if r[1].find("driver="):
                     b = r[1].split("driver=")[1].split(" ")[0]             #Split out the driver from the configuration line
-                    netwk.append(['wlan'+a,b])                          #add the wlan# and driver to the list
-                    logging.info("found wlan driver combo, "+a+" driver: "+b)
+                    netwk.append([a,b])                                    #add the wlan# and driver to the list
+                    logging.info("found wlan driver combo, wlan"+a+" driver: "+b)
                     a = ""
                     b = ""
                 else:
@@ -311,13 +310,13 @@ def getNetworkClass():
     if len(netwk) == 1:                                             #only one wlan interface AP only
         a = netwk[0][0]
         b = netwk[0][1]
-        logging.info("single interface "+a+" with driver "+b)
+        logging.info("single interface wlan"+a+" with driver "+b)
         # now we need to update the files for a single AP and no client
         AP = a;
         rbt = fixfiles(AP,CI)                                       #Go for fixing all the file entries
     elif len(netwk) > 1:                                            #multiple wlan's so both AP and client interfaces
-        logging.info(netwk[0][0]+" with driver "+netwk[0][1])
-        logging.info(netwk[1][0]+" with driver "+netwk[1][1])
+        logging.info("wlan"+netwk[0][0]+" with driver "+netwk[0][1])
+        logging.info("wlan"+netwk[1][0]+" with driver "+netwk[1][1])
             # we have an rtl driver on this first wlan
         if "rtl" in netwk[0][1]:                                    #if we have an rtl on the first wlan we will use it for AP
             AP = netwk[0][0]
@@ -333,7 +332,7 @@ def getNetworkClass():
                     CI = netwk[0][0]
                 else:
                     CI = netwk[1][0]
-        logging.info("AP will be: "+AP+" etherneet facing is: "+CI)
+        logging.info("AP will be: wlan"+AP+" etherneet facing is: wlan"+CI)
         if len(netwk) >=3:
             logging.info("we have more interfaces so they must be manually managed")  # if we have more than 2 interfaces then they must be manually managed.
         rbt = fixfiles(AP,CI)                                       #Go for fixing all the file entries
