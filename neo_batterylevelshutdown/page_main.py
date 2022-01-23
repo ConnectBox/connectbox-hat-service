@@ -85,23 +85,15 @@ class PageMain:
             #  happens.
             acin_present = self.axp.power_input_status.acin_present
             battexists = self.axp.battery_exists
-            if acin_present:
-                if globals.device_type != "CM":
-                    battgauge = self.axp.battery_gauge
-                    battery_voltage = self.axp.battery_voltage
-                else:
-                    battgauge = mb_utilities.averageFuel()
-                    battery_voltage = mb_utilities.averageBat()
-            else:
-            # if on battery power, calculate fuel based on battery voltage
+            #  calculate fuel based on battery voltage
             #  Fuel = (Vbatt - 3.275)/0.00767
             # simplifies to: (Vbatt(mv) - 3275) / 7.67 
-                if globals.device_type != "CM":
-                    battery_voltage = self.axp.battery_voltage
-                    battgauge =  (battery_voltage - 3275) / 7.67
-                else:
-                    battery_voltage = mb_utilities.averageBat()
-                    battgauge = mb_utilities.averageFuel()
+            if globals.device_type != "CM":
+                battery_voltage = self.axp.battery_voltage
+                battgauge =  (battery_voltage - 3275) / 7.67
+            else:
+                battery_voltage = mb_utilities.averageBat()
+                battgauge = mb_utilities.averageFuel()
         except OSError:
             acin_present = False
             battexists = False

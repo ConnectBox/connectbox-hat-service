@@ -30,7 +30,6 @@ class PageBattery:
 
 # pylint: disable=too-many-locals
 
-
     def draw_page(self):
         dir_path = os.path.dirname(os.path.abspath(__file__))
         # find out if the unit is charging or not
@@ -52,20 +51,34 @@ class PageBattery:
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
-        # See if we have a responsive AXP209
         try:
-            bat_exists = self.axp.battery_exists
-            bat_voltage = self.axp.battery_voltage
+            # The AXP209 can disappear - degrade gracefully if that
+            #  happens.
+            acin_present = self.axp.power_input_status.acin_present
+            battexists = self.axp.battery_exists
             have_axp209 = True
+
+            #  calculate fuel based on battery voltage
+            #  Fuel = (Vbatt - 3.275)/0.00767
+            # simplifies to: (Vbatt(mv) - 3275) / 7.67 
+            if globals.device_type != "CM":
+                battery_voltage = self.axp.battery_voltage
+                battgauge =  (battery_voltage - 3275) / 7.67
+            else:
+                battery_voltage = mb_utilities.averageBat()
+                battgauge = mb_utilities.averageFuel()
+                logging.debug("  type==CM: Battery Level: %s%%", battgauge)
+
         except OSError:
+            acin_present = False
+            battexists = False
+            battgauge = -1
             have_axp209 = False
 
         # draw text, VOLTAGE & TEMPERATURE, full opacity
         if have_axp209:
-            if not bat_exists:
-                bat_voltage = 0
             d.text((3, 44), "%.0f" %
-                       int(bat_voltage), font=font20, fill="black")
+                       int(battery_voltage), font=font20, fill="black")
             d.text((47, 44), "%.1f" %
                        self.axp.internal_temperature, font=font20, fill="black")
 
@@ -82,10 +95,8 @@ class PageBattery:
             # charging
             # cover the out arrow
             d.rectangle((47, 4, 62, 14), fill="white")  # out arrow
-            # percent charge left
-            percent = self.axp.battery_gauge
             d.text((63, 2), "%.0f%%" %
-                   percent, font=font20, fill="black")
+                   battgauge, font=font20, fill="black")
             if globals.device_type == "CM":
                 logging.info("Bus Battery: "+str(mb_utilities.bat_number()))
                 d.text((95,2), "#%.0f" %
@@ -102,14 +113,8 @@ class PageBattery:
             d.rectangle((0, 4, 14, 14), fill="white")  # in arrow
             # percent charge left
             if have_axp209:
-                # if on battery power, calculate fuel based on battery voltage
-                #  Fuel = (Vbatt - 3.275)/0.00767
-                # simplifies to: (Vbatt(mv) - 3275) / 7.67
-                battery_voltage = self.axp.battery_voltage
-                percent =  (battery_voltage - 3275) / 7.67
-
                 d.text((63, 2), "%.0f%%" %
-                       percent, font=font20, fill="black")
+                       battgauge, font=font20, fill="black")
                 d.text((92, 44), "%.0f" %
                        self.axp.battery_discharge_current,
                        font=font20, fill="black")
@@ -131,12 +136,12 @@ class PageBattery:
         else:
             # get the percent filled and draw a rectangle
             # percent = self.axp.battery_gauge
-            if percent < 10:
+            if battgauge < 10:
                 d.rectangle((20, 5, 22, 12), fill="black")
                 d.text((15, 2), "!", font=font14, fill="black")
             else:
                 # start of battery level= 20px, end = 38px
-                x = int((38 - 20) * (percent / 100)) + 20
+                x = int((38 - 20) * (battgauge / 100)) + 20
                 # print("X:" + str(x))
                 d.rectangle((20, 5, x, 12), fill="black")
 

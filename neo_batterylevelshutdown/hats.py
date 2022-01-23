@@ -13,7 +13,7 @@ import sys
 import time
 
 #JRA - 011322
-import smbus2
+#import smbus2
 
 from axp209 import AXP209, AXP209_ADDRESS
 from . import globals

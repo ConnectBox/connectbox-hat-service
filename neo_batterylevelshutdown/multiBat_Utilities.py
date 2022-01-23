@@ -21,19 +21,23 @@ I2C_BUS_NR = 10
 
 def i2c_read(reg, device=ATTINY_ADDRESS):
 #    logging.debug("i2c_read() port = %i ",globals.port)    
-#    logging.debug("i2c_read() reg = %i ",reg)    
+#    logging.debug("i2c_read() reg = %i ",reg) 
+#    with smbus2.SMBus(globals.port) as bus:  # gives "AttributeError: __enter__" 
     bus = smbus2.SMBus(globals.port)
     value = -1
     i = 1
     while (value == -1) and (i < 10):
         try:
             value = bus.read_byte_data(device, reg)
+            bus.close()     # success... close the bus
             return (value)
         except:
             i += 1
+    bus.close()      # failed... close the bus 
     return (-1)      # return -1 if we have 10 successive read failures      
 
 def i2c_write(reg, val, device = ATTINY_ADDRESS):
+#    with smbus2.SMBus(globals.port) as bus: # gives "AttributeError: __enter__" 
     bus = smbus2.SMBus(globals.port)
     value = -1
     i = 1
@@ -41,13 +45,26 @@ def i2c_write(reg, val, device = ATTINY_ADDRESS):
         try:
             bus.write_byte_data(device, reg, val)
             value = bus.read_byte_data(device, reg)
+            bus.close()     # success... close the bus
             return (value)
         except:
             i += 1
+    bus.close()             # failed... close the bus        
     return (-1)      # return -1 if we have 10 successive read failures  
 
+def test():
+    p = 9    
+
 def v_array_write(index,val):
-	voltage_array[index] = val
+    voltage_array[index] = val
+    # sync battery present (ATTiny) with voltage_array[]
+    positions = i2c_read(0x32)
+    for n in range (0,4):
+        if positions & (1 << n) == 0:
+            voltage_array[n+1] = 0     # battery not present... set voltage to zero
+        else:                # battery at this position... check that we have voltage_array[] valid   
+            if voltage_array[n+1] == 0:
+                voltage_array[n+1] = i2c_read(0x21 + n)  # should only get here during development
 
         
 
