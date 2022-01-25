@@ -23,6 +23,11 @@ import neo_batterylevelshutdown.multiBat_Utilities as mb_utilities
 # Start building the interactive menuing...
 
 
+
+dev_i2c = 0x34 # for AXP209 = 0x34
+#dev_i2c = 0x14  # for ATTiny88 on CM4 = 0x14
+
+
 class PageBattery:
     def __init__(self, device, axp):
         self.device = device

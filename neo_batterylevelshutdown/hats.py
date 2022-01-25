@@ -178,10 +178,10 @@ class q1y2018HAT(BasePhysicalHAT):
         PIN_VOLT_3_84 = 18      # PG9
     else:
         # Pin numbers specified in BCM format
-        PIN_VOLT_3_0 =  198     # PG6 
-        PIN_VOLT_3_45 = 199     # PG7
-        PIN_VOLT_3_71 = 200     # PG8
-        PIN_VOLT_3_84 = 201     # PG9
+        PIN_VOLT_3_0 =  14      # PG6 
+        PIN_VOLT_3_45 = 15      # PG7
+        PIN_VOLT_3_71 = 23      # PG8
+        PIN_VOLT_3_84 = 24      # PG9
 
     def __init__(self, displayClass):
 
@@ -449,9 +449,9 @@ class q3y2018HAT(Axp209HAT):
     #        self.PIN_AXP_INTERRUPT_LINE = 16
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         else:
-            self.PIN_L_BUTTON =    1            #  PA1
-            self.PIN_R_BUTTON =  199            #  PG7
-    #        self.PIN_AXP_INTERRUPT_LINE = 16
+            self.PIN_L_BUTTON =   14            #  PA1
+            self.PIN_R_BUTTON =   15            #  PG7
+    #        self.PIN_AXP_INTERRUPT_LINE = 23
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
 
 
@@ -547,10 +547,10 @@ class q3y2021HAT(Axp209HAT):
             self.PIN_OTG_SENSE = 11               #PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         else:
-            self.PIN_L_BUTTON = 198               #PG6
-            self.PIN_R_BUTTON = 199               #PG7
-            self.PIN_AXP_INTERRUPT_LINE = 200     #PG8
-            self.PIN_OTG_SENSE = 0                #PA0
+            self.PIN_L_BUTTON = 14                #PG6
+            self.PIN_R_BUTTON = 15                #PG7
+            self.PIN_AXP_INTERRUPT_LINE = 23      #PG8
+            self.PIN_OTG_SENSE = 17               #PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
 
 
