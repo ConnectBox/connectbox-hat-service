@@ -173,10 +173,10 @@ class q1y2018HAT(BasePhysicalHAT):
         PIN_VOLT_3_84 = 18      # PG9
     else:
         # Pin numbers specified in BCM format
-        PIN_VOLT_3_0 =  55      # PG6 
-        PIN_VOLT_3_45 = 51      # PG7
-        PIN_VOLT_3_71 = 47      # PG8
-        PIN_VOLT_3_84 = 45      # PG9
+        PIN_VOLT_3_0 =  14      # PG6 
+        PIN_VOLT_3_45 = 15      # PG7
+        PIN_VOLT_3_71 = 23      # PG8
+        PIN_VOLT_3_84 = 24      # PG9
 
     def __init__(self, displayClass):
 
@@ -418,9 +418,9 @@ class q3y2018HAT(Axp209HAT):
     #        self.PIN_AXP_INTERRUPT_LINE = 16
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         else:
-            self.PIN_L_BUTTON =   41            #  PA1
-            self.PIN_R_BUTTON =   51            #  PG7
-    #        self.PIN_AXP_INTERRUPT_LINE = 16
+            self.PIN_L_BUTTON =   14            #  PA1
+            self.PIN_R_BUTTON =   15            #  PG7
+    #        self.PIN_AXP_INTERRUPT_LINE = 23
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
 
 
@@ -460,17 +460,17 @@ class q4y2018HAT(Axp209HAT):
             self.PIN_AXP_INTERRUPT_LINE = 16    # PG8
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         elif (globals.device_type =="CM"):
-            self.PIN_L_BUTTON = 14              # GPIO3/56
-            self.PIN_R_BUTTON = 15              # GPIO4/54
-            self.PIN_AXP_INTERRUPT_LINE = 23    # GPIO15/51
+            self.PIN_L_BUTTON = 3               # GPIO3/56
+            self.PIN_R_BUTTON = 4               # GPIO4/54
+            self.PIN_AXP_INTERRUPT_LINE = 15    # GPIO15/51
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
 
         # We don't currently have a HAT for RPi... so we will get here if HAT wiring is same as CM4 for GPIO
         #  For the moment, we will assume a HAT with GPIO assignments the same as CM4
         else:                   #device type is Pi
-            self.PIN_L_BUTTON = 14               # GPIO3
-            self.PIN_R_BUTTON = 15              # GPIO4
-            self.PIN_AXP_INTERRUPT_LIINE = 23   # GPIO15
+            self.PIN_L_BUTTON = 3               # GPIO3
+            self.PIN_R_BUTTON = 4               # GPIO4
+            self.PIN_AXP_INTERRUPT_LIINE = 15   # GPIO15
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
 
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
