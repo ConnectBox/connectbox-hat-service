@@ -12,86 +12,13 @@
 
 import os.path
 import logging
-import smbus2
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
 import axp209
 from . import globals
 from .HAT_Utilities import get_device
-
-# Start building the interactive menuing...
-
-#for AXP209 = 0x34
-# for ATTiny88 on CM4 = 0x14
-dev_i2c = 0x34
-#bus = smbus2.SMBus(0)
-
-
-# handle the occassional failure of i2c read (ioctl errno 121)
-def i2c_read(device, reg):
-    global bus
-
-    value = -1
-    i = 1
-    while (value == -1) and (i < 10):
-        try:
-            value = bus.read_byte_data(device, reg)
-            return (value)
-        except:
-            i += 1
-    return (-1)      # return -1 if we have 10 successive read failures      
-
-def averageBat():
-    global bus
-    global dev_i2c
-    bat = 0
-    for reg in range (0x21, 0x29, 2):
-         value = i2c_read(dev_i2c, reg)
-         value += (i2c_read(dev_i2c, reg+1)) * 256
-         bat += value
-    bat = bat / (i2c_read(dev_i2c, 0x30))
-    bat = round(bat, 0)
-    return(bat)
-
-def averageFuel():
-    global bus
-    global dev_i2c
-    fuel = 0
-    for reg in range (0x41, 0x45, 1):
-         fuel += i2c_read(dev_i2c, reg)
-    fuel = fuel / (i2c_read(dev_i2c, 0x30))
-    fuel = round(fuel, 0)
-    return(fuel)
-
-
-def readBat(x):
-# reading battery (valid 1 - 4) for their voltage
-# read the 5 volt input at 5
-
-    global bus
-    global dev_i2c
-    if x>0 and x<5:
-        x -= 1 
-        reg= 0x21+(x*2)
-        logging.debug("read battery %i register start %i ", x+1, reg)
-        value = i2c_read(dev_i2c, reg)
-        value += (i2c_read(dev_i2c, reg+1)) * 256
-    else: value = 0
-    return(value)
-
-def readfuel(x):
-# reading battery (valid 1 - 4 ) for the fuel
-
-    global bus
-    global dev_i2c
-    if x>0 and x<5:
-        x -= 1 
-        reg= 0x41+x
-        logging.debug("read battery %i fuel register start %i ", x+1, reg)
-        fuel = i2c_read(dev_i2c, reg)
-    else: fuel = 0
-    return(fuel)
+import neo_batterylevelshutdown.multiBat_Utilities as mb_utilities
 
 
 
@@ -99,27 +26,10 @@ class PageMulti_Bat:
     def __init__(self, device, axp):
         self.device = device
         self.axp = axp
-        global bus
-        global dev_i2c
-# Then need to create a smbus object like...
-        bus = smbus2.SMBus(globals.port)    # 0 = /dev/i2c-0 (port I2C0), 1 = /dev/i2c-1 (port I2C1), etc
-
-# Then we can use smbus commands like... (prefix commands with "bus.") 
-#
-# read_byte(dev)     / reads a byte from specified device
-# write_byte(dev,val)   / writes value val to device dev, current register
-# read_byte_data(dev,reg) / reads byte from device dev, register reg
-# write_byte_data(dev,reg,val) / write byte val to device dev, register reg 
-#
-
 
     # pylint: disable=too-many-locals
     def draw_page(self):
-#        if globals.device_type != "NEO":
-#           return
 
-        global bus
-        global dev_i2c
         dir_path = os.path.dirname(os.path.abspath(__file__))
         # find out if the unit is charging or not
         # get an image
@@ -152,7 +62,7 @@ class PageMulti_Bat:
         # draw text, full opacity
         if bat_exists:
         # format with 2 decimals
-            b_voltage = averageBat()/1000
+            b_voltage = mb_utilities.averageBat()/1000
             v_string = "{:.2f}V"                
             d.text((68, 2),(v_string.format(b_voltage)), font=font14, fill="black")
         else:
@@ -169,11 +79,11 @@ class PageMulti_Bat:
             d.rectangle((0, 4, 14, 14), fill="white")     # "in" arrow
 
         if bat_exists:
-            battery_voltage = averageBat()
+            battery_voltage = mb_utilities.averageBat()
             # calculate fuel based on battery voltage
             #  Fuel = (Vbatt - 3.275)/0.00767
             # get the percent filled and draw a rectangle
-            percent = min(averageFuel(), 100)
+            percent = min(mb_utilities.averageFuel(), 100)
             if percent < 10:
                 d.rectangle((20, 5, 22, 12), fill="black")
                 d.text((15, 2), "!", font=font14, fill="black")
@@ -192,10 +102,10 @@ class PageMulti_Bat:
         # Read voltages of all 4 battery positions from the ATTiny
         # Any voltage < 0.5V (500 mV) or > 6000 we will call noise 
         #  and display battery voltage 0
-        # Note that readBat() function accepts battery numbers 1 -> 4 (not 0 -> 3)
+        # Note that bat_voltage() function accepts battery numbers 1 -> 4 (not 0 -> 3)
         v_bat = ["0V","0V","0V","0V"]
         for n in range(4):
-            voltage = readBat(n+1)
+            voltage = mb_utilities.bat_voltage(n+1)
             if (voltage < 500) or (voltage > 6000):
                 voltage = 0
             # format with 2 decimals
