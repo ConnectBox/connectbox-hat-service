@@ -197,7 +197,7 @@ class OLED:
             return
 
         with self._curPageLock:
-            logging.debug("Previous page stack: %s", self.pageStack)
+
             self.pages = self.statusPages if self.pageStack == 'admin' else self.adminPages
             self.pageStack = 'status' if self.pageStack == 'admin' else 'admin'
             logging.debug("Current page stack: %s", self.pageStack)
