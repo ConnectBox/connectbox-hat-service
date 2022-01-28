@@ -95,8 +95,8 @@ class BasePhysicalHAT:
         #
         # Register calculation from Allwinner_H3_Datasheet_v1.1.pdf page 316 ff
         #   Base address = 0x01c20800 ... PA0 is in bits 2:0 of offset 0x00
-        # globals.otg =0 for normal logic high to enable OTG and 1 for inverted OTG
-        if globals.otg=='none':
+        # globals.otg =0 for off;  high to enable OTG and "none" for enabled inverted OTG
+        if globals.otg=='0':
             retval = os.popen('modprobe -r g_serial')     #make sure there is no g_serial loaded by default.
             return
         if (globals.device_type == "NEO"):
@@ -107,8 +107,13 @@ class BasePhysicalHAT:
             cmd1 = cmd + " w " + hex(write_val)          # Form the command
             retval = os.system(cmd1)                     # Write the register
 
+            if globals.otg == "none":
+                otg.xor = 1
+            else:
+                otg.xor = 0
+
             # we are now in input mode for the pin...
-            if (GPIO.input(channel) ^ globals.otg) == 0:  #we have xored with the globals.otg value
+            if (GPIO.input(channel) ^ otg.xor) == 0:  #we have xored with the globals.otg value
                 logging.debug("The OTG pin is LOW, so leaving OTG mode")
                 otg_mode = False
             else:
@@ -121,7 +126,7 @@ class BasePhysicalHAT:
                 retval = os.popen(cmd2).read()          # the stdout of the command
 
             # Now we have determined the OTG request, so do the requested work
-            if otg_mode == 1:
+            if otg_mode == True:
                 logging.debug("in OTG set")
                 retval = os.popen("grep "+globals.g_device+" /proc/modules").read()
                 if retval == "":
@@ -489,11 +494,13 @@ class q4y2018HAT(Axp209HAT):
             self.PIN_L_BUTTON = 8               # PG6
             self.PIN_R_BUTTON = 10              # PG7
             self.PIN_AXP_INTERRUPT_LINE = 16    # PG8
+            self.PIN_OTG_SENSE = 11               #PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
         elif (globals.device_type =="CM"):
             self.PIN_L_BUTTON = 3               # GPIO3/56
             self.PIN_R_BUTTON = 4               # GPIO4/54
             self.PIN_AXP_INTERRUPT_LINE = 15    # GPIO15/51
+            self.PIN_OTG_SENSE = 17               #PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
 
         # We don't currently have a HAT for RPi... so we will get here if HAT wiring is same as CM4 for GPIO
@@ -502,11 +509,13 @@ class q4y2018HAT(Axp209HAT):
             self.PIN_L_BUTTON = 3               # GPIO3
             self.PIN_R_BUTTON = 4               # GPIO4
             self.PIN_AXP_INTERRUPT_LIINE = 15   # GPIO15
+            self.PIN_OTG_SENSE = 17               #PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
 
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_AXP_INTERRUPT_LINE, GPIO.IN)
+        GPIO.setup(self.PIN_OTG_SENSE, GPIO.IN)
         # Run parent constructors before adding event detection
         #  as some callbacks require objects only initialised
         #  in parent constructors
@@ -517,6 +526,10 @@ class q4y2018HAT(Axp209HAT):
         GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
                               callback=self.buttons.handleButtonPress,
                               bouncetime=125)
+        GPIO.add_event_detect(self.PIN_OTG_SENSE, GPIO.BOTH,
+                               callback=self.handleOtgSelect,
+                               bouncetime=125)
+
 
         # We only enable interrupts on this HAT, rather than in the superclass
         #  because not all HATs with AXP209s have a line that we can use to
@@ -531,6 +544,7 @@ class q4y2018HAT(Axp209HAT):
         #  so the desired action here is always to shutdown
         GPIO.add_event_detect(self.PIN_AXP_INTERRUPT_LINE, GPIO.FALLING,
                               callback=self.shutdownDeviceCallback)
+        self.handleOtgSelect(self.PIN_OTG_SENSE)
 
 
 
@@ -585,4 +599,4 @@ class q3y2021HAT(Axp209HAT):
         #  so the desired action here is always to shutdown
         GPIO.add_event_detect(self.PIN_AXP_INTERRUPT_LINE, GPIO.FALLING,
                               callback=self.shutdownDeviceCallback)
-
+        self.handleOtgSelect(self.PIN_OTG_SENSE)
