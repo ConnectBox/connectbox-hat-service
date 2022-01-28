@@ -8,6 +8,7 @@
 
 import io
 import json
+import logging
 
 # need to initialize the variables outside of the init() function
 # Then the init() will fill in the correct values
@@ -54,6 +55,8 @@ def init():
     global otg                      # high, low, none
     global port
     global clientIF
+
+    logging.info("Initializing Globals")
 
   # Using a dictionary and json to store Branding stuff
   # Read the dictionary
@@ -116,6 +119,8 @@ def init():
         clientIF = js["clientIF"]
     except:
         pass
+
+    logging.info("globals screen_enable="+str(screen_enable))
 
 # check that the brand name eg: hostname hasn't changed.
 # if it did we need to update the brand and the hostname
