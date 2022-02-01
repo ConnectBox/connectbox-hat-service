@@ -7,6 +7,7 @@
 # To easily create brand.txt, use the tool BrandCreationTool.py
 
 import io
+import os
 import json
 import logging
 
@@ -32,6 +33,7 @@ clientIF = "wlan0"
 port = 0
 otg = 0                         # 'none', 0 for normal positive OTG mode, 1 for inverted OTG mode
 usbnomount = 0                  # enables and dissables auto mount.
+timestamp = ""
 
 from . import page_battery
 from .HAT_Utilities import get_device
@@ -55,6 +57,7 @@ def init():
     global otg                      # high, low, none
     global port
     global clientIF
+    global timestamp
 
     logging.info("Initializing Globals")
 
@@ -64,6 +67,8 @@ def init():
     data = f.read()
     f.close()
     js = json.loads(data)
+    timestamp = os.path.getmtime('/usr/local/connectbox/brand.txt')
+
 
 # May want to put some checks in to allow fields to be missing and
 #  if so, revert to defaults...

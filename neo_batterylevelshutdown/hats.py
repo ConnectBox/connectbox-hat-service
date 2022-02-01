@@ -433,8 +433,13 @@ class Axp209HAT(BasePhysicalHAT):
                     self.nextBatteryCheckTime = \
                         time.time() + self.BATTERY_CHECK_FREQUENCY_SECS
 
-                # Give a rough idea of battery capacity based on the LEDs
-                self.updateLEDState()
+                    # Give a rough idea of battery capacity based on the LEDs
+                    self.updateLEDState()
+
+                    # Check to see if anyone changed the brand.txt file if so we need to reload
+                    tme_stmp = os.path.getmtime('/usr/local/connectbox.brand.txt')
+                    if tme_stmp != globals.timestamp:
+                        self.globals.init()
 
 
 class q3y2018HAT(Axp209HAT):
