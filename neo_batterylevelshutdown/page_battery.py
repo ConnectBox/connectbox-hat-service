@@ -72,7 +72,7 @@ class PageBattery:
             else:
                 battery_voltage = mb_utilities.averageBat()
                 battgauge = mb_utilities.averageFuel()
-                logging.debug("  type==CM: Battery Level: %s%%", battgauge)
+#               logging.debug("  type==CM: Battery Level: %s%%", battgauge)
 
         except OSError:
             acin_present = False

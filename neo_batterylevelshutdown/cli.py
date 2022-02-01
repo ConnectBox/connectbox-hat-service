@@ -120,6 +120,10 @@ def fixfiles(a, c):
 # This function is called to fix the files and restart the network interfaces based on what we have loaded.  AP represents the Wlan that will serve as the Access point.  CI is the ethernet interface which may or may not be there
 # in a standard configuration. The values of a and c are numbers only.
     logging.debug("Entering fix files")
+    res = os.system("systemctl stop networking.service")
+    res = os.system("systemctl stop hostapd")
+    res = os.system("systemctl stop dnsmasq")
+
     at = ""
     ct = ["",""]
     try:

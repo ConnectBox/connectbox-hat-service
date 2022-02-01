@@ -64,7 +64,7 @@ class PageMain:
         x = globals.splash_x
         y = globals.splash_y
 
-        logging.info("Branding Name : "+ globals.brand_name)          # test element for log  
+        logging.debug("Branding Name : "+ globals.brand_name)          # test element for log  
 
         # get a font
         font_path = dir_path + '/assets/connectbox.ttf'
@@ -116,7 +116,7 @@ class PageMain:
             else:
                 # start of battery level= 37px, end = 57px
                 battgauge = min(battgauge, 100)
-                logging.info("battery gauge is "+str( battgauge ))
+                logging.debug("battery gauge is "+str( battgauge ))
 
                 x = int((57 - 37) * (battgauge / 100)) + 37
                 d.rectangle((37, 51, x, 58), fill="black")

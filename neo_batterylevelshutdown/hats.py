@@ -34,7 +34,6 @@ def min_execution_time(min_time_secs):
     duration = time.monotonic() - start_time
     # If the function has run over the min execution time, don't sleep
     period = max(0, min_time_secs - duration)
-    logging.debug("sleeping for %.2f secs to guarantee min exec time", period)
     time.sleep(period)
 
 
@@ -317,7 +316,6 @@ class Axp209HAT(BasePhysicalHAT):
         #  power source, let's say that the level is always above if
         #  we have a negative battery_gauge
         try:
-            logging.debug("Battery Level: %s%%", self.axp.battery_gauge)
             gaugelevel = self.axp.battery_gauge
         except OSError:
             logging.error("Unable to read from AXP")
@@ -384,7 +382,6 @@ class Axp209HAT(BasePhysicalHAT):
     #  (make sure battery didn't change), write the battery voltage/16 to ATTiny
     #  and to local array bat_voltage[]
                 result = batteryNumber = mb_utilities.i2c_read(0x31)
-                logging.debug("read of battery number = %i ",batteryNumber)
                 if (result != -1):          # valid read of ATTiny so ATTiny handling battery switching
                     batteryVoltage = int(self.axp.battery_voltage)
                     wr_scaled = int(batteryVoltage/16)
@@ -395,7 +392,7 @@ class Axp209HAT(BasePhysicalHAT):
                         wr_result = mb_utilities.i2c_write(0x20+batteryNumber, wr_scaled)
                         mb_utilities.v_array_write(batteryNumber, wr_scaled)      # save battery voltage
                         mb_utilities.v_array_write(0, batteryNumber)              # put battery number in offset 0
-                        logging.debug("save bat_voltage[%i] = %i ", batteryNumber, wr_scaled)
+
 
                 else:       # no ATTiny, so CM4 handling battery selection
                     # code here to have CM4 check for which batteries are present and
@@ -422,12 +419,10 @@ class Axp209HAT(BasePhysicalHAT):
 
                     if self.batteryLevelAbovePercent(
                             self.BATTERY_WARNING_THRESHOLD_PERC):
-                        logging.debug("Battery above warning level")
                         # Hide the low battery warning, if we're currently
                         #  showing it
                         self.display.hideLowBatteryWarning()
                     else:
-                        logging.debug("Battery below warning level")
                         # show (or keep showing) the low battery warning page
                         self.display.showLowBatteryWarning()
                         # Don't blank the display while we're in the
