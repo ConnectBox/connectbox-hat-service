@@ -16,7 +16,7 @@ import time
 #import smbus2
 
 from axp209 import AXP209, AXP209_ADDRESS
-from . import globals
+import neo_batterylevelshutdown.globals as globals
 import RPi.GPIO as GPIO  # pylint: disable=import-error
 from .buttons import BUTTONS
 import neo_batterylevelshutdown.multiBat_Utilities as mb_utilities
@@ -437,12 +437,10 @@ class Axp209HAT(BasePhysicalHAT):
                     self.updateLEDState()
 
                     # Check to see if anyone changed the brand.txt file if so we need to reload
-                    tme_stmp = os.path.getmtime('/usr/local/connectbox.brand.txt')
-                    if tme_stmp != globals.timestamp:
-                        self.globals.init()
+                    globals.init()
 
 
-class q3y2018HAT(Axp209HAT):
+class q3y2018HAT(Axp209HAT): 
 
     # HAT 4.6.7 - This is ONLY a NEO HAT
 

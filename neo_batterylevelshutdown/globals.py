@@ -95,7 +95,7 @@ def init():
         pass
     try:
         screen_enable = [
-            js['lcd_pages.main'],
+            js['lcd_pages_main'],
             js['lcd_pages_info'],
             js['lcd_pages_battery'],
             js['lcd_pages_multi_bat'],
