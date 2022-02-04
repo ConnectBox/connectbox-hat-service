@@ -267,7 +267,7 @@ def fixfiles(a, c):
 
     logging.info("We have completed the file copy copleteions")
     logging.info("we will reboot to setup the new interfaces")
-    os.system("reboot")
+    os.system("shutdown -r now")
 
     return 0
 
@@ -344,7 +344,7 @@ def getNetworkClass():
         logging.info("We have no wlan interfaces we can't function this way, rebooting to try to find the device")
         rbt = 1                                                     # we will reboot and try again.
     if rbt == 1:
-        os.popen("reboot")
+        os.popen("shutdown -r now")
         return
 
 
