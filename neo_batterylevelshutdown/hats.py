@@ -107,12 +107,12 @@ class BasePhysicalHAT:
             retval = os.system(cmd1)                     # Write the register
 
             if globals.otg == "none":
-                otg.xor = 1
+                otg_xor = 1
             else:
-                otg.xor = 0
+                otg_xor = 0
 
             # we are now in input mode for the pin...
-            if (GPIO.input(channel) ^ otg.xor) == 0:  #we have xored with the globals.otg value
+            if (GPIO.input(channel) ^ otg_xor) == 0:  #we have xored with the globals.otg value
                 logging.debug("The OTG pin is LOW, so leaving OTG mode")
                 otg_mode = False
             else:
