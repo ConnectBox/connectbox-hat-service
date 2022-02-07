@@ -94,9 +94,12 @@ class BasePhysicalHAT:
         #
         # Register calculation from Allwinner_H3_Datasheet_v1.1.pdf page 316 ff
         #   Base address = 0x01c20800 ... PA0 is in bits 2:0 of offset 0x00
-        # globals.otg =0 for off;  high to enable OTG and "none" for enabled inverted OTG
-        if globals.otg=='0':
-            retval = os.popen('modprobe -r g_serial')     #make sure there is no g_serial loaded by default.
+        # globals.otg =0 for off;  high to enable OTG and "none" for enabled inverted OTG 
+        # and 'both' for always otg regardless of state
+        if globals.otg=='0' or globals.otg == 0:
+            retval = os.popen("grep "+globals.g_device).read()
+            if retval != "":
+                retval = os.popen('modprobe -r '+globals.g_device)     #make sure there is no g_device loaded by default.
             return
         if (globals.device_type == "NEO"):
             cmd = "devmem2 0x01c20800"      #set up to read the config value for PA0
@@ -112,12 +115,16 @@ class BasePhysicalHAT:
                 otg_xor = 0
 
             # we are now in input mode for the pin...
-            if (GPIO.input(channel) ^ otg_xor) == 0:  #we have xored with the globals.otg value
-                logging.debug("The OTG pin is LOW, so leaving OTG mode")
-                otg_mode = False
-            else:
-                logging.debug("The OTG pin is HIGH, so entering OTG mode")
+            if globals.otg == "both":
                 otg_mode = True
+                logging.debug("The OTG pin state dosn't matter were enabled in any case")
+            else:
+                if (globals.otg ^ otg_xor) == 0:
+                    logging.debug("The OTG pin is LOW, so leaving OTG mode")
+                    otg_mode = False
+                else:
+                    logging.debug("The OTG pin is HIGH, so entering OTG mode")
+                    otg_mode = True
 
             # we are through with using the OTG pin as an input... put the register back as it was
             if (globals.device_type == "NEO"):
@@ -129,13 +136,35 @@ class BasePhysicalHAT:
                 logging.debug("in OTG set")
                 retval = os.popen("grep "+globals.g_device+" /proc/modules").read()
                 if retval == "":
+                    # module was not loaded we couldn't find it at least.  So lets get to loading
+                    retval = os.popen("modprobe "+globals.g_device+" "+globals.enable_mass_storage).read()
+                    if retval.find("FATAL") <= 0:
+                        logging.info("failed to load the driver "+globals.g_device+" "+globals.enable_mass_storage)
+                        return
+                    else:
+                        retval = os.popen("systemctl daemon-reload").read()
+                        if globals.g_device == 'g_serial':
+                            retval = os.popen("systemctl restart serial-getty@ttyGS0.service").read()
+                            if retval != "":
+                                logging.info("load of g_serial serial-getty@ttyGS0.service failed")
+                    #######################################################################
+                    #What other service needs to be started or checked due to loading a module
+                    #We need to figure that out?
+                    #######################################################################
                     return
                 else:
-                    retval = os.popen("modinfo "+globals.g_device+" "+globals.enable_mass_storage).read()
-
-                if retval.find("FATAL"):
-                    logging.info("Modprobe operation on "+globals.g_device+" "+globals.enable_mass_storage+" Failed!")
-
+                    # module was already loaded so wnat do we need to do?
+                    if globals.g_device == 'g_serial':
+                        retval = os.popen("systemctl status service-getty@ttyGS).service").read()
+                        if retval.find("active (running)") <= 0:
+                            retval = os.popen("systemctl restart serial-getty@ttyGS0.service").read()
+                            if retval != "":
+                                logging.info("load of g_serial serial-getty@ttyGS0.service failed")
+                    #######################################################################
+                    #What other service needs to be started or checked due to loading a module
+                    #We need to figure that out?
+                    #######################################################################
+                    return
             else:
                 logging.debug("not OTG set")
                 retval = os.popen("grep "+globals.g_device+" /proc/modules").read()
@@ -166,7 +195,7 @@ class DummyHAT:
     # pylint: disable=no-self-use
     # This is a standard interface - it's ok not to use self for a dummy impl
     def mainLoop(self):
-        logging.info("There is no HAT, so there's nothing to do")
+        logging.info("There is no HAT, so there's nothing to do using DummyHat")
 
 
 class q1y2018HAT(BasePhysicalHAT):
@@ -174,18 +203,6 @@ class q1y2018HAT(BasePhysicalHAT):
     # battery voltage. All later HATs use the AXP209 for finding voltages
     # This HAT was ONLY made for NEO 
 
-    if globals.device_type == "NEO":
-        # Pin numbers specified in BCM format
-        PIN_VOLT_3_0 =  8       # PG6 
-        PIN_VOLT_3_45 = 10      # PG7
-        PIN_VOLT_3_71 = 16      # PG8
-        PIN_VOLT_3_84 = 18      # PG9
-    else:
-        # Pin numbers specified in BCM format
-        PIN_VOLT_3_0 =  14      # PG6 
-        PIN_VOLT_3_45 = 15      # PG7
-        PIN_VOLT_3_71 = 23      # PG8
-        PIN_VOLT_3_84 = 24      # PG9
 
     def __init__(self, displayClass):
 
@@ -194,13 +211,30 @@ class q1y2018HAT(BasePhysicalHAT):
         #  period before yanking the power, so if we have a falling edge on
         #  PIN_VOLT_3_0, then we're about to get the power yanked so attempt
         #  a graceful shutdown immediately.
+
+        if globals.device_type == "NEO":
+        # Pin numbers specified in BCM format
+            PIN_VOLT_3_0 =  8       # PG6 
+            PIN_VOLT_3_45 = 10      # PG7
+            PIN_VOLT_3_71 = 16      # PG8
+            PIN_VOLT_3_84 = 18      # PG9
+            logging.info("Found Q1Y2018HAY for neo")
+        else:
+            # Pin numbers specified in BCM format
+            PIN_VOLT_3_0 =  14      # PG6 
+            PIN_VOLT_3_45 = 15      # PG7
+            PIN_VOLT_3_71 = 23      # PG8
+            PIN_VOLT_3_84 = 24      # PG9
+            logging.info("Found Q1Y2018HAY for Pi")
+
+
         if (globals.device_type == "NEO"):
             logging.info("Initializing Pins")
             GPIO.setup(self.PIN_VOLT_3_0, GPIO.IN)
             GPIO.setup(self.PIN_VOLT_3_45, GPIO.IN)
             GPIO.setup(self.PIN_VOLT_3_71, GPIO.IN)
             GPIO.setup(self.PIN_VOLT_3_84, GPIO.IN)
-            logging.info("Pin initialization complete")
+
             # Run parent constructors before adding event detection
             #  as some callbacks require objects only initialised
             #  in parent constructors
@@ -447,15 +481,17 @@ class q3y2018HAT(Axp209HAT):
     def __init__(self, displayClass):
 
         if globals.device_type == "NEO":
-            self.PIN_L_BUTTON =   22            #  PA1
+            self.PIN_L_BUTTON =   8             #  PA1
             self.PIN_R_BUTTON =   10            #  PG7
     #        self.PIN_AXP_INTERRUPT_LINE = 16
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+            logging.info("found q3y2018HAT for neo")
         else:
             self.PIN_L_BUTTON =   14            #  PA1
             self.PIN_R_BUTTON =   15            #  PG7
     #        self.PIN_AXP_INTERRUPT_LINE = 23
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+            logging.info("found q3y2018HAT for Pi")
 
 
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
@@ -489,17 +525,19 @@ class q4y2018HAT(Axp209HAT):
     def __init__(self, displayClass):
 
         if (globals.device_type == "NEO"):
-            self.PIN_L_BUTTON = 8               # PG6
+            self.PIN_L_BUTTON = 8              # PG6
             self.PIN_R_BUTTON = 10              # PG7
             self.PIN_AXP_INTERRUPT_LINE = 16    # PG8
             self.PIN_OTG_SENSE = 11               #PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+            logging.info("found q4y2018HAT for neo")
         elif (globals.device_type =="CM"):
             self.PIN_L_BUTTON = 3               # GPIO3/56
             self.PIN_R_BUTTON = 4               # GPIO4/54
             self.PIN_AXP_INTERRUPT_LINE = 15    # GPIO15/51
             self.PIN_OTG_SENSE = 17               #PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+            logging.info("found q4y2018HAT for CM4")
 
         # We don't currently have a HAT for RPi... so we will get here if HAT wiring is same as CM4 for GPIO
         #  For the moment, we will assume a HAT with GPIO assignments the same as CM4
@@ -509,6 +547,7 @@ class q4y2018HAT(Axp209HAT):
             self.PIN_AXP_INTERRUPT_LIINE = 15   # GPIO15
             self.PIN_OTG_SENSE = 17               #PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+            logging.info("found q4y2018HAT for Pi")
 
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
@@ -558,12 +597,14 @@ class q3y2021HAT(Axp209HAT):
             self.PIN_AXP_INTERRUPT_LINE = 16      #PG8
             self.PIN_OTG_SENSE = 11               #PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+            logging.info("found q3y2021HAT for neo")
         else:
             self.PIN_L_BUTTON = 14                #PG6
             self.PIN_R_BUTTON = 15                #PG7
             self.PIN_AXP_INTERRUPT_LINE = 23      #PG8
             self.PIN_OTG_SENSE = 17               #PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+            loggitng.info("found q3y2021HAT for Pi")
 
 
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)

@@ -6,10 +6,19 @@ import 'connectbox-pi/ansible/group_vars/brand'
 # not that Enable_MassStorage of 1 will override g_device.  Additionally, both MassStorage and g_device are subject to otg : high, low, none
 
 # Create the dictionary
-details  = {'Brand':"{{ connectbox_default_hostname }}", 'Image':"{{ lcd_logo }}", \
-        'Font':{{ lcd_font_size }},'pos_x': {{ lcd_x_position}},'pos_y': {{ lcd_y_position}}, \
-        'Enable_MassStorage':{{enable_mass_storage}}, \
+details  = {'Brand':"{{ connectbox_default_hostname }}", \
+        'Image':"{{ lcd_logo }}", \
+        'enhanced_logo': "{{ enhanced_interface_logo }}", \
+        'Font':{{ lcd_font_size }}, \
+        'pos_x': {{ lcd_x_position}}, \
+        'pos_y': {{ lcd_y_position}}, \
+
         "usb0NoMount": {{ usb0NoMount }}, \
+
+        "otg_enable": {{ lcd_otg_enable }}\
+        'g_device': "{{lcd_g_device}}", "otg": {{ otg_enable }}, \
+        'Enable_MassStorage':{{enable_mass_storage}}, \
+
         "Screen_Enable": [
         {{ lcd_pages_main }},
         {{ lcd_pages_info }},
@@ -26,7 +35,7 @@ details  = {'Brand':"{{ connectbox_default_hostname }}", 'Image':"{{ lcd_logo }}
         {{ lcd_pages_stats_month_two }},
         {{ lcd_pages_admin }}
         ], \
-        'g_device': "{{lcd_g_device}}", "otg": {{ otg_enable }}, \
+
         "server_url": "{{ server_url }}", \
         "server_authorization": "{{ server_authorization }}", \
         "server_sitename": "{{ server_sitename }}", \

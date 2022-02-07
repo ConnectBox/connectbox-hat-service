@@ -50,11 +50,11 @@ def init():
     global splash_x
     global splash_y
     global splash_font
-    global enable_mass_storage      # mass storage enabled overrides g_device always but is subject to otg setting
     global usbnomount
     global screen_enable
+    global enable_mass_storage      # mass storage enabled overrides g_device always but is subject to otg setting
     global g_device                 # g_device is subject to otg setting
-    global otg                      # high, low, none
+    global otg                      # high, low, none, both
     global port
     global clientIF
     global timestamp
@@ -85,10 +85,7 @@ def init():
         device_type = js["Device_type"]
     except:
         pass
-    try:
-        enable_mass_storage = js["Enable_MassStorage"]
-    except:
-        pass
+  
     try:
         usbnomount = js["usb0NoMount"]
     except:
@@ -112,12 +109,17 @@ def init():
         ]
     except:
         pass
+
+    try:
+        otg = js["otg"]
+    except:
+        pass
     try:
         g_device = js["g_device"]
     except:
         pass
     try:
-        otg = js["otg"]
+        enable_mass_storage = js["Enable_MassStorage"]
     except:
         pass
     try:

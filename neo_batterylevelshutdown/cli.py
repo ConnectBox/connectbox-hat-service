@@ -246,15 +246,15 @@ def fixfiles(a, c):
 
 # Now we are done with the network/interface.tmp, dnsmasq.tmp and hostapd.tmp file creations time to put them into action.
 
-#    if a != "":
-#         logging.info("taking interface down wlan"+a)
-#         os.system("ifdown wlan"+a)
-#
-#    if c != "":
-#         logging.info("taking interface down wlan"+c)
-#         os.system("ifdown wlan"+c)
-#    time.sleep(10)
-#
+    if a != "":
+         logging.info("taking interface down wlan"+a)
+         os.system("ifdown wlan"+a)
+
+    if c != "":
+         logging.info("taking interface down wlan"+c)
+         os.system("ifdown wlan"+c)
+    time.sleep(10)
+
 #    logging.info("We have taken the interfaces down now")
     os.system("mv /etc/network/interfaces /etc/network/interfaces.bak")
     os.system("mv /etc/hostapd/hostapd.conf /etc/hostapd/hostapd.bak")
@@ -363,8 +363,10 @@ def main(verbose):
 #Initialize the Global Variables
     globals.init()
 # Use BCM pin numbering scheme for compatibility with CM4 and use Board compatability for NEO
-    if globals.device_type == "NEO": GPIO.setmode(GPIO.BOARD)
-    else: GPIO.setmode(GPIO.BCM)
+    if globals.device_type == "NEO":
+        GPIO.setmode(GPIO.BOARD)
+    else:
+        GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
 
 # Go find the netowrk interfaces and seteup the wans

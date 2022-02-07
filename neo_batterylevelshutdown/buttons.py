@@ -387,7 +387,7 @@ class BUTTONS:
         :return: nothing
 
         '''
-
+        logging.info("we had a button press")
         if self.display_type == 'DummyDisplay':  # this device has no buttons or display, skip
             return
 
@@ -406,7 +406,7 @@ class BUTTONS:
             logging.debug("return from time.time - self.button_press_cleared_time")
             return
 
-        logging.debug("Handling button press")
+        logging.info("Handling button press")
         # get time single button was pressed along with the amount of time both buttons were pressed
         channelTime, dualTime = self.checkPressTime(channel)
 
