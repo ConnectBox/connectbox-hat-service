@@ -29,9 +29,8 @@ font20 = 19
 font14 = 13
 font10 = 11
 g_device = "g_serial"           # blank for no g_device on OTG
-clientIF = "wlan0"
 port = 0
-otg = 0                         # 'none', 0 for normal positive OTG mode, 1 for inverted OTG mode
+otg = "0"                       # 'none', 0 for normal positive OTG mode, 1 for inverted OTG mode
 usbnomount = 0                  # enables and dissables auto mount.
 timestamp = ""
 
@@ -56,7 +55,6 @@ def init():
     global g_device                 # g_device is subject to otg setting
     global otg                      # high, low, none, both
     global port
-    global clientIF
     global timestamp
 
     logging.info("Initializing Globals")
@@ -120,10 +118,6 @@ def init():
         pass
     try:
         enable_mass_storage = js["Enable_MassStorage"]
-    except:
-        pass
-    try:
-        clientIF = js["clientIF"]
     except:
         pass
 

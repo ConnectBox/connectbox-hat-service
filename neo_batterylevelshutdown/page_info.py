@@ -65,7 +65,11 @@ class PageInfo:
 
     @staticmethod
     def get_connected_users():
-        c = subprocess.run(['iw', 'dev', globals. clientIF, 'station',
+        f = open("/usr/local/connectbox/wificonf.txt","r")
+        dat = f.read()
+        f.close()
+        clientIF = dat.split("\n")[0].partition("AccessPointIF=")[2]        
+        c = subprocess.run(['iw', 'dev', clientIF, 'station',
                             'dump'], stdout=subprocess.PIPE)
         connected_user_count = len([line for line in c.stdout.decode(
             "utf-8").split('\n') if line.startswith("Station")])
