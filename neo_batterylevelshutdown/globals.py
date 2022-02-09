@@ -33,6 +33,7 @@ port = 0
 otg = "0"                       # 'none', 0 for normal positive OTG mode, 1 for inverted OTG mode
 usbnomount = 0                  # enables and dissables auto mount.
 timestamp = ""
+clientIF = ""
 
 from . import page_battery
 from .HAT_Utilities import get_device
@@ -56,6 +57,7 @@ def init():
     global otg                      # high, low, none, both
     global port
     global timestamp
+    global clientIF
 
     logging.info("Initializing Globals")
 
@@ -148,5 +150,10 @@ def init():
         else:           #all other Raspberry Pi version other than compute modules
             device_type = "PI"
             port = 1
+# Read the default AccessPoint Interface for the front panel display
+# note this will get re-read occassionally
     f.close()
-
+    f = open("/usr/local/connectbox/wificonf.txt","r")
+    dat = f.read()
+    f.close()
+    clientIF = dat.split("\n")[0].partition("AccessPointIF=")[2]   
