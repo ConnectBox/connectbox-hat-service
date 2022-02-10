@@ -16,7 +16,9 @@ import neo_batterylevelshutdown.hats as hats
 import neo_batterylevelshutdown.displays as displays
 import neo_batterylevelshutdown.HAT_Utilities as utilities
 
+# Global definitions for this module
 hatClass = 0
+progress_file = "/usr/local/connectbox/bin/expand_progress.txt"
 
 
 def getHATClass():
@@ -136,7 +138,7 @@ def fixfiles(a, c):
     logging.info("wificonf.txt holds "+ct[0]+" and "+ct[1]+" for detected paramaters (AP, Client) "+a+" and "+c)
     if ("AccessPointIF=wlan"+ a) == ct[0] and (("ClientIF=wlan"+ c == ct[1] and c!="") | (c == "" and ct[1] == "ClientIF=")):
         logging.info("Skipped file reconfiguration as the configuration is the same")
-        return              # we return because everything is the same and no need to reset netowrk settings.
+        return(0)           # we return because everything is the same and no need to reset netowrk settings.
 
 # we only come here if we need to adjust the network settings
 # Lets start with the /etc/network/interface folder
@@ -242,7 +244,7 @@ def fixfiles(a, c):
         f.flush()
         f.close()
     except:
-        pass
+        return0
     os.system("sync")                                #we will ensure we clear all files and pending write data
 
 # Now we are done with the network/interface.tmp, dnsmasq.tmp and hostapd.tmp file creations time to put them into action.
@@ -268,9 +270,7 @@ def fixfiles(a, c):
 
     logging.info("We have completed the file copy copleteions")
     logging.info("we will reboot to setup the new interfaces")
-    os.system("shutdown -r now")
-
-    return 0
+    return(1)	# we want to reboot after this since we need to reload all the kernel drivers
 
 
 def getNetworkClass():
@@ -278,6 +278,8 @@ def getNetworkClass():
     # network facing interface.  The client interface is the AP interface and is based on either RTL8812AU or RTL8812BU or RTL88192U  The
     # network facing interface will use the on board BMC wifi module as long as an AP module is present.  If no AP module is present it will become
     # the AP although this is not optimal.  But this is useful for modules such as the RaspberryPi Zero W.
+
+    global progress_file
     netwk=[]
     res = ""
     a = ""
@@ -319,6 +321,12 @@ def getNetworkClass():
         # now we need to update the files for a single AP and no client
         AP = a;
         rbt = fixfiles(AP,CI)                                       #Go for fixing all the file entries
+        f = open(progress_file, "w")
+        f.write("rewrite_netfiles_done")
+        f.close()
+        os.sync()
+        return(rbt)
+
     elif len(netwk) > 1:                                            #multiple wlan's so both AP and client interfaces
         logging.info("wlan"+netwk[0][0]+" with driver "+netwk[0][1])
         logging.info("wlan"+netwk[1][0]+" with driver "+netwk[1][1])
@@ -339,17 +347,18 @@ def getNetworkClass():
                     CI = netwk[1][0]
         logging.info("AP will be: wlan"+AP+" etherneet facing is: wlan"+CI)
         if len(netwk) >=3:
-            logging.info("we have more interfaces so they must be manually managed")  # if we have more than 2 interfaces then they must be manually managed.
-        rbt = fixfiles(AP,CI)                                       #Go for fixing all the file entries
+            logging.info("we have more interfaces so they must be manually managed") # if we have more than 2 interfaces then they must be manually managed. rbt = fixfiles(AP,CI) #Go for fixing all the file entries 
+            return(1)
+        else:
+            rbt = FixFiles(AP,CI)
+            f = open(progress_file, "w")
+            f.write("rewrite_netfiles_done")
+            f.close()
+            os.sync()
+            return(rbt)
     else:                                                           # we don't have even 1 interface
         logging.info("We have no wlan interfaces we can't function this way, rebooting to try to find the device")
-        rbt = 1                                                     # we will reboot and try again.
-    if rbt == 1:
-        f.open(progress_file, "w")
-        f.write("rewrite_netfiles_done")
-        f.close()
-        os.sync()
-        return
+        return(1)
 
 
 
@@ -359,42 +368,65 @@ def getNetworkClass():
 @click.option('-v', '--verbose', is_flag=True, default=False)
 
 def main(verbose):
+
+    global hatClass
+    global progress_file
+
     if verbose:
         logging.basicConfig(level=logging.INFO)
     else:
          logging.basicConfig(level=logging.DEBUG)
 
-    progress_file = "usr/local/connectbox/bin/expand_progress.txt"
-    global progress_file
-#Initialize the Global Variables
-    globals.init()
+    if not os.path.exists("/usr/local/connectbox/wificonf.txt"):
+        f = open("/usr/local/connectbox/wificonf.txt", "w")
+        f.write("AccessPointIF=\n")
+        f.write("ClientIF=\n")
+        f.write("#####END######")
+        f.close()
+        print("wrote temp wificonf.txt file out\g\g\g")
 
-    while os.path(progress_file)
-        f = open(progress_file, "r")
-        if f.read() =="resize2s_done" or "rewrite_netfiles_done":
-            f.close()
+#Initialize the Global Variables
+
+    while not  os.path.exists(progress_file):
+      print("waiting\g\g")
+      time.sleep(5)	#we wait till we have a progress file
+    time.sleep(2)	#make sure its filled
+    print("out of waiting loop") 
+    f = open(progress_file, "r")
+    if (f.read() == "resize2s_done" or "rewrite_netfiles_done"):
+        f.close()
+        print("into global inits")
 # Use BCM pin numbering scheme for compatibility with CM4 and use Board compatability for NEO
-            if globals.device_type == "NEO":
-                GPIO.setmode(GPIO.BOARD)
-            else:
-                GPIO.setmode(GPIO.BCM)
-            GPIO.setwarnings(False)
+        globals.init()
+        if globals.device_type == "NEO":
+             GPIO.setmode(GPIO.BOARD)
+        else:
+             GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(False)
 
 # Go find the netowrk interfaces and seteup the wans
-            getNetworkClass()        #sets up the AP and Client interfaces
-            logging.debug("Finished netowrk class")
-            hatClass = getHATClass()
-            displayClass =getDisplayClass(hatClass)
+        if getNetworkClass():        #sets up the AP and Client interfaces if it returns a 1 we need  to shutdown and start over
+            print("getNetworkClass  asked for a reboot \g\g")
+            GPIO.cleanup()       # clean up GPIO on  reboot
+            os.sync()
+            os.system("shutdown -r now")
+        else:
+          logging.debug("Finished netowrk class")
+          hatClass = getHATClass()
+          displayClass =getDisplayClass(hatClass)
+
+          print("Finished display class")
 
 #    logging.debug("display Class is: "+str(displayClass))
 #    logging.debug("finished display class starting main loop")
-            try:
-                hatClass(displayClass).mainLoop()
-            except KeyboardInterrupt:
-                GPIO.cleanup()       # clean up GPIO on CTRL+C exit
-            GPIO.cleanup()           # clean up GPIO on normal exit
-        else:
-            f.close()
+        try:
+            hatClass(displayClass).mainLoop()
+        except KeyboardInterrupt:
+            GPIO.cleanup()       # clean up GPIO on CTRL+C exit
+
+    else:
+        f.close()
+        GPIO.cleanup()       # clean up GPIO on normal exit
 
   #end of while looop
 
