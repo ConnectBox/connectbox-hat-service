@@ -125,7 +125,7 @@ def fixfiles(a, c):
     res = os.system("systemctl stop dnsmasq")
 
     at = ""
-    ct = ["",""]
+    ct = ["","",""]
     try:
         f = open("/usr/local/connectbox/wificonf.txt", 'r')
         at = f.read()
@@ -136,8 +136,9 @@ def fixfiles(a, c):
     logging.info("wificonf.txt holds "+ct[0]+" and "+ct[1]+" for detected paramaters (AP, Client) "+a+" and "+c)
     if ("AccessPointIF=wlan"+ a) == ct[0] and (("ClientIF=wlan"+ c == ct[1] and c!="") | (c == "" and ct[1] == "ClientIF=")):
         logging.info("Skipped file reconfiguration as the configuration is the same")
-        return
+        return              # we return because everything is the same and no need to reset netowrk settings.
 
+# we only come here if we need to adjust the network settings
 # Lets start with the /etc/network/interface folder
     f = open('/etc/network/interfaces.j2','r', encoding='utf-8')
     g = open('/etc/network/interfaces.tmp','w', encoding='utf-8')
@@ -344,7 +345,10 @@ def getNetworkClass():
         logging.info("We have no wlan interfaces we can't function this way, rebooting to try to find the device")
         rbt = 1                                                     # we will reboot and try again.
     if rbt == 1:
-        os.popen("shutdown -r now")
+        f.open(progress_file, "w")
+        f.write("rewrite_netfiles_done")
+        f.close()
+        os.sync()
         return
 
 
@@ -360,28 +364,39 @@ def main(verbose):
     else:
          logging.basicConfig(level=logging.DEBUG)
 
+    progress_file = "usr/local/connectbox/bin/expand_progress.txt"
+    global progress_file
 #Initialize the Global Variables
     globals.init()
+
+    while os.path(progress_file)
+        f = open(progress_file, "r")
+        if f.read() =="resize2s_done" or "rewrite_netfiles_done":
+            f.close()
 # Use BCM pin numbering scheme for compatibility with CM4 and use Board compatability for NEO
-    if globals.device_type == "NEO":
-        GPIO.setmode(GPIO.BOARD)
-    else:
-        GPIO.setmode(GPIO.BCM)
-    GPIO.setwarnings(False)
+            if globals.device_type == "NEO":
+                GPIO.setmode(GPIO.BOARD)
+            else:
+                GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
 
 # Go find the netowrk interfaces and seteup the wans
-    getNetworkClass()        #sets up the AP and Client interfaces
-    logging.debug("Finished netowrk class")
-    hatClass = getHATClass()
-    displayClass =getDisplayClass(hatClass)
+            getNetworkClass()        #sets up the AP and Client interfaces
+            logging.debug("Finished netowrk class")
+            hatClass = getHATClass()
+            displayClass =getDisplayClass(hatClass)
+
 #    logging.debug("display Class is: "+str(displayClass))
 #    logging.debug("finished display class starting main loop")
-    try:
-        hatClass(displayClass).mainLoop()
-    except KeyboardInterrupt:
-        GPIO.cleanup()       # clean up GPIO on CTRL+C exit
-    GPIO.cleanup()           # clean up GPIO on normal exit
+            try:
+                hatClass(displayClass).mainLoop()
+            except KeyboardInterrupt:
+                GPIO.cleanup()       # clean up GPIO on CTRL+C exit
+            GPIO.cleanup()           # clean up GPIO on normal exit
+        else:
+            f.close()
 
+  #end of while looop
 
 if __name__ == "__main__":
     main()  # pylint: disable=no-value-for-parameter
