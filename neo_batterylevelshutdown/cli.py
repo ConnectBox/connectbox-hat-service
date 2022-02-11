@@ -350,7 +350,7 @@ def getNetworkClass():
             logging.info("we have more interfaces so they must be manually managed") # if we have more than 2 interfaces then they must be manually managed. rbt = fixfiles(AP,CI) #Go for fixing all the file entries 
             return(1)
         else:
-            rbt = FixFiles(AP,CI)
+            rbt = fixfiles(AP,CI)
             f = open(progress_file, "w")
             f.write("rewrite_netfiles_done")
             f.close()
@@ -383,52 +383,51 @@ def main(verbose):
         f.write("ClientIF=\n")
         f.write("#####END######")
         f.close()
-        print("wrote temp wificonf.txt file out\g\g\g")
+        logging.info("wrote temp wificonf.txt file out\g\g\g")
 
 #Initialize the Global Variables
 
     while not  os.path.exists(progress_file):
-      print("waiting\g\g")
+      logging.info("waiting\g\g")
       time.sleep(5)	#we wait till we have a progress file
-    time.sleep(2)	#make sure its filled
-    print("out of waiting loop") 
+    time.sleep(2)	#make sure its filled 
     f = open(progress_file, "r")
-    if (f.read() == "resize2s_done" or "rewrite_netfiles_done"):
-        f.close()
-        print("into global inits")
+    while not (f.read() == "resize2s_done" or "rewrite_netfiles_done" or "running"):
+        time.sleep(10)
+#  we wait because we need the disk resize to finishe
+    f.close()
+    print("into global inits")
 # Use BCM pin numbering scheme for compatibility with CM4 and use Board compatability for NEO
-        globals.init()
-        if globals.device_type == "NEO":
-             GPIO.setmode(GPIO.BOARD)
-        else:
-             GPIO.setmode(GPIO.BCM)
-        GPIO.setwarnings(False)
+    globals.init()
+    if globals.device_type == "NEO":
+         GPIO.setmode(GPIO.BOARD)
+    else:
+         GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
 
 # Go find the netowrk interfaces and seteup the wans
-        if getNetworkClass():        #sets up the AP and Client interfaces if it returns a 1 we need  to shutdown and start over
-            print("getNetworkClass  asked for a reboot \g\g")
-            GPIO.cleanup()       # clean up GPIO on  reboot
-            os.sync()
-            os.system("shutdown -r now")
-        else:
-          logging.debug("Finished netowrk class")
-          hatClass = getHATClass()
-          displayClass =getDisplayClass(hatClass)
-
-          print("Finished display class")
-
+    if getNetworkClass():        #sets up the AP and Client interfaces if it returns a 1 we need  to shutdown and start over
+        logging.info("getNetworkClass  asked for a reboot \g\g")
+        GPIO.cleanup()       # clean up GPIO on  reboot
+        os.sync()
+        time.sleep(2)
+        os.system("shutdown -r now")
+    else:
+      logging.debug("Finished netowrk class")
+      hatClass = getHATClass()
+      displayClass =getDisplayClass(hatClass)
+      logging.info("Finished display class")
+    f = open(progress_file, "w")
+    f.write("running")
+    f.close()
+    os.sync()
 #    logging.debug("display Class is: "+str(displayClass))
 #    logging.debug("finished display class starting main loop")
-        try:
-            hatClass(displayClass).mainLoop()
-        except KeyboardInterrupt:
+    try:
+         hatClass(displayClass).mainLoop()
+    except KeyboardInterrupt:
             GPIO.cleanup()       # clean up GPIO on CTRL+C exit
 
-    else:
-        f.close()
-        GPIO.cleanup()       # clean up GPIO on normal exit
-
-  #end of while looop
-
+   
 if __name__ == "__main__":
     main()  # pylint: disable=no-value-for-parameter
