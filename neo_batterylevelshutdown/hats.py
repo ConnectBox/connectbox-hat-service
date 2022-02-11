@@ -107,7 +107,7 @@ class BasePhysicalHAT:
             init_val = int(retval.split(":")[1],16)     # The initial (integer) value of the register
             write_val = init_val & 0x77777770           # Mask to set the PA0 pin to INPUT
             cmd1 = cmd + " w " + hex(write_val)          # Form the command
-            retval = os.system(cmd1)                     # Write the register
+            retval = os.popen(cmd1).read()                     # Write the register
 
             if globals.otg == "none":
                 otg_xor = 1
