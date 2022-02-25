@@ -122,9 +122,6 @@ def fixfiles(a, c):
 # This function is called to fix the files and restart the network interfaces based on what we have loaded.  AP represents the Wlan that will serve as the Access point.  CI is the ethernet interface which may or may not be there
 # in a standard configuration. The values of a and c are numbers only.
     logging.debug("Entering fix files")
-    res = os.system("systemctl stop networking.service")
-    res = os.system("systemctl stop hostapd")
-    res = os.system("systemctl stop dnsmasq")
 
     at = ""
     ct = ["","",""]
@@ -139,6 +136,10 @@ def fixfiles(a, c):
     if ("AccessPointIF=wlan"+ a) == ct[0] and (("ClientIF=wlan"+ c == ct[1] and c!="") | (c == "" and ct[1] == "ClientIF=")):
         logging.info("Skipped file reconfiguration as the configuration is the same")
         return(0)           # we return because everything is the same and no need to reset netowrk settings.
+
+    res = os.system("systemctl stop networking.service")
+    res = os.system("systemctl stop hostapd")
+    res = os.system("systemctl stop dnsmasq")
 
 # we only come here if we need to adjust the network settings
 # Lets start with the /etc/network/interface folder
