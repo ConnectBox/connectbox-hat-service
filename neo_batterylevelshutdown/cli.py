@@ -418,6 +418,7 @@ def main(verbose):
       hatClass = getHATClass()
       displayClass =getDisplayClass(hatClass)
       logging.info("Finished display class")
+      logging.info("writing running to progress_file")
     f = open(progress_file, "w")
     f.write("running")
     f.close()
