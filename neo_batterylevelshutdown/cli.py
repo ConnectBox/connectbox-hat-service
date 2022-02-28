@@ -146,7 +146,7 @@ def fixfiles(a, c):
     f = open('/etc/network/interfaces.j2','r', encoding='utf-8')
     g = open('/etc/network/interfaces.tmp','w', encoding='utf-8')
     x = 0
-    wlan_num  = 3                                        #number of wlanX references in the AP side before the #CLIENT# in /etc/network/interfaces.j2 text file
+    wlan_num  = 4                                        #number of wlanX references in the AP side before the #CLIENT# in /etc/network/interfaces.j2 text file
     skip_rest = 0
     l = ""
     n = ""
@@ -162,8 +162,10 @@ def fixfiles(a, c):
                         m[0] = '#'+m[0]+'wlan'+str(int(a)+1)
                     else:
                         if "#" == m[0][0]:
-                            while m[0][0]=="#":
+                            while m[0][1]=="#":             #take out any extra comment lines
                                 m[0]=m[0][1:]
+                            if len(m[0])<30:
+                                m[0] = m[0][1:]             if the line is not a real command line but a comment then take out the # in front ssince we have C
                     n = m[0]+'wlan'+c
 #                   logging.debug("on interface line were setting $2: "+n)
                 x += 1
@@ -423,6 +425,7 @@ def main(verbose):
     f.write("running")
     f.close()
     os.sync()
+    os.system("chattr +i /usr/local/connectbox/progress_file")  #make this file immutable
 #    logging.debug("display Class is: "+str(displayClass))
 #    logging.debug("finished display class starting main loop")
     try:
