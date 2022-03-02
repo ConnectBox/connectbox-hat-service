@@ -18,7 +18,7 @@ import neo_batterylevelshutdown.HAT_Utilities as utilities
 
 # Global definitions for this module
 hatClass = 0
-progress_file = "/usr/local/connectbox/bin/expand_progress.txt"
+progress_file = "/usr/local/connectbox/expand_progress.txt"
 
 
 def getHATClass():
@@ -140,6 +140,7 @@ def fixfiles(a, c):
     res = os.system("systemctl stop networking.service")
     res = os.system("systemctl stop hostapd")
     res = os.system("systemctl stop dnsmasq")
+    res = os.system("systemctl stop dhcpcd")
 
 # we only come here if we need to adjust the network settings
 # Lets start with the /etc/network/interface folder
@@ -165,7 +166,7 @@ def fixfiles(a, c):
                             while m[0][1]=="#":             #take out any extra comment lines
                                 m[0]=m[0][1:]
                             if len(m[0])<30:
-                                m[0] = m[0][1:]             if the line is not a real command line but a comment then take out the # in front ssince we have C
+                                m[0] = m[0][1:]             #if the line is not a real command line but a comment then take out the # in front ssince we have C
                     n = m[0]+'wlan'+c
 #                   logging.debug("on interface line were setting $2: "+n)
                 x += 1
@@ -235,6 +236,30 @@ def fixfiles(a, c):
     g.close()
     logging.debug("We have finished the temp /etc/hostapd/hostapd.tmp file")
 
+# Nowe we need to exclude the AP from Wpa_supplicant control
+
+    f = open('/etc/dhcpcd.conf','r', encoding='utf-8')
+    g = open('/etc/dhcpcd.tmp','w', encoding='utf-8')
+    x = 0
+    n = ""
+    for y,l in enumerate(f):
+        if 'wlan' in l:
+             m = l.split('interface=wlan')
+             n = str(m[0]+'interface=wlan'+a)
+#             logging.debug("on dhcpcd.conf were setting $1: "+n)
+             x += 1
+             while m[1][0].isnumeric():
+                   m[1] = m[1][1:]
+             n = str(n + m[1])
+        else:
+             n = str(l)
+        g.write(n)
+
+    g.flush()
+    f.close()
+    g.close()
+    logging.debug("We have finished the temp /etc/dhcpcd.tmp file")
+
 #  Now lets make sure we write out the configuration for future
     try:
         f = open("/usr/local/connectbox/wificonf.txt", 'w')
@@ -265,11 +290,12 @@ def fixfiles(a, c):
     os.system("mv /etc/network/interfaces /etc/network/interfaces.bak")
     os.system("mv /etc/hostapd/hostapd.conf /etc/hostapd/hostapd.bak")
     os.system("mv /etc/dnsmasq.conf /etc/dnsmasq.bak")
+    os.system("mv /etc/dhcpcd.conf /etc/dhcpcd.bak")
 
     os.system("mv /etc/hostapd/hostapd.tmp /etc/hostapd/hostapd.conf")
     os.system("mv /etc/dnsmasq.tmp /etc/dnsmasq.conf")
     os.system("mv /etc/network/interfaces.tmp /etc/network/interfaces")
-
+    os.system("mv /etc/dhcpcd.tmp /etc/dhcpcd.conf")
 
     logging.info("We have completed the file copy copleteions")
     logging.info("we will reboot to setup the new interfaces")
@@ -395,7 +421,7 @@ def main(verbose):
       time.sleep(5)	#we wait till we have a progress file
     time.sleep(2)	#make sure its filled 
     f = open(progress_file, "r")
-    while not (f.read() == "resize2s_done" or "rewrite_netfiles_done" or "running"):
+    while not (f.read() == ("resize2fs_done" or "rewrite_netfiles_done" or "running")):
         time.sleep(10)
 #  we wait because we need the disk resize to finishe
     f.close()
