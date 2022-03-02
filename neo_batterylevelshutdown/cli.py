@@ -421,8 +421,10 @@ def main(verbose):
       time.sleep(5)	#we wait till we have a progress file
     time.sleep(2)	#make sure its filled 
     f = open(progress_file, "r")
-    while not (f.read() == ("resize2fs_done" or "rewrite_netfiles_done" or "running")):
+    while  (f.read() == ("fdisk_done" or 'resize_done'):
+        f.close()
         time.sleep(10)
+        f = open(progress_file, "r")
 #  we wait because we need the disk resize to finishe
     f.close()
     print("into global inits")
