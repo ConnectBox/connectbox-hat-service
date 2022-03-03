@@ -244,13 +244,15 @@ def fixfiles(a, c):
     n = ""
     for y,l in enumerate(f):
         if 'wlan' in l:
-             m = l.split('interface=wlan')
-             n = str(m[0]+'interface=wlan'+a)
+            if 'denyinterfaces' in l:
+                 m = l.split('denyinterfaces wlan')
+                 n = str(m[0]+"denyinterfaces wlan" + c)
 #             logging.debug("on dhcpcd.conf were setting $1: "+n)
-             x += 1
-             while m[1][0].isnumeric():
-                   m[1] = m[1][1:]
-             n = str(n + m[1])
+                 x += 1
+            else:
+                 m = l.split('interface wlan')
+                 n = str(m[0]+'interface wlan' + a)
+                 x += 1
         else:
              n = str(l)
         g.write(n)
@@ -421,10 +423,12 @@ def main(verbose):
       time.sleep(5)	#we wait till we have a progress file
     time.sleep(2)	#make sure its filled 
     f = open(progress_file, "r")
-    while  (f.read() == ("fdisk_done" or 'resize_done'):
+    a = f.read()
+    while  (a == "fdisk_done" or a =='resize_done'):
         f.close()
         time.sleep(10)
         f = open(progress_file, "r")
+        a = f.read()
 #  we wait because we need the disk resize to finishe
     f.close()
     print("into global inits")
