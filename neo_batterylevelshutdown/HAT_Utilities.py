@@ -59,7 +59,8 @@ def get_device(actual_args=None):
     try:
         device = cmdline.create_device(args)
     except error.Error as e:
-        parser.error(e)
+        logging.info('no display device found')
+        device=None
 
     return device
 
