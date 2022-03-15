@@ -278,6 +278,7 @@ def fixfiles(a, c):
         f.close()
     except:
         return0
+    os.system("systemctl daemon-reload")             #we reload all the daemons since we changed the config.
     os.system("sync")                                #we will ensure we clear all files and pending write data
 
 # Now we are done with the network/interface.tmp, dnsmasq.tmp and hostapd.tmp file creations time to put them into action.
