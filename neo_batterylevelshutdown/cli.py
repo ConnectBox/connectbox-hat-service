@@ -246,12 +246,15 @@ def fixfiles(a, c):
         if 'wlan' in l:
             if 'denyinterfaces' in l:
                  m = l.split('denyinterfaces wlan')
-                 n = str(m[0]+"denyinterfaces wlan" + c)
+                 if c="":
+                    n = str(m[0] + "\n")
+                 else:
+                    n = str(m[0]+"denyinterfaces wlan" + c + "\n")
 #             logging.debug("on dhcpcd.conf were setting $1: "+n)
                  x += 1
             else:
                  m = l.split('interface wlan')
-                 n = str(m[0]+'interface wlan' + a)
+                 n = str(m[0]+'interface wlan' + a + "\n" )
                  x += 1
         else:
              n = str(l)
