@@ -246,7 +246,7 @@ def fixfiles(a, c):
         if 'wlan' in l:
             if 'denyinterfaces' in l:
                  m = l.split('denyinterfaces wlan')
-                 if c="":
+                 if c=="":
                     n = str(m[0] + "\n")
                  else:
                     n = str(m[0]+"denyinterfaces wlan" + c + "\n")
