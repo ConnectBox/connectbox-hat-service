@@ -59,7 +59,7 @@ def init():
     global timestamp
     global clientIF
 
-    logging.info("Initializing Globals")
+    logging.debug("Initializing Globals")
 
   # Using a dictionary and json to store Branding stuff
   # Read the dictionary
@@ -123,7 +123,7 @@ def init():
     except:
         pass
 
-    logging.info("globals screen_enable="+str(screen_enable))
+    logging.debug("globals screen_enable="+str(screen_enable))
 
 # check that the brand name eg: hostname hasn't changed.
 # if it did we need to update the brand and the hostname
