@@ -461,7 +461,7 @@ def main(verbose):
     f.write("running")
     f.close()
     os.sync()
-    os.system("chattr +i /usr/local/connectbox/progress_file")  #make this file immutable
+
 #    logging.debug("display Class is: "+str(displayClass))
 #    logging.debug("finished display class starting main loop")
     try:
