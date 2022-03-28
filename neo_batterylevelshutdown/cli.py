@@ -422,7 +422,7 @@ def main(verbose):
 
 #Initialize the Global Variables
 
-    while not  os.path.exists(progress_file):
+    while not ( os.path.exists( progress_file )):
       logging.info("waiting\g\g")
       time.sleep(5)	#we wait till we have a progress file
     time.sleep(2)	#make sure its filled 
