@@ -28,7 +28,7 @@ class PageStats:
     def readStatsJSON(self):
         results = subprocess.run(["connectboxmanage", "get", "topten"], stdout=subprocess.PIPE)
         data = results.stdout.decode('utf-8').strip('\n')
-        data = json.load(data)
+        data = json.loads(data)
         print('============================')
         print('     ' + self.dt_range)
         print('============================')
@@ -70,7 +70,7 @@ class PageStats:
         # draw text, full opacity
         results = subprocess.run(["connectboxmanage", "get", "topten"], stdout=subprocess.PIPE)
         data = results.stdout.decode('utf-8').strip('\n')
-        data = json.load(data)
+        data = json.loads(data)
         y = 0
         count = 0
 
