@@ -13,6 +13,7 @@ sudo logrotate /etc/logrotate.hourly.conf
 
 import json
 import os.path
+import subprocess
 from PIL import Image, ImageFont, ImageDraw
 from .HAT_Utilities import get_device
 import neo_batterylevelshutdown.globals as globals
