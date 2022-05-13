@@ -13,6 +13,7 @@ sudo logrotate /etc/logrotate.hourly.conf
 
 import json
 import os.path
+import subprocess
 from PIL import Image, ImageFont, ImageDraw
 from .HAT_Utilities import get_device
 import neo_batterylevelshutdown.globals as globals
@@ -25,15 +26,15 @@ class PageStats:
         self.page_num = page_num
 
     def readStatsJSON(self):
-        STATS_FILE = '/var/www/connectbox/connectbox_default/stats.top10.json'
-        with open(STATS_FILE) as json_file:
-            data = json.load(json_file)
-            print('============================')
-            print('     ' + self.dt_range)
-            print('============================')
-            for p in data[self.dt_range]:
-                print('file: ' + p['resource'])
-                print('count: ' + str(p['count']))
+        results = subprocess.run(["connectboxmanage", "get", "topten"], stdout=subprocess.PIPE)
+        data = results.stdout.decode('utf-8').strip('\n')
+        data = json.loads(data)
+        print('============================')
+        print('     ' + self.dt_range)
+        print('============================')
+        for p in data[self.dt_range]:
+            print('file: ' + p['resource'])
+            print('count: ' + str(p['count']))
         print('')
 
     # pylint: disable=too-many-locals, too-many-branches
@@ -67,44 +68,42 @@ class PageStats:
         d = ImageDraw.Draw(txt)
 
         # draw text, full opacity
-        fname = '/var/www/connectbox/connectbox_default/stats.top10.json'
-        if os.path.isfile(fname):
-            # file exists continue
-            with open(fname) as json_file:
-                data = json.load(json_file)
-                y = 0
-                count = 0
+        results = subprocess.run(["connectboxmanage", "get", "topten"], stdout=subprocess.PIPE)
+        data = results.stdout.decode('utf-8').strip('\n')
+        data = json.loads(data)
+        y = 0
+        count = 0
 
-                if self.page_num == 1:
-                    d.text((107, 22), 'p1', font=font20, fill="black")
-                else:
-                    d.text((107, 22), 'p2', font=font20, fill="black")
+        if self.page_num == 1:
+            d.text((107, 22), 'p1', font=font20, fill="black")
+        else:
+            d.text((107, 22), 'p2', font=font20, fill="black")
 
-                # check to see if we have data or not
-                for p in data[self.dt_range]:
-                    if 'resource' in p.keys():
-                        # cover up the unhappy face
-                        d.rectangle((25, 1, 75, 128), fill="white")
+        # check to see if we have data or not
+        for p in data[self.dt_range]:
+            if 'resource' in p.keys():
+                # cover up the unhappy face
+                d.rectangle((25, 1, 75, 128), fill="white")
 
-                for p in data[self.dt_range]:
-                    media = p['resource'].rsplit('/', 1)[1]
-                    if self.page_num == 1:
-                        # trim out directories
-                        d.text((2, y), '(%s) %s' %
-                               (str(p['count']), media),
-                               font=font10, fill="black")
-                        y += 12
-                        count += 1
-                        if count == 5:
-                            break
-                    else:
-                        # trim out directories
-                        count += 1
-                        if count > 5:
-                            d.text((2, y), '(%s) %s' %
-                                   (str(p['count']), media),
-                                   font=font10, fill="black")
-                            y += 12
+        for p in data[self.dt_range]:
+            media = p['resource']
+            if self.page_num == 1:
+                # trim out directories
+                d.text((2, y), '(%s) %s' %
+                       (str(p['count']), media),
+                       font=font10, fill="black")
+                y += 12
+                count += 1
+                if count == 5:
+                    break
+            else:
+                # trim out directories
+                count += 1
+                if count > 5:
+                    d.text((2, y), '(%s) %s' %
+                           (str(p['count']), media),
+                           font=font10, fill="black")
+                    y += 12
 
         out = Image.alpha_composite(img, txt)
         self.device.display(out.convert(self.device.mode))
