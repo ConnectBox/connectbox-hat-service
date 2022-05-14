@@ -135,6 +135,7 @@ def fixfiles(a, c):
     logging.info("wificonf.txt holds "+ct[0]+" and "+ct[1]+" for detected paramaters (AP, Client) "+a+" and "+c)
     if ("AccessPointIF=wlan"+ a) == ct[0] and (("ClientIF=wlan"+ c == ct[1] and c!="") | (c == "" and ct[1] == "ClientIF=")):
         logging.info("Skipped file reconfiguration as the configuration is the same")
+        os.system("ifup wlan"+a)   # restart wlan ... other restarts needed??
         return(0)           # we return because everything is the same and no need to reset netowrk settings.
 
     res = os.system("systemctl stop networking.service")
