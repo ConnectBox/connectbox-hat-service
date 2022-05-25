@@ -108,6 +108,8 @@ def averageFuel():
     fuel = (avg_voltage - 3275)/7.67
     if fuel <= 5:
         fuel = 5
+    if fuel > 99:
+        fuel = 100    
     return(fuel)
 
 

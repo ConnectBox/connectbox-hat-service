@@ -310,16 +310,12 @@ class Axp209HAT(BasePhysicalHAT):
         #  condition because we're only ever setting an absolute value rather
         #  than incrementing i.e. we're not referencing the old value
         self.displayPowerOffTime = time.time() + 3
-        # If we have a battery, perform a level check at our first chance but
-        #  if we don't, never schedule the battery check (this assumes that
-        #  the battery will never be plugged in after startup, which is a
-        #  reasonable assumption for non-development situations)
-        if self.axp.battery_exists:
-            self.nextBatteryCheckTime = 0
-        else:
-            # Never schedule it...
-            self.nextBatteryCheckTime = sys.maxsize
-
+        # establish self.nextBatteryChecktime so that if
+        #  we have a battery, perform a level check at our first chance 
+        #  (removed assumption that battery will not be added or removed in
+        #   real use case)
+        self.nextBatteryCheckTime = 0
+        
         # Clear all IRQ Enable Control Registers. We may subsequently
         #  enable interrupts on certain actions below, but let's start
         #  with a known state for all registers.
@@ -327,7 +323,22 @@ class Axp209HAT(BasePhysicalHAT):
             self.axp.bus.write_byte_data(AXP209_ADDRESS, ec_reg, 0x00)
 
         # Write the charge control 1 - limit/ current control register 
-        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x33, 0x99)
+        #  (Vtarget = 4.1 volts, end charging when below 10% of set charge current, 
+        #   charge current = 1200 mA )
+        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x33, 0x89)
+
+        # Enable AC_IN current and voltage ADCs (also ADCs for Battery voltage, Battery current, 
+        #  and APS voltage.)
+        #  note: APS monitors the IPSOUT voltage and shuts down system if < 2.9 volts.
+        #        also, the Battery Temp Sense (TS) ADC is left enabled because disabling it
+        #        results in a battery error warning LED (?)
+        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x82, 0xF3)
+
+        # Change Voff voltage level (level of IPS_OUT below which causes AXP209 to shutdown)
+        #  to 2.6V. Hopefully this will keep that feature from shutting us down when batteries
+        #  get low. We do our own monitoring in this code, so shouldn't hurt batteries.
+        self.axp.bus.write_byte_data(AXP209_ADDRESS,0x31,0x00)
+
 
         # Now all interrupts are disabled, clear the previous state
         self.clearAllPreviousInterrupts()
@@ -446,7 +457,8 @@ class Axp209HAT(BasePhysicalHAT):
                 #  impact is probably minimal but that would mean we need to
                 #  check for whether the battery is connected on each loop so
                 #  readability doesn't necessarily improve
-                if time.time() > self.nextBatteryCheckTime:
+                # (added test for battery exists for removable battery systems)
+                if (time.time() > self.nextBatteryCheckTime) and (self.axp.battery_exists):
                     if not self.batteryLevelAbovePercent(
                             self.BATTERY_SHUTDOWN_THRESHOLD_PERC):
                         self.shutdownDevice()
