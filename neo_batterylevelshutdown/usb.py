@@ -71,70 +71,77 @@ class USB:
         fp.close()
         time.sleep(2)  # give time for Pause of the Mount
         y = 0
-        if sourcePath != '/media/usb11':
-            x = ord(sourcePath[len(sourcePath)-1])
-            while (not os.path.exists('/media/usb'+chr(x))) and x < ord(':'):
+        a = sourcePath
+        b = '/source'
+        if not os.path.exists(destPath+b): os.mkdir(destPath+b)
+        if a != '/media/usb11':
+            x = ord(a[len(a)-1])
+            while (not os.path.exists('/media/usb'+chr(x)+b)) and x < ord(':'):
                 x +=1
         else: x = ord('0')
-        if os.path.exists(destPath):
-            while os.path.exists(sourcePath) and (x < ord(':')):
-                if os.path.exists(sourcePath) and os.path.exists(destPath):
-                    logging.info("Copying tree: "+sourcePath+" to: "+destPath)
-                    copy_tree(sourcePath, destPath)
+        if os.path.exists(destPath+b):
+            while os.path.exists(a+b) and (x < ord(':')):
+                if os.path.exists(a+b) and os.path.exists(destPath+b):
+                    logging.info("Copying tree: "+a+b+" to: "+destPath+b)
+                    copy_tree(a+b, destPath+b)
                     y = 1
-                    logging.debug("Done copying to: "+destPath)
+                    logging.debug("Done copying to: "+destPath+b)
 #   Find the next USB key in the system to copy to destination
-                if sourcePath != '/media/usb0':
-                    if len(sourcePath)==12: sourcePath = "/media/usb0"
-                    x = ord(sourcePath[len(sourcePath)-1]) + 1
-                    sourcePath = '/media/usb'+chr(x)
-                    while not os.path.exists(sourcePath) and (x < ord(':')):
-                        x = ord(sourcePath[len(sourcePath)-1]) + 1
-                        sourcePath = "/media/usb"+chr(x)
+                if a != '/media/usb0':
+                    if len(a)==12: a = "/media/usb0"
+                    x = ord(a[len(a)-1]) + 1
+                    a = '/media/usb'+chr(x)
+                    while not os.path.exists(a+b) and (x < ord(':')):
+                        x = ord(a[len(a)-1]) + 1
+                        a = "/media/usb"+chr(x)
 
             if (y == 1):
                 logging.info("Everything copied all done")
                 return True
             else:
-                logging.info("nothing copied alll done")
+                logging.info("nothing copied all done")
                 return False
         else:
             logging.info("failed destination path")
             return False
 
-    def checkSpace(self, sourcePath='/media/usb11', destPath='/media/usb0'):
+    def checkSpace(self, sourcePath='/media/usb11', destPath='/media/usb0', sourdest=1):
         '''
         Function to make sure there is space on destination for source materials
 
         :param sourcePath: path to the source material
         :param destPath:  path to the destination
+        :param sourdest : indicates that we are copying source to destination if 1 otherwise were copying destination to source
         :return: True / False
         '''
         logging.info("Starting the Space Check")
         destSize = self.getFreeSpace(destPath)
         sourceSize = 0
-        while os.path.exists(sourcePath):
-            sourceSize += self.getSize(sourcePath)
-            logging.info("got source size as : "+str(sourceSize)+" Path is: "+sourcePath)
-            if sourcePath != "/media/usb0":
-                if len(sourcePath) == 12:
-                   sourcePath = '/media/usb0'
-                x = ord(sourcePath[len(sourcePath) - 1])+1
-                sourcePath = '/media/usb'+chr(x)
-                while not os.path.exists(sourcePath) and (x< ord(':')):
-                   x = ord(sourcePath[len(sourcePath)-1]) + 1
-                   sourcePath = "/dev/usb"+chr(x) 
-                logging.info("Source size:"+str(sourceSize)+"  bytes, destination size:"+str(destSize)+" Now looking at:"+sourcePath)
-            else:
-                logging.info("total source size:"+str(sourceSize)+"  bytes, total destination size "+str(destSize))
-                return(destSize, sourceSize)
-        logging.info("total source size:"+str(sourceSize)+"  bytes, total destination size "+str(destSize))
+        y = 0
+        a = sourcePath
+        b = "/content"
+            while os.path.exists(a+b):
+                sourceSize += self.getSize(a+b)
+                logging.info("got source size as : "+str(sourceSize)+" Path is: "+a+b)
+                if sourcePath != "/media/usb0":
+                    if len(a) == 12:
+                       a = '/media/usb0'
+                    x = ord(a[len(a) - 1])+1
+                    a = '/media/usb'+chr(x)
+                    while not os.path.exists(a) and (x< ord(':')):
+                       x = ord(a[len(a)-1]) + 1
+                       a = "/dev/usb"+chr(x) 
+                    logging.info("Source size:"+str(sourceSize)+"  bytes, destination size:"+str(destSize)+" Now looking at:"+a+b)
+                else:
+                    logging.info("total source size:"+str(sourceSize)+"  bytes, total destination size "+str(destSize))
+                    return(destSize, sourceSize)
+            logging.info("total source size:"+str(sourceSize)+"  bytes, total destination size "+str(destSize))
         return (destSize, sourceSize)
 
     # pylint: disable=unused-variable
     # Looks like this isn't summing subdirectories?
     @staticmethod
-    def getSize(startPath='/media/usb11'):
+    def getSize(startPath='/media/usb11/content'):
         '''
         Recursively get the size of a folder structure
 

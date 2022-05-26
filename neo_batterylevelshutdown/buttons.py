@@ -174,8 +174,6 @@ class BUTTONS:
                 if x == ord('k'):
                     x = ord('a')
                     dev = '/dev/sd'+chr(x)+'1'
-                if x == ord('k'):
-                    x = ord('a')
 
             self.display.pageStack = 'confirm'
             self.display.showConfirmPage()
@@ -231,7 +229,7 @@ class BUTTONS:
                         usb.unmount(zz)                                 #Make sure we unmount that device.
                         usb.unmount(dev)                                #Make sure we unmount the mount point
                         if zz[len(zz)-1] != '0':                          # as long as its not /media/usb0
-                            os.system('rm -r '+ z)                      #Make sure we remove that directory since PauseMount is set
+                            os.system('rm -r '+ zz)                      #Make sure we remove that directory since PauseMount is set
                     else: logging.debug("Space of Desitinationis ok for source to copy to "+zz)
                 else:                                                   #we have a key but it is not mounted
                     if usb.isUsbPresent(dev):                           #Hmm USB is present but not mounted.
@@ -253,33 +251,33 @@ class BUTTONS:
                                 return
                             x -= 1						#decrement so we can recheck this mount
                         else:
-                                self.disiplay.showErrorPage("")
-                                self.display.pageStack = 'error'
-                                try: os.remove('/usr/local/connectbox/PauseMount')
-                                except:
-                                   pass
-                                return
+                            self.disiplay.showErrorPage("")
+                            self.display.pageStack = 'error'
+                            try: os.remove('/usr/local/connectbox/PauseMount')
+                            except:
+                                pass
+                            return
                 x += 1;
                 dev = '/dev/sd'+chr(x)+'1'
-            logging.info("we passed size checks so we are going on to copy now")
+                logging.info("we passed size checks so we are going on to copy now")
 
 
-            # we think we have keys to work with if we go forward from here.
-            l = []
-            y = [0,0,0]
-            self.display.showWaitPage("Copying Now")
-            x = ord('a')
-            dev = '/dev/sd'+chr(x)+"1"
-            logging.info("Ready to start the copies")
-            while x < ord('k'):
-                if usb.isUsbPresent(dev):		             #find the first usb key
-                    y[0] = subprocess.Popen(("/usr/bin/cp -r /media/usb0/* "+usb.getMount(dev)+"/"), shell=True)
-                    y[1] = usb.getMount(dev)+"/"
-                    y[2] = y[0].pid+1
-                    l.append(y)
-                    logging.info("started copy from /media/usb0/* to "+y[1]+" as pid: "+str(y[2]))
-                x +=1
-                dev = '/dev/sd'+chr(x)+'1'
+                # we think we have keys to work with if we go forward from here.
+                l = []
+                y = [0,0,0]
+                self.display.showWaitPage("Copying Now")
+                x = ord('a')
+                dev = '/dev/sd'+chr(x)+"1"
+                logging.info("Ready to start the copies")
+                while x < ord('k'):
+                    if usb.isUsbPresent(dev):		             #find the first usb key
+                        y[0] = subprocess.Popen(("/usr/bin/cp -r /media/usb0/* "+usb.getMount(dev)+"/"), shell=True)
+                        y[1] = usb.getMount(dev)+"/"
+                        y[2] = y[0].pid+1
+                        l.append(y)
+                        logging.info("started copy from /media/usb0/* to "+y[1]+" as pid: "+str(y[2]))
+                    x +=1
+                    dev = '/dev/sd'+chr(x)+'1'
 
 #            x = 0
 #            y = [0,0,0]
