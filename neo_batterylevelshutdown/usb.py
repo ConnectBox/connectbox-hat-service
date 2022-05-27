@@ -120,22 +120,22 @@ class USB:
         y = 0
         a = sourcePath
         b = "/content"
-            while os.path.exists(a+b):
-                sourceSize += self.getSize(a+b)
-                logging.info("got source size as : "+str(sourceSize)+" Path is: "+a+b)
-                if sourcePath != "/media/usb0":
-                    if len(a) == 12:
-                       a = '/media/usb0'
-                    x = ord(a[len(a) - 1])+1
-                    a = '/media/usb'+chr(x)
-                    while not os.path.exists(a) and (x< ord(':')):
-                       x = ord(a[len(a)-1]) + 1
-                       a = "/dev/usb"+chr(x) 
-                    logging.info("Source size:"+str(sourceSize)+"  bytes, destination size:"+str(destSize)+" Now looking at:"+a+b)
-                else:
-                    logging.info("total source size:"+str(sourceSize)+"  bytes, total destination size "+str(destSize))
-                    return(destSize, sourceSize)
-            logging.info("total source size:"+str(sourceSize)+"  bytes, total destination size "+str(destSize))
+        while os.path.exists(a+b):
+            sourceSize += self.getSize(a+b)
+            logging.info("got source size as : "+str(sourceSize)+" Path is: "+a+b)
+            if sourcePath != "/media/usb0":
+                if len(a) == 12:
+                   a = '/media/usb0'
+                x = ord(a[len(a) - 1])+1
+                a = '/media/usb'+chr(x)
+                while not os.path.exists(a) and (x< ord(':')):
+                   x = ord(a[len(a)-1]) + 1
+                   a = "/dev/usb"+chr(x) 
+                logging.info("Source size:"+str(sourceSize)+"  bytes, destination size:"+str(destSize)+" Now looking at:"+a+b)
+            else:
+                logging.info("total source size:"+str(sourceSize)+"  bytes, total destination size "+str(destSize))
+                return(destSize, sourceSize)
+        logging.info("total source size:"+str(sourceSize)+"  bytes, total destination size "+str(destSize))
         return (destSize, sourceSize)
 
     # pylint: disable=unused-variable
