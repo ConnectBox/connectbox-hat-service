@@ -10,7 +10,7 @@ import RPi.GPIO as GPIO                        # pylint: disable=import-error fr
 from .usb import USB
 from . import page_display_image
 import neo_batterylevelshutdown.globals as globals
-
+DEBUG = True
 
 class BUTTONS:
     # This class is for dealing with button presses on the connectbox
@@ -100,10 +100,16 @@ class BUTTONS:
             a = usb.getMount(dev)
             logging.debug("starting to do the copy with device "+a)
             self.display.showWaitPage("Copying Files")
-            if not usb.copyFiles(a):                         # see if we copied successfully
+            if not usb.copyFiles(a, "/media/usb0"):                         # see if we copied successfully
                 logging.debug("failed the copy. display an error page")
                 self.display.showErrorPage("Failed Copy")                # if not generate error page and exit
                 self.display.pageStack = 'error'
+                if usb.getMount(dev) == '/media/usb11' :
+                    logging.debug("since we moved the moount we want /media/usb0 back")
+                    üsb.moveMount(dev, "/media/usb11", "/media/usb0")
+                    try: os.remove('/media/usb11')
+                    except:
+                        pass
                 try: os.remove('/usr/local/connectbox/PauseMount')
                 except:
                     pass

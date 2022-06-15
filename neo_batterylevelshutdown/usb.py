@@ -72,37 +72,42 @@ class USB:
         time.sleep(2)  # give time for Pause of the Mount
         y = 0
         a = sourcePath
-        b = '/source'
-        if not os.path.exists(destPath+b): os.mkdir(destPath+b)
-        if a != '/media/usb11':
-            x = ord(a[len(a)-1])
-            while (not os.path.exists('/media/usb'+chr(x)+b)) and x < ord(':'):
-                x +=1
-        else: x = ord('0')
-        if os.path.exists(destPath+b):
-            while os.path.exists(a+b) and (x < ord(':')):
-                if os.path.exists(a+b) and os.path.exists(destPath+b):
-                    logging.info("Copying tree: "+a+b+" to: "+destPath+b)
-                    copy_tree(a+b, destPath+b)
-                    y = 1
-                    logging.debug("Done copying to: "+destPath+b)
+        b = '/content/'
+        if os.path.exists(a+b):
+            if a != '/media/usb11':
+                c = getdev(a)
+                x = ord(c[len(c)-1])
+                while (not os.path.exists('/media/usb'+chr(x)+b)) and x < ord(':'):
+                    x +=1
+            else: x = ord('0')
+            if os.path.exists(destPath+b):
+#                os.command("rm -r /media/usb0/*") # we don't need to delete it if were running pythone 3.9
+                while os.path.exists(a+b) and (x < ord(':')):
+                    if os.path.exists(a+b) and os.path.exists(destPath):
+                        logging.info("Copying tree: "+a+b+" to: "+destPath+b)
+                        copy_tree(u(a+b), u(destPath+b), symlinks=False, ignore=None, ignore_dangling_symlinks=True, dirs_exist_ok=True)
+                        y = 1
+                        logging.debug("Done copying to: "+destPath+b)
 #   Find the next USB key in the system to copy to destination
-                if a != '/media/usb0':
-                    if len(a)==12: a = "/media/usb0"
-                    x = ord(a[len(a)-1]) + 1
-                    a = '/media/usb'+chr(x)
-                    while not os.path.exists(a+b) and (x < ord(':')):
+                    if a != '/media/usb0':
+                        if len(a)==12: a = "/media/usb0"
                         x = ord(a[len(a)-1]) + 1
-                        a = "/media/usb"+chr(x)
+                        a = '/media/usb'+chr(x)
+                        while not os.path.exists(a+b) and (x < ord(':')):
+                            x = ord(a[len(a)-1]) + 1
+                            a = "/media/usb"+chr(x)
 
-            if (y == 1):
-                logging.info("Everything copied all done")
-                return True
+                if (y == 1):
+                    logging.info("Everything copied all done")
+                    return True
+                else:
+                    logging.info("nothing copied all done")
+                    return False
             else:
-                logging.info("nothing copied all done")
+                logging.info("failed destination path")
                 return False
         else:
-            logging.info("failed destination path")
+            logging.info("there was not a /content/ directory on the USB key")
             return False
 
     def checkSpace(self, sourcePath='/media/usb11', destPath='/media/usb0', sourdest=1):
