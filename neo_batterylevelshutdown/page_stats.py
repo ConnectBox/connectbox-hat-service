@@ -13,6 +13,7 @@ sudo logrotate /etc/logrotate.hourly.conf
 
 import json
 import os.path
+import logging
 import subprocess
 from PIL import Image, ImageFont, ImageDraw
 from .HAT_Utilities import get_device
@@ -71,6 +72,7 @@ class PageStats:
         results = subprocess.run(["connectboxmanage", "get", "topten"], stdout=subprocess.PIPE)
         data = results.stdout.decode('utf-8').strip('\n')
         data = json.loads(data)
+        logging.info("connectbox manage results: "+str(data))
         y = 0
         count = 0
 

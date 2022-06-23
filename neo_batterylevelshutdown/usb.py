@@ -1,9 +1,8 @@
-
 import logging
 import os
 import time
 import subprocess
-from distutils.dir_util import copy_tree
+import shutil
 
 
 class USB:
@@ -14,6 +13,7 @@ class USB:
     @staticmethod
     def isUsbPresent(devPath='/dev/sda1'):
         '''
+
         Returns if there is a USB plugged into specified devPath
         :return: True / False
         '''
@@ -73,6 +73,7 @@ class USB:
         y = 0
         a = sourcePath
         b = '/content/'
+
         if os.path.exists(a+b):
             if a != '/media/usb11':
                 c = getdev(a)
@@ -80,13 +81,34 @@ class USB:
                 while (not os.path.exists('/media/usb'+chr(x)+b)) and x < ord(':'):
                     x +=1
             else: x = ord('0')
-            if os.path.exists(destPath+b):
-#                os.command("rm -r /media/usb0/*") # we don't need to delete it if were running pythone 3.9
+            if os.path.isdir(destPath):
+                if os.path.isdir(destPath+b):
+                    shutil.rmtree((dest_Path+b), ignore_errors=True)
+                errors=[]
                 while os.path.exists(a+b) and (x < ord(':')):
                     if os.path.exists(a+b) and os.path.exists(destPath):
-                        logging.info("Copying tree: "+a+b+" to: "+destPath+b)
-                        copy_tree(u(a+b), u(destPath+b), symlinks=False, ignore=None, ignore_dangling_symlinks=True, dirs_exist_ok=True)
-                        y = 1
+                        files_in_dir = str(a+b)
+                        files_to_dir = str(destPath+b)
+                        try:
+                            if os.path.isdir(files_in_dir):
+                                logging.info("Copying tree: "+files_in_dir+" to: "+files_to_dir)
+                                shutil.copytree(files_in_dir, files_to_dir, symlinks=False, copy_function=copy2, ignore_dangling_symlinks=True)
+                            else:
+                                logging.info("Copying: "+files_in_dir+" to: "+files_to_dir)
+                                copy2(files_in_dir, files_to_dir)
+                        except OSError as err::
+                            errors.append((files_in_dir, files_to_dir, str(err)))
+                        except BaseException as err:
+                            erros.extend(err.args[0])
+                        try:
+                            copystat(files_in_dir, files_to_dir)
+                        except OSError as err:
+                            if err.winerror is None:
+                                errors.extend((files_in_dir, files_to_dir, str(err)))
+                            if errors:
+                                raise Error(errors)
+                        if not errors:
+                            y = 1
                         logging.debug("Done copying to: "+destPath+b)
 #   Find the next USB key in the system to copy to destination
                     if a != '/media/usb0':
@@ -124,7 +146,7 @@ class USB:
         sourceSize = 0
         y = 0
         a = sourcePath
-        b = "/content"
+        b = "/content/"
         while os.path.exists(a+b):
             sourceSize += self.getSize(a+b)
             logging.info("got source size as : "+str(sourceSize)+" Path is: "+a+b)
