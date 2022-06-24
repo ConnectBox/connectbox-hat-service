@@ -435,8 +435,10 @@ class Axp209HAT(BasePhysicalHAT):
                     reread = mb_utilities.i2c_read(0x31)
                     if (batteryNumber == reread):
                         wr_result = mb_utilities.i2c_write(0x20+batteryNumber, wr_scaled)
-                        mb_utilities.v_array_write(batteryNumber, wr_scaled)      # save battery voltage
-                        mb_utilities.v_array_write(0, batteryNumber)              # put battery number in offset 0
+                    #   ATTiny handles storing bat voltages (including paralleled bats) in 0x21 - 0x24 
+                    #    so let mb_utilities just read from there...
+                    #  (one call to v_update_array is all that is needed)
+                        mb_utilities.v_update_array(batteryNumber)              # put battery number in offset 0
 
 
                 else:       # no ATTiny, so CM4 handling battery selection
