@@ -55,18 +55,12 @@ def i2c_write(reg, val, device = ATTINY_ADDRESS):
 def test():
     p = 9    
 
-def v_array_write(index,val):
-    voltage_array[index] = val
-    # sync battery present (ATTiny) with voltage_array[]
-    positions = i2c_read(0x32)
+def v_update_array(bat_number):
+    voltage_array[0] = bat_number
+    # sync ATTiny voltage array (0x21 - 0x24) with python voltage_array[]
     for n in range (0,4):
-        if positions & (1 << n) == 0:
-            voltage_array[n+1] = 0     # battery not present... set voltage to zero
-        else:                # battery at this position... check that we have voltage_array[] valid   
-            if voltage_array[n+1] == 0:
-                voltage_array[n+1] = i2c_read(0x21 + n)  # should only get here during development
+        voltage_array[n+1] = i2c_read(0x21 + n) 
 
-        
 
 # Here is a collection of battery read utilities for use by pages requiring battery voltage
 # (There may be a better place to put the battery voltage functions)
