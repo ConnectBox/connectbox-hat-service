@@ -307,8 +307,8 @@ class BUTTONS:
             yy = 0
             x = 0
             xx = len(l)
-            while x < xx
-                for y in l 
+            while (x < xx):
+                for y in l:
                     yy = y[0].poll()
                     if yy != None:
                         try:
@@ -322,6 +322,8 @@ class BUTTONS:
                                 logging.info("Copy Errored out USB "+y[1]+" with error "+str(out)+":"+str(err))
                                 l.remove(x)
                                 xx -= 1
+                        except
+                            pass
                     else:
                         x += 1                                                          #were moving to the next list element
                 x = 1                                                                   #We finished looking at all processes now we start over

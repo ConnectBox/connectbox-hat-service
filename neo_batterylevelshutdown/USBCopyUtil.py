@@ -6,55 +6,65 @@ This file is designed to be a subprocess to copy files from one location to USB'
 """
 
 import sys, getopt
+import argparse
 import os, shutil
 import logging
+import shutil
 
 
-def main(argv):
-	inputdir = ""
-	outputdir = ""
-	try:
-		opts, args = getopt.getopt(argv, "hi:0:", [ "ifile=", "ofile="])								# gete the arguments passed to the probram
-    except getopt.GetoptError:
-    	logging.info("startup of USBCopyUtil with unknown arguments")
-    	sys.exit(2)
-    for opt, arg in opts:
-    	if opt in ('-h', "--help"):																		# I'm asking for help
-    		print 'USBCopyUtil.py -i <inputdir> -o <outputdir'
-    		sys.exit()
-    	elif opt in ("-i", "--indir"):																	# We have a valid input directory
-    		inputdir = arg
-     	elif opt in ("-0", "--odir"):																	# we have a valid output directory
-     	    outputdir = arg
-    if inputdir == "" or outputdir == "":
-    	print("get paramaters with -h or --help")
-    	logging.info(Closed USBCopyUtil.py due to lack of valid variabales)
-    	sys.exit(2)																						# we didn't get valid paramaters
-    if  ! os.path.isdir(outputdir):																		#Check output that its a valid directory
-    	logging.info(Closed USBCopyUtil.py due to output path not being a direcotry)
-    	sys.exit(2)
+def main():
+        inputdir = ""
+        outputdir = ""
+        error = []
+        parser = argparse.ArgumentParser()
+        parser.add_argument( '--i', type=str, required=True, help = "Input Directory for Copy")
+        parser.add_argument( '--o', type=str, required=True, help = "Output Directory for copy")
+        arguments = (parser.parse_args())
+        print("arguments", arguments)
+        logging.info("Starting the copy function")
+#        if not ("--i" in aruments and '--o" in  arguments):
+#               print("startup of USBCopyUtil with unknown arguments")
+#               sys.exit(2)
+        if len(arguments.i) <= 4:
+                print('USBCopyUtil.py -i <inputdir> missing')
+                sys.exit()
+        elif len(arguments.o) <=4:
+                print("USBCopyUtil.py -o <outputdir> missing")                                                # we have a valid output directory
+                outputdir = val[1]
+        if  arguments.i == arguments.o:
+                print("cannot copy from the same source to same destination")
+                print("Closed USBCopyUtil.py due to lack of valid variabales")
+                sys.exit(2)                                                                                       # we didn't get valid paramaters
+        if  not os.path.isdir(arguments.o):                                                                     #Check output that its a valid directory
+                print("Closed USBCopyUtil.py due to output path not being a direcotry")
+                sys.exit(2)
+        print("Starting USBCopyUtil with "+arguments.i+" copying to "+arguments.o)
+        try:
+            if os.path.isdir(arguments.i):                                                                     # We check that we have a valid direcotry on input
+                print("Copying tree: "+arguments.i+" to: "+arguments.o)
+                shutil.rmtree( arguments.o, ignore_errors=True)							#Remove the directory where were copying to.
+                logging.info("Copying: "+arguments.i+" to "+arguments.o)
+                shutil.copytree(arguments.i, arguments.o, symlinks=False, copy_function=shutil.copy2, ignore_dangling_symlinks=True)
+            else:
+                print("Copying: "+arguments.i+" to: "+arguments.o)	                                           # We may just try a copy if the input directory is only a file.
+                logging.info(USBcopyUtil copy: "+arguments.i+" to: "+arguments.o)
+                copy2(arguments.i, arguments.o)
+#        except (OSError):
+#            errors.append((arguments.i, arguments.o, str(OSError), str(shutil.Error))                            # We encountered an error so we stop.
+        except shutil.Error:
+            errors.extend(arguments.i, arguments.o, str(Baseexeption), str(shutil.Error))
+        try:
+            copystat(arguments.i, arguments.o)                            	                                   # wE WANT TO MOVE THE STATISTICAL INFO TO THE FILES AS WELL 
+        except OSError:
+            if err.winerror is None:
+                errors.extend((arguments.i, arguments.o, str(err), str(shutil.Error)))                              # We had an error in the statistics.
+            else:
+                logging.info("USBcopyUtil copystat errors",errors)
+                print("USBopyUtil copystat errors ", errors)
+                sys.exit()                                                                                  #No error so we just exit clean
 
-   	logging.info("Starting USBCopyUtil with "+inputdir+" copying to "+outputdir)
-    try:
-        if os.path.isdir(inputdir):																		# We check that we have a valid direcotry on input
-            logging.info("Copying tree: "+inputdir+" to: "+outputdir)
-            shutil.copytree(inputdir, outputdir, symlinks=False, copy_function=copy2, ignore_dangling_symlinks=True)
-        else:
-            logging.info("Copying: "+inputdir+" to: "+outputdir)										# We may just try a copy if the input directory is only a file.
-            copy2(inputdir, outputdir)
-        except OSError as err::
-            errors.append((inputdir, outputdir, str(err)))												# We encountered an error so we stop.
-        except BaseException as err:
-            erros.extend(err.args[0])
-    try:
-        copystat(inputdir, outputdir)																	# wE WANT TO MOVE THE STATISTICAL INFO TO THE FILES AS WELL	
-    except OSError as err:
-    if err.winerror is None:
-        errors.extend((inputdir, outputdir, str(err)))													# We had an error in the statistics.
-    if errors:
-        raise Error(errors)
-    if not errors:
-    	sys.exit()																						#No error so we just exit clean
-    else:
-    	sys.exit(2)																						#we had an error we exit with error
 
+
+
+if __name__ == "__main__":
+    main()

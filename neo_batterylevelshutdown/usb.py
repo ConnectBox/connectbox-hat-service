@@ -96,7 +96,7 @@ class USB:
                             else:
                                 logging.info("Copying: "+files_in_dir+" to: "+files_to_dir)
                                 copy2(files_in_dir, files_to_dir)
-                        except OSError as err::
+                        except OSError as err:
                             errors.append((files_in_dir, files_to_dir, str(err)))
                         except BaseException as err:
                             erros.extend(err.args[0])
