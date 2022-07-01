@@ -47,14 +47,14 @@ def main():
                 shutil.copytree(arguments.i, arguments.o, symlinks=False, copy_function=shutil.copy2, ignore_dangling_symlinks=True)
             else:
                 print("Copying: "+arguments.i+" to: "+arguments.o)	                                           # We may just try a copy if the input directory is only a file.
-                logging.info(USBcopyUtil copy: "+arguments.i+" to: "+arguments.o)
-                copy2(arguments.i, arguments.o)
+                logging.info("USBcopyUtil copy: "+arguments.i+" to: "+arguments.o)
+                shutil.copy2(arguments.i, arguments.o)
 #        except (OSError):
 #            errors.append((arguments.i, arguments.o, str(OSError), str(shutil.Error))                            # We encountered an error so we stop.
         except shutil.Error:
             errors.extend(arguments.i, arguments.o, str(Baseexeption), str(shutil.Error))
         try:
-            copystat(arguments.i, arguments.o)                            	                                   # wE WANT TO MOVE THE STATISTICAL INFO TO THE FILES AS WELL 
+            shutil.copystat(arguments.i, arguments.o)                          	                                   # wE WANT TO MOVE THE STATISTICAL INFO TO THE FILES AS WELL 
         except OSError:
             if err.winerror is None:
                 errors.extend((arguments.i, arguments.o, str(err), str(shutil.Error)))                              # We had an error in the statistics.

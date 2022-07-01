@@ -141,7 +141,7 @@ class USB:
         :param sourdest : indicates that we are copying source to destination if 1 otherwise were copying destination to source
         :return: True / False
         '''
-        logging.info("Starting the Space Check")
+        logging.info("Starting the Space Check "+sourcePath+" "+destPath)
         destSize = self.getFreeSpace(destPath)
         sourceSize = 0
         y = 0
@@ -275,6 +275,27 @@ class USB:
         for line in mounts:
             if (curDev in line):
                 x = line.split("%", 1)
+                x = x[1].rstrip(" ")
+                x = x.lstrip(" ")
+                x = ''.join(x)
+                break
+            else:
+                x = ""
+        return x
+
+
+    def getDev(self, curDev):
+        '''
+        This is a method of getting the device for the mount point
+        '''
+# take the file mount outuput and separate it into lines
+        mounts = str(subprocess.check_output(['df']))
+        mounts = mounts.split("\\n")
+
+# take the lines and check for the mount.
+        for line in mounts:
+            if (curDev in line):
+                x = line.split(" ", 1)
                 x = x[1].rstrip(" ")
                 x = x.lstrip(" ")
                 x = ''.join(x)
