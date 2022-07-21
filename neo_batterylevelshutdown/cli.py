@@ -441,6 +441,9 @@ def main(verbose):
     globals.init()
     if globals.device_type == "NEO":
          GPIO.setmode(GPIO.BOARD)
+    elif globals.device_type == "OZ2":
+         import orangepi.zero2
+         GPIO.setmode(orangepi.zero2.BOARD)
     else:
          GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
