@@ -135,7 +135,7 @@ def fixfiles(a, c):
     logging.info("wificonf.txt holds "+ct[0]+" and "+ct[1]+" for detected paramaters (AP, Client) "+a+" and "+c)
     if ("AccessPointIF=wlan"+ a) == ct[0] and (("ClientIF=wlan"+ c == ct[1] and c!="") | (c == "" and ct[1] == "ClientIF=")):
         logging.info("Skipped file reconfiguration as the configuration is the same")
-        os.system("ifup wlan"+a)   # restart wlan ... other restarts needed??
+        os.system("ifup wlan"+a)   # restart wlan ... other restarts needed??n
         return(0)           # we return because everything is the same and no need to reset netowrk settings.
 
     res = os.system("systemctl stop networking.service")
@@ -278,8 +278,8 @@ def fixfiles(a, c):
         f.flush()
         f.close()
     except:
-        return0
-    os.system("systemctl daemon-reload")             #we reload all the daemons since we changed the config.
+        pass
+ 
     os.system("sync")                                #we will ensure we clear all files and pending write data
 
 # Now we are done with the network/interface.tmp, dnsmasq.tmp and hostapd.tmp file creations time to put them into action.
@@ -299,11 +299,12 @@ def fixfiles(a, c):
     os.system("mv /etc/dnsmasq.conf /etc/dnsmasq.bak")
     os.system("mv /etc/dhcpcd.conf /etc/dhcpcd.bak")
 
-    os.system("mv /etc/hostapd/hostapd.tmp /etc/hostapd/hostapd.conf")
-    os.system("mv /etc/dnsmasq.tmp /etc/dnsmasq.conf")
-    os.system("mv /etc/network/interfaces.tmp /etc/network/interfaces")
-    os.system("mv /etc/dhcpcd.tmp /etc/dhcpcd.conf")
-
+    os.system("cp /etc/hostapd/hostapd.tmp /etc/hostapd/hostapd.conf")
+    os.system("cp /etc/dnsmasq.tmp /etc/dnsmasq.conf")
+    os.system("cp /etc/network/interfaces.tmp /etc/network/interfaces")
+    os.system("cp /etc/dhcpcd.tmp /etc/dhcpcd.conf")
+    
+    os.system("systemctl daemon-reload")             #we reload all the daemons since we changed the config.
     logging.info("We have completed the file copy copleteions")
     logging.info("we will reboot to setup the new interfaces")
     return(1)	# we want to reboot after this since we need to reload all the kernel drivers
