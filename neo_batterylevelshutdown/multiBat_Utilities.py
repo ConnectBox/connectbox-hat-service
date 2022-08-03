@@ -61,6 +61,12 @@ def v_update_array(bat_number):
     for n in range (0,4):
         voltage_array[n+1] = i2c_read(0x21 + n) 
 
+def get_in_use():
+    in_use_map = i2c_read(0x33)
+    return in_use_map        
+
+
+
 
 # Here is a collection of battery read utilities for use by pages requiring battery voltage
 # (There may be a better place to put the battery voltage functions)
