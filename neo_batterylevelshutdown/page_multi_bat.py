@@ -34,8 +34,12 @@ class PageMulti_Bat:
         # find out if the unit is charging or not
         # get an image
         img_path = dir_path + '/assets/multi_bat.png'
+        check_path = dir_path + '/assets/check5.png'
+        box_path = dir_path + '/assets/box.png'
 
         base = Image.open(img_path).convert('RGBA')
+        check_img = Image.open(check_path).convert('RGBA')
+        box_img = Image.open(box_path).convert('RGBA')
         fff = Image.new(base.mode, base.size, (255,) * 4)
         img = Image.composite(base, fff, base)
 
@@ -113,14 +117,27 @@ class PageMulti_Bat:
             v_string = "{:.2f}V"
             v_bat[n] = v_string.format(b_voltage)
 
-        d.text((3, 18),"1", font=font10, fill="black")    # battery #1
-        d.text((17, 22),v_bat[0], font=font14, fill="black")    # battery #1
-        d.text((3, 39),"2", font=font10, fill="black")    # battery #1
-        d.text((17, 43),v_bat[1], font=font14, fill="black")    # battery #2
-        d.text((67, 18),"3", font=font10, fill="black")    # battery #1
-        d.text((82, 22),v_bat[2], font=font14, fill="black")    # battery #3
-        d.text((67, 39),"4", font=font10, fill="black")    # battery #1
-        d.text((82, 43),v_bat[3], font=font14, fill="black")    # battery #4
+        d.text((3, 19),"1", font=font10, fill="black")    # battery #1
+        d.text((17, 23),v_bat[0], font=font14, fill="black")    # battery #1
+        d.text((3, 42),"2", font=font10, fill="black")    # battery #1
+        d.text((17, 46),v_bat[1], font=font14, fill="black")    # battery #2
+        d.text((67, 19),"3", font=font10, fill="black")    # battery #1
+        d.text((82, 23),v_bat[2], font=font14, fill="black")    # battery #3
+        d.text((67, 42),"4", font=font10, fill="black")    # battery #1
+        d.text((82, 46),v_bat[3], font=font14, fill="black")    # battery #4
+
+        # find batteries in use and add marker to display to indicate those used
+        glyph = [box_img,box_img,box_img,box_img]           # set empty list
+        in_use_map = mb_utilities.get_in_use()
+        for n in range (4):
+            if (((in_use_map >> n) & 0x01) > 0):
+                glyph[n] = check_img
+        d.bitmap((3,29),glyph[0],fill="black")
+        d.bitmap((3,52),glyph[1],fill="black")
+        d.bitmap((67,29),glyph[2],fill="black")
+        d.bitmap((67,52),glyph[3],fill="black")
+
+
 
         out = Image.alpha_composite(img, txt)
         self.device.display(out.convert(self.device.mode))
