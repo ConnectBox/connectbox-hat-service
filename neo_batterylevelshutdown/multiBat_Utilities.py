@@ -55,11 +55,16 @@ def i2c_write(reg, val, device = ATTINY_ADDRESS):
 def test():
     p = 9    
 
-def v_update_array(bat_number):
+def v_update_array(bat_number, bat_voltage):    # array voltages lsb = 1mV
     voltage_array[0] = bat_number
-    # sync ATTiny voltage array (0x21 - 0x24) with python voltage_array[]
-    for n in range (0,4):
-        voltage_array[n+1] = i2c_read(0x21 + n) 
+    # store voltage (lsb = 1 mV) directly to local array
+    voltage_array[bat_number] = bat_voltage     # bat_number is 1 based
+    welded =  i2c_read(0x33)                    # batGroup bitmap (zero based)
+    if ((1 << (bat_number -1)) & welded) > 0:   # current battery part of welded group
+        for n in range(4):                      # set all voltages in welded group to current bat voltage
+            if ((1<<n)&welded) > 0:
+                voltage_array[n+1] = bat_voltage  # lsb = 1mV
+
 
 def get_in_use():
     in_use_map = i2c_read(0x33)
@@ -77,11 +82,12 @@ def get_in_use():
 voltage_array = [0,0,0,0,0]      
 
 def bat_voltage(x):     # NOTE: returned lsb = 1mv
-    return 16*voltage_array[x]
+    return voltage_array[x]
 
 def bat_number():
     return voltage_array[0]
 
+# Function not used... also... the math is wrong (lsb is 16mV not 1mV)
 def bat_fuel(x):
     if x >0 and x<5:
         fuel = (voltage_array[x] - 3275)/7.67  

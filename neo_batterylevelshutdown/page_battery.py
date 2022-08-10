@@ -95,7 +95,7 @@ class PageBattery:
             d.text((52, 44), "%s" %
                     "x", font=font20, fill="black")
 
-    # now handle everything else based on state of battenxits and acin_present
+    # now handle everything else based on state of battexists and acin_present
 
         if battexists and acin_present and have_axp209:
             logging.debug("  +b  +a ")
@@ -104,11 +104,11 @@ class PageBattery:
             d.text((63, 2), "%.0f%%" %
                    battgauge, font=font20, fill="black")
 
-            # multiple batteries
-            if globals.device_type == "CM":
-                logging.info("Bus Battery: "+str(mb_utilities.bat_number()))
-                d.text((99,2), "#%.0f" %
-                   float(mb_utilities.bat_number()), font=font20, fill="black")		#Display the battery number
+            # multiple batteries - DERPICATE: multi bat page should be sufficient
+        #    if globals.device_type == "CM":
+        #        logging.info("Bus Battery: "+str(mb_utilities.bat_number()))
+        #        d.text((99,2), "#%.0f" %
+        #           float(mb_utilities.bat_number()), font=font20, fill="black")		#Display the battery number
 
             # charge current
             d.text((92, 44), "%.0f" %
@@ -138,11 +138,11 @@ class PageBattery:
                        self.axp.battery_discharge_current,
                        font=font20, fill="black")
 
-                # multiple batteries    
-                if globals.device_type == "CM":
-                    logging.info("Bus Battery: "+str(mb_utilities.bat_number()))
-                    d.text((99,2), "#%.0f" %
-                        float(mb_utilities.bat_number()), font=font20, fill="black")		#Display the battery number
+                # multiple batteries - DERPICATE: multi bat page should be sufficient    
+            #    if globals.device_type == "CM":
+            #        logging.info("Bus Battery: "+str(mb_utilities.bat_number()))
+            #        d.text((99,2), "#%.0f" %
+            #            float(mb_utilities.bat_number()), font=font20, fill="black")		#Display the battery number
 
                 # get the percent filled and draw a rectangle
                 # percent = self.axp.battery_gauge

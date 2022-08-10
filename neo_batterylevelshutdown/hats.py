@@ -325,7 +325,7 @@ class Axp209HAT(BasePhysicalHAT):
         # Write the charge control 1 - limit/ current control register 
         #  (Vtarget = 4.1 volts, end charging when below 10% of set charge current, 
         #   charge current = 1200 mA )
-        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x33, 0x89)
+        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x33, 0xC9)    # V(trgt) = 4.2V (was 0x89... 4.1V)
 
         # Enable AC_IN current and voltage ADCs (also ADCs for Battery voltage, Battery current, 
         #  and APS voltage.)
@@ -337,7 +337,7 @@ class Axp209HAT(BasePhysicalHAT):
         # Change Voff voltage level (level of IPS_OUT below which causes AXP209 to shutdown)
         #  to 2.6V. Hopefully this will keep that feature from shutting us down when batteries
         #  get low. We do our own monitoring in this code, so shouldn't hurt batteries.
-        self.axp.bus.write_byte_data(AXP209_ADDRESS,0x31,0x00)
+        self.axp.bus.write_byte_data(AXP209_ADDRESS,0x31,0x04)  # AXP209 trigger shutdown at Vbatt = 3.0V
 
 
         # Now all interrupts are disabled, clear the previous state
@@ -426,6 +426,8 @@ class Axp209HAT(BasePhysicalHAT):
     # Read the battery in use number from ATTiny, read the voltage from AXP209, re-read the battery number
     #  (make sure battery didn't change), write the battery voltage/16 to ATTiny
     #  and to local array bat_voltage[]
+    # With ATTiny rev 0x19, we don't need to store battery voltages in 0x21-0x24
+    #  but we will store there anyway for backwards compatibility
                 result = batteryNumber = mb_utilities.i2c_read(0x31)
                 if (result != -1):          # valid read of ATTiny so ATTiny handling battery switching
                     batteryVoltage = int(self.axp.battery_voltage)
@@ -435,10 +437,8 @@ class Axp209HAT(BasePhysicalHAT):
                     reread = mb_utilities.i2c_read(0x31)
                     if (batteryNumber == reread):
                         wr_result = mb_utilities.i2c_write(0x20+batteryNumber, wr_scaled)
-                    #   ATTiny handles storing bat voltages (including paralleled bats) in 0x21 - 0x24 
-                    #    so let mb_utilities just read from there...
-                    #  (one call to v_update_array is all that is needed)
-                        mb_utilities.v_update_array(batteryNumber)              # put battery number in offset 0
+                        # store unscaled voltage directly to array 
+                        mb_utilities.v_update_array(batteryNumber,batteryVoltage) 
 
 
                 else:       # no ATTiny, so CM4 handling battery selection
@@ -461,9 +461,9 @@ class Axp209HAT(BasePhysicalHAT):
                 #  readability doesn't necessarily improve
                 # (added test for battery exists for removable battery systems)
                 if (time.time() > self.nextBatteryCheckTime) and (self.axp.battery_exists):
-                    if not self.batteryLevelAbovePercent(
-                            self.BATTERY_SHUTDOWN_THRESHOLD_PERC):
-                        self.shutdownDevice()
+                #    if not self.batteryLevelAbovePercent(
+                #            self.BATTERY_SHUTDOWN_THRESHOLD_PERC):
+                #        self.shutdownDevice()
 
                     if self.batteryLevelAbovePercent(
                             self.BATTERY_WARNING_THRESHOLD_PERC):
