@@ -75,6 +75,11 @@ class BasePhysicalHAT:
     def shutdownDeviceCallback(self, channel):
         logging.debug("Triggering device shutdown based on edge detection "
                       "of GPIO %s.", channel)
+        # do some verification that the IRQ is still low after 100 ms
+        time.sleep(0.1)
+        # if interrupt line is high, this was a false trigger... just return
+        if GPIO.input(self.PIN_AXP_INTERRUPT_LINE):
+            return   
         self.shutdownDevice()
 
     def handleOtgSelect(self, channel):
