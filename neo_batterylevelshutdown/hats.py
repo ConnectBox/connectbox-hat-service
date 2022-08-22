@@ -73,7 +73,7 @@ class BasePhysicalHAT:
             pass
 
     def shutdownDeviceCallback(self, channel):
-        logging.debug("Triggering device shutdown based on edge detection "
+        logging.info("Triggering device shutdown based on edge detection "
                       "of GPIO %s.", channel)
         # do some verification that the IRQ is still low after 100 ms
         time.sleep(0.1)
@@ -299,6 +299,8 @@ class Axp209HAT(BasePhysicalHAT):
     MIN_BATTERY_THRESHOLD_PERC_SINGLE_FLASH = 33  # Parity with PIN_VOLT_3_71
     MIN_BATTERY_THRESHOLD_PERC_DOUBLE_FLASH = 3   # Parity with PIN_VOLT_3_45
     BATTERY_WARNING_THRESHOLD_PERC = MIN_BATTERY_THRESHOLD_PERC_DOUBLE_FLASH
+    BATTERY_WARNING_VOLTAGE = 3400                # CM4 warning voltage (mV)
+    BATTERY_SHUTDOWN_VOLTAGE = 3000               # CM4 shutdown voltage (mV)
     BATTERY_SHUTDOWN_THRESHOLD_PERC = 1
     DISPLAY_TIMEOUT_SECS = 120
     # possibly should be moved elsewhere
@@ -340,8 +342,7 @@ class Axp209HAT(BasePhysicalHAT):
         self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x82, 0xF3)
 
         # Change Voff voltage level (level of IPS_OUT below which causes AXP209 to shutdown)
-        #  to 2.6V. Hopefully this will keep that feature from shutting us down when batteries
-        #  get low. We do our own monitoring in this code, so shouldn't hurt batteries.
+        #  to 3.0V. 
         self.axp.bus.write_byte_data(AXP209_ADDRESS,0x31,0x04)  # AXP209 trigger shutdown at Vbatt = 3.0V
 
 
@@ -373,6 +374,17 @@ class Axp209HAT(BasePhysicalHAT):
 
         return gaugelevel < 0 or \
             gaugelevel > level
+
+    def batteryLevelAboveVoltage(self, level):      # level in mV
+        try:
+            voltagelevel = self.axp.battery_voltage  # returns mV
+        except OSError:
+            logging.error("Unable to read from AXP")
+            voltagelevel = -1
+
+        return voltagelevel < 0 or \
+            voltagelevel > level
+
 
     def updateLEDState(self):
         if self.batteryLevelAbovePercent(
@@ -435,7 +447,10 @@ class Axp209HAT(BasePhysicalHAT):
     #  but we will store there anyway for backwards compatibility
                 result = batteryNumber = mb_utilities.i2c_read(0x31)
                 if (result != -1):          # valid read of ATTiny so ATTiny handling battery switching
-                    batteryVoltage = int(self.axp.battery_voltage)
+                    try:
+                        batteryVoltage = int(self.axp.battery_voltage)
+                    except:
+                        batteryVoltage = 3100   # AXP209 i2c fails at 3100 mV    
                     wr_scaled = int(batteryVoltage/16)
                     if (wr_scaled > 0xFF):
                         wr_scaled = 0xFF
@@ -465,23 +480,43 @@ class Axp209HAT(BasePhysicalHAT):
                 #  check for whether the battery is connected on each loop so
                 #  readability doesn't necessarily improve
                 # (added test for battery exists for removable battery systems)
-                if (time.time() > self.nextBatteryCheckTime) and (self.axp.battery_exists):
-                #    if not self.batteryLevelAbovePercent(
-                #            self.BATTERY_SHUTDOWN_THRESHOLD_PERC):
-                #        self.shutdownDevice()
+                try:
+                    axp_there = self.axp.battery_exists
+                except:
+                    axp_there = False      # AXP209 i2c shutdown, likely Vbatt<3.1V
+                # if axp_there == False, we will allow the AXP to do shutdown based on 
+                #     V(level2) triggering the IRQ for power off
+                #  otherwise, continue to monitor Vbatt from AXP209   
+                if (time.time() > self.nextBatteryCheckTime) and (axp_there):
+                    logging.info("BATTERY VOLTAGE CHECK BEGINS")
+                    if not self.batteryLevelAboveVoltage(
+                            self.BATTERY_SHUTDOWN_VOLTAGE):
+                        logging.info("BATTERY_SHUTDOWN_VOLTAGE reached")
+                        hexval = self.axp.bus.read_byte_data(AXP209_ADDRESS, 0x32)
+                        hexval = hexval | 0x80      # signal AXP209 to shutdown power
+                        self.display.showPoweringOff()
+                        logging.info("Exiting for Shutdown due to battery exhaustion")
+                        time.sleep(5)       # show power down screen for 5 seconds
+                        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x32, hexval)
+                        while True:
+                            pass        # stick here while irq is serviced
 
-                    if self.batteryLevelAbovePercent(
-                            self.BATTERY_WARNING_THRESHOLD_PERC):
+
+                    if self.batteryLevelAboveVoltage(
+                            self.BATTERY_WARNING_VOLTAGE):
                         # Hide the low battery warning, if we're currently
                         #  showing it
                         self.display.hideLowBatteryWarning()
                     else:
-                        # show (or keep showing) the low battery warning page
+                        logging.info("BATTERY_WARNING_VOLTAGE reached")
+                         # show (or keep showing) the low battery warning page
                         self.display.showLowBatteryWarning()
                         # Don't blank the display while we're in the
                         #  warning period so the low battery warning shows
                         #  to the end
                         self.displayPowerOffTime = sys.maxsize
+                        # we are near shutdown... force check every time around loop (5 sec)
+                        self.BATTERY_CHECK_FREQUENCY_SECS = 4   
 
                     self.nextBatteryCheckTime = \
                         time.time() + self.BATTERY_CHECK_FREQUENCY_SECS
@@ -590,12 +625,10 @@ class q4y2018HAT(Axp209HAT):
         # We only enable interrupts on this HAT, rather than in the superclass
         #  because not all HATs with AXP209s have a line that we can use to
         #  detect the interrupt
-        # Enable interrupts when battery goes below LEVEL2 or when
+        # Enable interrupts [ DEPRICATED -- when battery goes below LEVEL2] or when
         #  N_OE (the power switch) goes high
         # Note that the axp209 will do a shutdown based on register 0x31[2:0]
-        #  which is set to 2.9V by default, and as we're triggering a shutdown
-        #  based on LEVEL2 that mechanism should never be necessary
-        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x43, 0x41)
+        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x43, 0x40)
         # We've masked all other interrupt sources for the AXP interrupt line
         #  so the desired action here is always to shutdown
         GPIO.add_event_detect(self.PIN_AXP_INTERRUPT_LINE, GPIO.FALLING,

@@ -62,6 +62,7 @@ class PageMulti_Bat:
             have_axp209 = True
         except OSError:
             have_axp209 = False
+            bat_exists = False          # axp209 no help, so call it "no battery"
 
         # draw text, full opacity
         if bat_exists:
@@ -74,7 +75,7 @@ class PageMulti_Bat:
            
         # page_multi_bat.py should only be called if we have CM4 HAT, which includes AXP209
         #  so we should ALWAYS have "have_axp209" true (unless our HAT is broken)
-        if self.axp.power_input_status.acin_present:
+        if (self.axp.power_input_status.acin_present and have_axp209):
         # charging -- cover the "out" arrow
             d.rectangle((47, 4, 62, 14), fill="white")  # out arrow
         else:

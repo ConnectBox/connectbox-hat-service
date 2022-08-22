@@ -402,7 +402,7 @@ def getNetworkClass():
 
 
 @click.command()
-@click.option('-v', '--verbose', is_flag=True, default=False)
+@click.option('-v', '--verbose', is_flag=True, default=True)
 
 def main(verbose):
 
