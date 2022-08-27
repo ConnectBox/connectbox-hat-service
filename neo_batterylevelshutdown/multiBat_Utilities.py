@@ -99,12 +99,12 @@ def averageBat():
     batV = 0
     count = 0
     for reg in range (1,5):
-         value = bat_voltage(reg)
-         batV += value
-         if (value > 0):
-            count = count + 1
-         if count == 0:
-            return 0 	# handle startup prior to any batteries being read   
+        value = bat_voltage(reg)
+        batV += value
+        if (value > 0):
+           count = count + 1
+    if count == 0:
+        return 0 	# handle startup prior to any batteries being read   
     batV = batV / count
     batV = round(batV, 0)
     return(batV)

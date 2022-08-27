@@ -357,6 +357,10 @@ class Axp209HAT(BasePhysicalHAT):
         # Set LEVEL2 voltage i.e. 3.0V
         self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x3B, 0x18)
 
+        # Tell ATTiny to cycle through all batteries so AXP209 can read the voltages
+        result = mb_utilities.i2c_read(0x40)    
+
+
         super().__init__(displayClass)
 
 
