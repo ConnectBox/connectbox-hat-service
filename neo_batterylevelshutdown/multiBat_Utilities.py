@@ -28,6 +28,7 @@ def i2c_read(reg, device=ATTINY_ADDRESS):
     i = 1
     while (value == -1) and (i < 10):
         try:
+#            logging.info("... in i2c_read for register 0x%x", reg)
             value = bus.read_byte_data(device, reg)
             bus.close()     # success... close the bus
             return (value)
@@ -64,6 +65,10 @@ def v_update_array(bat_number, bat_voltage):    # array voltages lsb = 1mV
         for n in range(4):                      # set all voltages in welded group to current bat voltage
             if ((1<<n)&welded) > 0:
                 voltage_array[n+1] = bat_voltage  # lsb = 1mV
+    b_present = i2c_read(0x32)
+    for n in range(4):                      # set all voltages for batteries not present to 0
+        if ((1<<n)&b_present) == 0:
+            voltage_array[n+1] = 0  
 
 
 def get_in_use():

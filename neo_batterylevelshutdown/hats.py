@@ -308,6 +308,7 @@ class Axp209HAT(BasePhysicalHAT):
 
     def __init__(self, displayClass):
 
+        logging.info("Starting AXP209HAT class __init__")
         self.axp = AXP209(globals.port)         # Pass the port number to get the right device
         self.display = displayClass(self)
         self.buttons = BUTTONS(self, self.display)
@@ -358,8 +359,15 @@ class Axp209HAT(BasePhysicalHAT):
         self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x3B, 0x18)
 
         # Tell ATTiny to cycle through all batteries so AXP209 can read the voltages
-        result = mb_utilities.i2c_read(0x40)    
-
+        logging.info("Resetting battery registers (i2c_read(0x40))")
+#        time.sleep(10)  # delay to trap i2c on logic analyzer
+        result1 = mb_utilities.i2c_read(0x40)    
+        time.sleep(1)
+        result = mb_utilities.i2c_read(0x40)
+        # return value incremented every 200 ms so if the same the i2c isn't working right
+        if result1 == result:
+            logging.error("ERROR: ATTiny i2c failed)")
+        logging.info("AXP209HAT __init__ complete")
 
         super().__init__(displayClass)
 
@@ -492,7 +500,7 @@ class Axp209HAT(BasePhysicalHAT):
                 #     V(level2) triggering the IRQ for power off
                 #  otherwise, continue to monitor Vbatt from AXP209   
                 if (time.time() > self.nextBatteryCheckTime) and (axp_there):
-                    logging.info("BATTERY VOLTAGE CHECK BEGINS")
+#                    logging.info("BATTERY VOLTAGE CHECK BEGINS")
                     if not self.batteryLevelAboveVoltage(
                             self.BATTERY_SHUTDOWN_VOLTAGE):
                         logging.info("BATTERY_SHUTDOWN_VOLTAGE reached")
