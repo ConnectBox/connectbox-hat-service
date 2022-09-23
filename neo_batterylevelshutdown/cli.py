@@ -5,6 +5,7 @@
 # Modified 11/05/19 JRA to detect no battery unit by asking the AXP209 whether battery exists
 # AXP209 code comes from github.com/artizirk/python-axp209
 
+import sys
 import logging
 import axp209
 import time
