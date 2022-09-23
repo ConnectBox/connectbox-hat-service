@@ -160,7 +160,7 @@ class BasePhysicalHAT:
                 else:
                     # module was already loaded so wnat do we need to do?
                     if globals.g_device == 'g_serial':
-                        retval = os.popen("systemctl status service-getty@ttyGS).service").read()
+                        retval = os.popen("systemctl status service-getty@ttyGS0.service").read()
                         if retval.find("active (running)") <= 0:
                             retval = os.popen("systemctl restart serial-getty@ttyGS0.service").read()
                             if retval != "":
