@@ -76,7 +76,7 @@ class BUTTONS:
                 logging.debug("Moving /media/usb0 to /media/usb11 to be able to copy")
                 if not os.path.exists('/media/usb11'):                          # check that usb11 exsists to be able to move the mount
                     os.mkdir('/media/usb11')                                    # make the directory
-                if not usb.moveMount(dev, usb.getDev(dev), '/media/usb11'):     # see if our remount was successful
+                if not usb.moveMount(dev, usb.getMount(dev), '/media/usb11'):     # see if our remount was successful
                     self.display.showErrorPage("Moving Mount")                  # if not generate error page and exit
                     self.display.pageStack = 'error'
                     try: os.remove('/usr/local/connectbox/PauseMount')
@@ -104,7 +104,7 @@ class BUTTONS:
             a = usb.getMount(dev)
             logging.info("starting to do the copy with device "+a+ext)
             self.display.showWaitPage("Copying Files"+"\nSize is: "+str(int(s/1000))+"MB")
-            if not usb.copyFiles(a+ext, "/media/usb0"+ext):                    # see if we copied successfully
+            if not usb.copyFiles(a, "/media/usb0", ext):                    # see if we copied successfully
                 logging.debug("failed the copy. display an error page")
                 self.display.showErrorPage("Failed Copy")                       # if not generate error page and exit
                 self.display.pageStack = 'error'
@@ -155,7 +155,7 @@ class BUTTONS:
                 self.display.showRemoveUsbPage()
                 return
             for file_object in os.listdir('/media/usb0'+ext):
-                file_object_path = os.path.join('/media/usb0', file_object)
+                file_object_path = os.path.join('/media/usb0'+ext, file_object)
                 if os.path.isfile(file_object_path):
                     os.unlink(file_object_path)
                 else:

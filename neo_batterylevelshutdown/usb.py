@@ -52,7 +52,7 @@ class USB:
         return response == 0
 
     @staticmethod
-    def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0'):
+    def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0', ext='/content/'):
         '''
         Move files from sourcePath to destPath recursively
         To do this we need to turn off automount temporarily by creating a file
@@ -72,7 +72,7 @@ class USB:
         time.sleep(2)  # give time for Pause of the Mount
         y = 0
         a = sourcePath
-        b = '/content/'
+        b = ext
 
         if os.path.exists(a+b):
             if a != '/media/usb11':
@@ -92,16 +92,16 @@ class USB:
                         try:
                             if os.path.isdir(files_in_dir):
                                 logging.info("Copying tree: "+files_in_dir+" to: "+files_to_dir)
-                                shutil.copytree(files_in_dir, files_to_dir, symlinks=False, copy_function=copy2, ignore_dangling_symlinks=True)
+                                shutil.copytree(files_in_dir, files_to_dir, symlinks=False, ignore_dangling_symlinks=True)
                             else:
                                 logging.info("Copying: "+files_in_dir+" to: "+files_to_dir)
-                                copy2(files_in_dir, files_to_dir)
+                                shutil.copy2(files_in_dir, files_to_dir)
                         except OSError as err:
                             errors.append((files_in_dir, files_to_dir, str(err)))
                         except BaseException as err:
-                            erros.extend(err.args[0])
+                            errors.extend(err.args[0])
                         try:
-                            copystat(files_in_dir, files_to_dir)
+                            shutil.copystat(files_in_dir, files_to_dir)
                         except OSError as err:
                             if err.winerror is None:
                                 errors.extend((files_in_dir, files_to_dir, str(err)))
@@ -265,7 +265,7 @@ class USB:
 
     def getMount(self, curDev):
         '''
-        This is a method of getting the device for the mount point
+        This is a method of getting the mount point for the dev (ex: returns /media/usb0 for curDev /dev/sda1)
         '''
 # take the file mount outuput and separate it into lines
         mounts = str(subprocess.check_output(['df']))
@@ -284,9 +284,10 @@ class USB:
         return x
 
 
-    def getDev(self, curDev):
+# Not currently called, but here for completeness
+    def getDev(self, curMount):
         '''
-        This is a method of getting the device for the mount point
+        This is a method of getting the device for the mount point (ex: returns /dev/sda1 for curMount=/media/usb0)
         '''
 # take the file mount outuput and separate it into lines
         mounts = str(subprocess.check_output(['df']))
@@ -296,7 +297,7 @@ class USB:
         for line in mounts:
             if (curDev in line):
                 x = line.split(" ", 1)
-                x = x[1].rstrip(" ")
+                x = x[0].rstrip(" ")
                 x = x.lstrip(" ")
                 x = ''.join(x)
                 break
