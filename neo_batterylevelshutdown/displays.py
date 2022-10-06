@@ -116,11 +116,11 @@ class OLED:
     def checkIfLastPage(self):
         return self._curPage == self.pages[-1]
 
-    def showRemoveUsbPage(self):
+    def showRemoveUsbPage(self,a=''):
         with self._curPageLock:
             logging.debug("Showing remove usb page")
             self._curPage = page_display_image.PageDisplayImage(self.display_device,
-                                                                'remove_usb.png')
+                                                                'remove_usb.png',a)
             self._curPage.draw_page()
 
     def showInsertUsbPage(self):

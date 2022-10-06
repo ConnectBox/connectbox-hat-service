@@ -105,11 +105,11 @@ class BUTTONS:
             logging.info("starting to do the copy with device "+a+ext)
             self.display.showWaitPage("Copying Files"+"\nSize is: "+str(int(s/1000))+"MB")
             if not usb.copyFiles(a, "/media/usb0", ext):                    # see if we copied successfully
-                logging.debug("failed the copy. display an error page")
+                logging.info("failed the copy. display an error page")
                 self.display.showErrorPage("Failed Copy")                       # if not generate error page and exit
                 self.display.pageStack = 'error'
                 if usb.getMount(dev) == '/media/usb11' :
-                    logging.debug("since we moved the mount we want /media/usb0 back")
+                    logging.info("since we moved the mount we want /media/usb0 back")
                     usb.moveMount(dev, "/media/usb11", "/media/usb0")
                     try: os.rmdir('/media/usb11')
                     except:
@@ -118,20 +118,20 @@ class BUTTONS:
                 except:
                     pass
                 return
-            logging.debug("Finished usb key")
-            logging.debug("Ok now we want to remove all the usb keys")
+            logging.info("Finished usb key")
+            logging.info("Ok now we want to remove all the usb keys")
             curDev='/dev/sda1'
             x = ord('a')
             while (not usb.isUsbPresent(curDev)) and x < ord("k"):
-                logging.debug("is key "+curDev+" present? "+str(usb.isUsbPresent(curDev))) 
+                logging.info("is key "+curDev+" present? "+str(usb.isUsbPresent(curDev))) 
                 x +=1
                 curDev = '/dev/sd'+chr(x)+'1'
 
             while usb.isUsbPresent(curDev) and x < ord("k"):
-                self.display.showRemoveUsbPage("USB "+str(curDev))              #show the remove usb page
+                self.display.showRemoveUsbPage()                                 #show the remove usb page
                 self.display.pageStack = 'removeUsb'                            #show we removed the usb key
                 self.command_to_reference = 'remove_usb'
-                while usb.isusbPresent(curDev):
+                while usb.isUsbPresent(curDev):
                     time.sleep(3)                                               #Wait for the key to be removed
                 while (not usb.isUsbPresent(curDev)) and x < ord("k"):
                     x += 1                                                      # lets look at the next one
@@ -168,11 +168,12 @@ class BUTTONS:
 
         elif command == 'copy_to_usb':
             logging.debug("got to copy to usb code")
-            z = ord('a')                                                            # Z is the ordinal of the USB key in DEV
-            dev = '/dev/sd'+chr(z)+'1'                                              # X is the ordinal of the  mount point
-            self.display.showInsertUsbPage()                                        #tell them to inert new keys
+            z = ord('a')                                                    # Z is the ordinal of the USB key in DEV
+            dev = '/dev/sd'+chr(z)+'1' 
+            if (not usb.isUsbPresent(dev)):                                 # only checks /dev/sda1...
+                self.display.showInsertUsbPage()                            # tell them to inert new keys
    
-            if usb.isUsbPresent('/dev/sdk1'):                                       #check for more USB's than we can handle
+            if usb.isUsbPresent('/dev/sdk1'):                               #check for more USB's than we can handle
                 self.display.showRemoveUsbPage("To many USB's\nMaximum 10")
                 self.command_to_reference = 'remove_usb'
                 self.display.pageStack = 'removeUsb'                                #show we removed the usb key
@@ -184,10 +185,6 @@ class BUTTONS:
                 if z == ord('k'):
                     z = ord('a')
                     dev = '/dev/sd'+chr(z)+'1'
-            if z < ord('k'):
-                self.display.pageStack = 'confirm'
-                self.display.showConfirmPage()
-                time.sleep(1)
 
             with open('/usr/local/connectbox/PauseMount','w') as fp:                #Lock out PxUSBm for now
                 pass
@@ -201,7 +198,7 @@ class BUTTONS:
 
             y = 0                                                                   # y keeps track of the number of USB keys
             logging.debug("were ready to start size check")
-            while z < ord('0'):
+            while z < ord('k'):
                 if usb.getMount(dev) == '/media/usb0':                              # if the key is mounted on '/media/usb0' then we have to move it.
                     x = ord(":")                                                    # x keeps track of the mount point
                     logging.debug("Moving /media/usb0 to /media/usb11 be able to copy")
@@ -228,7 +225,7 @@ class BUTTONS:
                             except OSError:
                                 logging.info("had a problem deleting the destination file: ",zz+ext)
                                 return
-                        (d,s) = usb.checkSpace(('/media/usb0'+ext), zz)             # verify that source is smaller than destination
+                        (d,s) = usb.checkSpace('/media/usb0', zz)             # verify that source is smaller than destination
                         logging.debug("Space of Destination  is : "+str(d)+" , Source: "+str(s)+" at: "+dev)
                         if d<s or s==0:                                             #if destination free is less than source we don't have enough space
                             if d<s: logging.info("source exceeds destination at"+zz+ext)
@@ -292,8 +289,7 @@ class BUTTONS:
                             logging.info("started copy from /media/usb0/source/ to "+y[1]+ext+" as pid: "+str(y[2]))
                             try:
                                 out, err = y[0].communicate(input=None, timeout=2)
-                                if err == None:
-                                    l.append(y)
+                                if err == '':
                                     self.display.pageStack = 'wait'
                                     self.display.showWaitPage("Copying USB"+chr(x)+"\nSize is: "+str(int(s/1000))+"MB")      #Ok we have the key started on the copy.
                                     time.sleep(3)
@@ -319,116 +315,53 @@ class BUTTONS:
                                 self.display.pageStack = 'wait'
                                 self.display.showWaitPage("Failed USB"+(chr(xy)))       #Ok we have the key removed lets move on.
                                 time.sleep(5)
-                                logging.info("Copy subprocess fialed to start copy to "+str(y[1])+" kill output "+str(out)+":"+str(err))
+                                logging.info("Copy subprocess failed to start copy to "+str(y[1])+" kill output "+str(out)+":"+str(err))
                                 y[2]=0
                                 y[1]=0
                     z +=1
                     dev = '/dev/sd'+chr(z)+'1'
 
-            # Ok we started all the copyies now we need to check for closure of the copy
+# Ok we started all the copies now we need to check for closure of the copy
             logging.info("Starting end of copy testing, lenth of l is "+str(len(l)))
             y=[0,0,0]
             yy = 0
-            x = 0
-            xx = len(l)
-            while x < xx:                                                                #We look at all processes we started till we have none.
-                for y in l:
-                    try:
-                        yy = y[0].poll()                                                 #This lets check the status of the process without asking for communication.
-                        if str(yy) != "None":
-                            try:
-                                out, err = y[0].communicate(input=None, timeout=3)       #We do the communicate in case there is pending IO that might put the process in the wait state.
-                                if out == 0 and err == 0:
-                                    if y[1] == "/media/usb11/":
-                                        xy = ord("0")
-                                    else:
-                                        xy = ord(y[1][len(y[1])-1])                      #X is the ord of the mount point
-                                    logging.info("Finished the copy of USB "+chr(xy))
-                                    self.display.pageStack = 'wait'
-                                    self.display.showWaitPage("Finished USB"+(chr(xy)))  #Ok we have the key removed lets move on.
-                                    usb.unmount(y[1])
-                                    dev = usb.getDev(y[1])
-                                    usb.unmount(dev)
-                                    time.sleep(3)
-                                    y[2]=0
-                                    l.remove(x)
-                                    xx -= 1                                              #We have removed a list element so decrement the total count and current position
-                                    x -= 1
-
-                                else:
-                                    if err == 0:
-                                        if y[1] == "/media/usb11/":
-                                            xy = ord("0")
-                                        else:
-                                            xy = ord(y[1][len(y[1])-1])                  #X is the ord of the mount point
-                                        logging.info("Were not sure what happened with the copy of the USB "+chr(xy))
-                                        self.display.pageStack = 'wait'
-                                        self.display.showWaitPage("Copying USB"+(chr(xy)))
-                                        time.sleep(2)
-                                    else:
-                                        if y[1] ==  "/media/usb11/":
-                                            xy = ord("0")
-                                        else:
-                                            xy = ord(y[1][len(y[1])-1])                 #X is the ord of the mount point
-                                            logging.info("Copy Errored out USB "+y[1]+" with error "+str(out)+":"+str(err))
-                                            self.display.pageStack = 'wait'
-                                            self.display.showWaitPage("Failed USB"+(chr(xy)))              #Ok we have the key removed lets move on.
-                                            os.sync
-                                            dev = usb.getDev(y[1])
-                                            usb.unmount(y[1])
-                                            usb.unmount(dev)
-                                            l.remove(x)
-                                            time.sleep(3)
-                                            xx -= 1                                     #We have removed a list element so decrement the total count and current position
-                                            x -= 1
-
-                            except subprocess.TimeoutExpired:
-#                            We expected to get some output status since the poll was not nul but we timed out
-                                if y[1] == "/media/usb11":
-                                    xy = ord("0")
-                                else:
-                                    xy = ord(y[1][len(y[1])-1])                         #X is the ord of the mount point
-                                logging.info("Finished the copy of USB "+chr(xy))
-                                self.display.pageStack = 'wait'
-                                self.display.showWaitPage("Finished USB"+(chr(xy)))     #Ok we have the key removed lets move on.
-                                os.sync
-                                dev = usb.getDev(y[1])
-                                usb.unmount(y[1])
-                                usb.unmount(dev)
-                                time.sleep(3)
-                                y[2]=0
-                                l.remove(x)
-                                xx -= 1                                                 #We have removed a list element so decrement the total count and current position
-                                x -= 1
-                        else:                                                           #We are here because we are still running the copy utility
-                            if y[1] == "/media/usb11":
-                                xy = ord("0")
-                            else:
-                                xy = ord(y[1][len(y[1])-1])                             #X is the ord of the mount point
-                            self.display.pageStack = 'wait'
-                            self.display.showWaitPage("Copying USB"+(chr(xy)+"\nSize is: "+str(s)))           #Ok we have the key removed lets move on.
-                            time.sleep(3)
-                    except:
-                    #We tried to ge status of the process but got an error trying.  So we have to assume its finished or bad
-                        if y[1] == "/media/usb11/":
+            for y in l:
+                try:
+                    yy = y[0].poll()        #This lets check the status of the process without asking for communication.
+                    if str(yy) != None:     # python keyword None would mean no return code, process still running
+                        if y[1] == "/media/usb11":
                             xy = ord("0")
                         else:
-                            xy = ord(y[1][len(y[1])-1])                                  #X is the ord of the mount point
+                            xy = ord(y[1][len(y[1])-1])                      #X is the ord of the mount point
                         logging.info("Finished the copy of USB "+chr(xy))
                         self.display.pageStack = 'wait'
-                        self.display.showWaitPage("Finished USB"+(chr(xy)))              #Ok we have the key removed lets move on.
-                        os.sync
-                        dev = usb.getDev(y[1])
+                        self.display.showWaitPage("Finished USB"+(chr(xy)))  #Ok we have the key removed lets move on.
                         usb.unmount(y[1])
-                        usb.unmount(dev)
                         time.sleep(3)
-                        y[2]=0
-                        l.remove(x)
-                        xx -= 1                                                           #We have removed a list element so decrement the total count and current position
-                        x -= 1
-                    x += 1                                                                #were at the end of the for loop we need to increment our list counter
+                    else:                                    #We are here because we are still running the copy utility
+                        if y[1] == "/media/usb11":
+                            xy = ord("0")
+                        else:
+                            xy = ord(y[1][len(y[1])-1])       #X is the ord of the mount point
+                        self.display.pageStack = 'wait'
+                        self.display.showWaitPage("Copying USB"+(chr(xy)+"\nSize is: "+str(s)))   #Ok we have the key removed lets move on.
+                        time.sleep(3)
 
-                x = 1                                                                     #Were at the end of the while loop, We finished looking at all processes now we start over
+    #We tried to get status of the process but got an error trying.  So we have to assume its finished or bad
+                except:
+                    if y[1] == "/media/usb11":
+                        xy = ord("0")
+                    else:
+                        xy = ord(y[1][len(y[1])-1])                                  #X is the ord of the mount point
+                    logging.info("Finished the copy of USB "+chr(xy))
+                    self.display.pageStack = 'wait'
+                    self.display.showWaitPage("Finished USB"+(chr(xy)))              #Ok we have the key removed lets move on.
+                    os.sync
+                    usb.unmount(y[1])
+                    time.sleep(3)
+# end of looping to check process completion
+
+# loop through all keys present (mounted or not) and tell user to remove them
             logging.info("All Copy processes have completed")
             os.sync()
             logging.info("Ok now we want to remove all the usb keys")
@@ -582,8 +515,8 @@ class BUTTONS:
                     dualTimeRecorded = dualButtonTime
             if GPIO.input(otherChannel) == 1:                                                   # move start time up if not pressing other button     
                 dualStartTime = time.time()                                                     # reset start time to now
-            if (time.time() - startTime) > 5:                                                   # don't stick in this interrupt service forever
-                break    
+            if (time.time() - startTime) > 4:                                                   # don't stick in this interrupt service forever
+                break                                                                           # (note: CHECK_PRESS_THRESHOLD_SEC == 3)
 
         buttonTime = time.time() - startTime                                                    # How long was the original button down?
 

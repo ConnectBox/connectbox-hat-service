@@ -15,6 +15,7 @@ class USB:
         '''
 
         Returns if there is a USB plugged into specified devPath
+        (does not depend on stick being mounted)
         :return: True / False
         '''
         return os.path.exists(devPath)
@@ -83,7 +84,7 @@ class USB:
             else: x = ord('0')
             if os.path.isdir(destPath):
                 if os.path.isdir(destPath+b):
-                    shutil.rmtree((dest_Path+b), ignore_errors=True)
+                    shutil.rmtree((destPath+b), ignore_errors=True)
                 errors=[]
                 while os.path.exists(a+b) and (x < ord(':')):
                     if os.path.exists(a+b) and os.path.exists(destPath):
@@ -282,28 +283,5 @@ class USB:
             else:
                 x = ""
         return x
-
-
-# Not currently called, but here for completeness
-    def getDev(self, curMount):
-        '''
-        This is a method of getting the device for the mount point (ex: returns /dev/sda1 for curMount=/media/usb0)
-        '''
-# take the file mount outuput and separate it into lines
-        mounts = str(subprocess.check_output(['df']))
-        mounts = mounts.split("\\n")
-
-# take the lines and check for the mount.
-        for line in mounts:
-            if (curDev in line):
-                x = line.split(" ", 1)
-                x = x[0].rstrip(" ")
-                x = x.lstrip(" ")
-                x = ''.join(x)
-                break
-            else:
-                x = ""
-        return x
-
 
 
