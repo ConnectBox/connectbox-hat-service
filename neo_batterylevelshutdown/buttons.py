@@ -179,7 +179,7 @@ class BUTTONS:
                 self.display.pageStack = 'removeUsb'                                #show we removed the usb key
                 time.sleep(3)                                                       #wait 3 seconds and check again.
 
-            while (not usb.isUsbPresent(dev)) and z < ord('k'):
+            while (not usb.isUsbPresent(dev)) and z < ord('k'):         # loop to find /dev/sdxx
                 z += 1
                 dev = '/dev/sd'+chr(z)+'1'
                 if z == ord('k'):
@@ -201,7 +201,7 @@ class BUTTONS:
             while z < ord('k'):
                 if usb.getMount(dev) == '/media/usb0':                              # if the key is mounted on '/media/usb0' then we have to move it.
                     x = ord(":")                                                    # x keeps track of the mount point
-                    logging.debug("Moving /media/usb0 to /media/usb11 be able to copy")
+                    logging.info("Moving /media/usb0 to /media/usb11 be able to copy")
                     if not os.path.exists('/media/usb11'):                          # check that usb11 exsists to be able to move the mount
                         os.mkdir('/media/usb11')                                    # make the directory
                     if not usb.moveMount( dev, '/media/usb0', '/media/usb11'):      # see if our remount was successful
@@ -217,8 +217,17 @@ class BUTTONS:
 
                 while z < ord('k') and y >= 0:                                       #While we know we have a usb key lets check the sizes
                     zz = usb.getMount(dev)
-                    if zz != "":
-                        logging.debug("getting the size for source /media/usb0 and destination "+zz)
+
+                    if zz == "":                                            # we have a /dev/sda but it isn't mounted
+                        self.display.showErrorPage("USB not mounted")                  # if not generate error page and exit
+                        self.display.pageStack = 'error'
+                        try: os.remove('/usr/local/connectbox/PauseMount')
+                        except:
+                            pass
+                        return
+
+                    else:
+                        logging.info("getting the size for source /media/usb0 and destination "+zz)
                         if os.path.isdir(zz+ext):
                             try:
                                 shutil.rmtree((zz+ext), ignore_errors=True)         #remove old data from /source/ directory
@@ -226,7 +235,7 @@ class BUTTONS:
                                 logging.info("had a problem deleting the destination file: ",zz+ext)
                                 return
                         (d,s) = usb.checkSpace('/media/usb0', zz)             # verify that source is smaller than destination
-                        logging.debug("Space of Destination  is : "+str(d)+" , Source: "+str(s)+" at: "+dev)
+                        logging.info("Space of Destination  is : "+str(d)+" , Source: "+str(s)+" at: "+dev)
                         if d<s or s==0:                                             #if destination free is less than source we don't have enough space
                             if d<s: logging.info("source exceeds destination at"+zz+ext)
                             else: logging.info("source is 0 bytes in length so nothing to copy")
@@ -249,7 +258,7 @@ class BUTTONS:
                             x = (ord(dev[len(dev)-2])-ord('a'))+ord("0")            #get the base letter of the /dev/sdX1 device  and convert to integer
                             x += 1                                                  #increment the dev letter integer
                         else:
-                            logging.debug("Space of Desitinationis ok for source to copy to "+zz+ext)
+                            logging.info("Space of Destination is ok for source to copy to "+zz+ext)
                             x = (ord(dev[len(dev)-2])-ord('a'))+ord("0")            #get the base letter of the /dev/sdX1 device  and convert to integer
                             x += 1                                                  #increment the dev letter integer
                             y +=1
@@ -382,7 +391,7 @@ class BUTTONS:
                 curDev = '/dev/sd'+chr(z)+'1'                                             #create the next curdev
             # We finished the umounts
             self.display.pageStack = 'success'
-            self.display.showSuccessPage("Copy Complete")
+            self.display.showSuccessPage()
             logging.debug("Success page now deleting the PauseMount file")
             try: os.remove('/usr/local/connectbox/PauseMount')
             except:
@@ -400,7 +409,7 @@ class BUTTONS:
         :return: nothing
 
         '''
-        logging.info("we had a button press")
+        logging.debug("we had a button press")
         if self.display_type == 'DummyDisplay':                                           # this device has no buttons or display, skip
             return
 
@@ -419,7 +428,7 @@ class BUTTONS:
             logging.debug("return from time.time - self.button_press_cleared_time")
             return
 
-        logging.info("Handling button press")
+        logging.debug("Handling button press")
         # get time single button was pressed along with the amount of time both buttons were pressed
         channelTime, dualTime = self.checkPressTime(channel)
 
@@ -446,18 +455,24 @@ class BUTTONS:
                 dualTime < self.CHECK_PRESS_THRESHOLD_SEC:
             logging.debug("hit self.check_press_threshold_sec line 158")
             if channel == self.USABLE_BUTTONS[0]:                                           # this is the left button
-                if pageStack in ['confirm', 'error', 'success']:                            # return to admin stack
+                logging.info("Left button: pageStack ="+str(pageStack))
+                if pageStack in ['success']:                # return to 1st page of admin stack
+                    self.moveToStartPage(channel)
+                elif pageStack in ['confirm', 'error']:     # return to first page admin stack
                     self.chooseCancel()
-                elif pageStack in ['removeUsb']:                                            # gonna keep going until they remove the USB stick
+                elif pageStack in ['removeUsb']:            # never reach here... loops elsewhere until they remove the USB stick
                     self.chooseEnter(pageStack)
-                else:                                                                       # anything else, we treat as a moveForward (default) function
+                else:                                       # anything else, we treat as a moveForward (default) function
                     self.moveForward(channel)
             else:                                                                           # right button
-                if pageStack == 'status':                                                   # standard behavior
+                logging.info("Right button: pageStack ="+str(pageStack))
+                if pageStack in ['success']:                # return to 1st page of admin stack
+                    self.moveToStartPage(channel)
+                elif pageStack == 'status':                 # standard behavior - status stack
                     self.moveBackward(channel)
-                elif pageStack in ['error', 'success']:                                     # both conditions return to admin stack
+                elif pageStack in ['error']:                # both conditions return to admin stack
                     self.chooseCancel()
-                else:                                                                       # this is an enter key
+                else:                                       # this is an enter key in the admin stack
                     self.chooseEnter(pageStack)
 
         # if we have a long press (both are equal or greater than threshold) call switch pages
@@ -547,7 +562,7 @@ class BUTTONS:
                 logging.debug("Leaving admin page: %s",
                               self.command_to_reference)
                 logging.debug("Confirmed Page shown")
-                self.display.showConfirmPage()
+                self.display.showConfirmPage()                  # pageStack now = 'confirm'
         else:
             logging.debug("Choice confirmed")
             self.display.showWaitPage("")
@@ -564,6 +579,12 @@ class BUTTONS:
         self.display.switchPages()
         # reset the display power off time
         self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS
+
+    def moveToStartPage(self,channel):
+        self.display.moveToStartPage()
+        # reset the display power off time
+        self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS
+        
 
     def moveForward(self, channel):
         """method for use on button press to cycle display"""

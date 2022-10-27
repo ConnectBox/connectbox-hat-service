@@ -192,7 +192,7 @@ class OLED:
         #  The last page in the normal stack is the admin page so we can simply
         #  test if the screen_enable[lastPage] is '0' and bail out in that case
         screenList = globals.screen_enable
-        adminPage = len(self.pages) - 1
+        adminPage = len(self.statusPages) - 1       # globals.screen_enable maps statusPages onlu
         if screenList[adminPage] == 0:
             return
 
@@ -208,6 +208,14 @@ class OLED:
             self._curPage.draw_page()
             logging.debug("Transitioned to page %s", self._curPage)
 
+
+    def moveToStartPage(self):
+        with self._curPageLock:
+            self._curPage = self.pages[self.STARTING_PAGE_INDEX]
+            self.pageStack = 'admin'
+            self._curPage.draw_page()
+            
+
     def moveForward(self):
         with self._curPageLock:
             logging.debug("Current page is %s", self._curPage)
@@ -215,14 +223,18 @@ class OLED:
                 # Always start with the starting page if the screen went off
                 #  or if we were showing the low battery page
                 self._curPage = self.pages[self.STARTING_PAGE_INDEX]
+
+            #need to handle both admin and status page stacks!    
             else:
                 # Figure out what the index of the next valid page
-                screenList = globals.screen_enable
+
                 current_page_index = self.pages.index(self._curPage)
                 page_count = len(self.pages)
                 next_page_index = (current_page_index +1) % page_count
-                while screenList[next_page_index % page_count] == 0:
-                    next_page_index = (next_page_index+1) % page_count   # skip page with value 0  
+                if self.pages == self.statusPages:      # we are in the status pages stack
+                    screenList = globals.screen_enable          # valid only for status pages... not admi
+                    while screenList[next_page_index % page_count] == 0:
+                        next_page_index = (next_page_index+1) % page_count   # skip page with value 0  
                 self._curPage = \
                         self.pages[next_page_index]
 
