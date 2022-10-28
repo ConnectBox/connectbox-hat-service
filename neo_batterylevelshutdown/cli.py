@@ -358,6 +358,29 @@ def getNetworkClass():
         logging.info("single interface wlan"+a+" with driver "+b)
         # now we need to update the files for a single AP and no client
         AP = a;
+        res = os.popen("ip link show "+AP).read()
+        x = res.find("permaddr:")
+        if ( x > 0 ):
+            addr = res[(x+9):(x+26)]
+        else:
+            x = res.find("link/ether")
+            if (x > 0):
+                addr = res[(x+11):(x+27)]
+            else:
+                addr = 0
+        if (addr > 0):
+        # now that we have the AP file lets setup the /etc/systemd/network/10-wlanX.link file
+            d = "/etc/systemd/network/10-"+AP+".link"
+            try:
+                f = open(d,'r')
+                f.close()
+            except:
+                f = open(d, "w")
+                f.write("\n[Match]\nMACAddress="+dap+"\n[Link]\nName="+AP+"\nMACAddressPolicy=random\n")
+                f.close()
+                os.sync()
+                res=os.popen("update-initramfs -u")
+                os.sync() 
         rbt = fixfiles(AP,CI)                                       #Go for fixing all the file entries
         f = open(progress_file, "w")
         f.write("rewrite_netfiles_done")
