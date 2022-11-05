@@ -12,12 +12,12 @@ details  = {'Brand':"Connectbox", \
         'Font': '27', \
         'pos_x': '6', \
         'pos_y': '0', \
-        'Device_type": "NEO", \
+        'Device_type': "NEO", \
         "usb0NoMount": '0', \
         "lcd_pages_main": '1',\
         "lcd_pages_info": '1',\
         "lcd_pages_battery": '1',\
-        "lcd_pages_multi_bat"1',\
+        "lcd_pages_multi_bat": '1',\
         "lcd_pages_stats_hour_one": '1',\
         "lcd_pages_stats_hour_two": '1',\
         "lcd_pages_stats_day_one": "1",\
@@ -26,7 +26,7 @@ details  = {'Brand':"Connectbox", \
         "lcd_pages_stats_week_two": "1",\
         "lcd_pages_stats_month_one": "1",\
         "lcd_pages_stats_month_two": "1",\
-        "lcd_pages_admin": '1',\
+        "lcd_pages_admin": '0',\
         "Enable_MassStorage": "",\
         "g_device": "g_serial",\
         "otg": "none",\
@@ -40,6 +40,15 @@ details  = {'Brand':"Connectbox", \
         }
 
 # Write the dictionary
+a = input("Device_type (NEO) ?: ")
+details['Device_type'] = a
+x = 3
+while (x != 0 or X != 1):
+    b = input("Enable lcd_pages_admin (0) ?:")
+    x = int(b)
+details["lcd_pages_admin"]= x
+
+
 with io.open('/usr/local/connectbox/brand.txt', mode='w') as f:
     f.write(json.dumps(details))
     f.close()
