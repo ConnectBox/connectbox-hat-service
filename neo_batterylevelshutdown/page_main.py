@@ -29,7 +29,7 @@ class PageMain:
 
     @staticmethod
     def get_connected_users():
- 
+
         c = subprocess.run(['iw', 'dev', globals.clientIF, 'station',
                             'dump'], stdout=subprocess.PIPE)
         connected_user_count = len([line for line in c.stdout.decode(
@@ -69,17 +69,17 @@ class PageMain:
 
         # get a font
         font_path = dir_path + '/assets/CODE2000.TTF'
-        font30 = ImageFont.truetype(font_path, globals.font30)
         font20 = ImageFont.truetype(font_path, globals.font20)
         font14 = ImageFont.truetype(font_path, globals.font14)
+        font10 = ImageFont.truetype(font_path, globals.font10)
 
-        d.text((x, y), name, font=font30, fill="black")
+        d.text((x, y), name, font=font20, fill="black")
         # Image version name/number
-        d.text((38, 32), GetReleaseVersion(), font=font14, fill="black")
+        d.text((38, 32), GetReleaseVersion(), font=font10, fill="black")
 
         # connected users
         d.text((13, 35), PageMain.get_connected_users(),
-               font=font20, fill="black")
+               font=font14, fill="black")
 
         try:
             # The AXP209 can disappear - degrade gracefully if that
@@ -113,7 +113,7 @@ class PageMain:
             # get the percent filled and draw a rectangle
             if battgauge < 10:
                 d.rectangle((37, 51, 39, 58), fill="black")
-                d.text((43, 51), "!", font=font14, fill="black")
+                d.text((43, 51), "!", font=font10, fill="black")
             else:
                 # start of battery level= 37px, end = 57px
                 battgauge = min(battgauge, 100)
@@ -128,7 +128,7 @@ class PageMain:
 
         # cpu temp
         d.text((105, 49), "%.0fC" % PageMain.get_cpu_temp(),
-               font=font14, fill="black")
+               font=font10, fill="black")
 
         out = Image.alpha_composite(img, txt)
         self.device.display(out.convert(self.device.mode))
