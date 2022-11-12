@@ -68,7 +68,7 @@ class PageMain:
         logging.debug("Branding Name : "+ globals.brand_name)          # test element for log  
 
         # get a font
-        font_path = dir_path + '/assets/connectbox.ttf'
+        font_path = dir_path + '/assets/CODE2000.TTF'
         font30 = ImageFont.truetype(font_path, globals.font30)
         font20 = ImageFont.truetype(font_path, globals.font20)
         font14 = ImageFont.truetype(font_path, globals.font14)

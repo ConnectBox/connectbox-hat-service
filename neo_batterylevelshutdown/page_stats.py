@@ -61,10 +61,9 @@ class PageStats:
         txt = Image.new('RGBA', base.size, (255, 255, 255, 0))
 
         # get a font
-        font_path = dir_path + '/assets/HaxM-10.pil'
-        font10 = ImageFont.load(font_path)
-        font_path = dir_path + '/assets/HaxM-13.pil'
-        font20 = ImageFont.load(font_path)
+        font_path = dir_path + '/assets/CODE2000.TTF'
+        font10 = ImageFont.truetype(font_path, 10)
+        font20 = ImageFont.truetype(font_path, 13)
         # get a drawing context
         d = ImageDraw.Draw(txt)
 
