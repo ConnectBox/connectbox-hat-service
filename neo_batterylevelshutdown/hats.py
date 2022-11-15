@@ -457,12 +457,12 @@ class Axp209HAT(BasePhysicalHAT):
     #  and to local array bat_voltage[]
     # With ATTiny rev 0x19, we don't need to store battery voltages in 0x21-0x24
     #  but we will store there anyway for backwards compatibility
+                try:
+                    batteryVoltage = int(self.axp.battery_voltage)
+                except:
+                    batteryVoltage = 3100   # AXP209 i2c fails at 3100 mV    
                 result = batteryNumber = mb_utilities.i2c_read(0x31)
                 if (result != -1):          # valid read of ATTiny so ATTiny handling battery switching
-                    try:
-                        batteryVoltage = int(self.axp.battery_voltage)
-                    except:
-                        batteryVoltage = 3100   # AXP209 i2c fails at 3100 mV    
                     wr_scaled = int(batteryVoltage/16)
                     if (wr_scaled > 0xFF):
                         wr_scaled = 0xFF
@@ -473,11 +473,12 @@ class Axp209HAT(BasePhysicalHAT):
                         mb_utilities.v_update_array(batteryNumber,batteryVoltage) 
 
 
-                else:       # no ATTiny, so CM4 handling battery selection
-                    # code here to have CM4 check for which batteries are present and
-                    #  which battery is in use; read the voltage of the battery and store
+                else:       
+                    # no ATTiny, so read the voltage of the battery and store
                     #  in the global array for use by the page_multi_bat.py code (and possibly others)
-                    pass    # This is a stub for now    
+                    #  (we store in reverse order to leave the array thinking battery 1 is active)
+                    for i in range (1,5):
+                        mb_utilities.v_update_array(5-i,batteryVoltage) 
  
     # Perhaps here we add a call to update the current page
     #  self.display.redrawCurrentPage()
