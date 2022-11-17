@@ -16,6 +16,7 @@ from . import globals
 
 ATTINY_ADDRESS = 0x14
 I2C_BUS_NR = 10
+ATTiny_Talking = True
 
 # Utilities for reading i2c devices ... default address is ATTINY
 
@@ -56,16 +57,26 @@ def i2c_write(reg, val, device = ATTINY_ADDRESS):
 def test():
     p = 9    
 
-def v_update_array(bat_number, bat_voltage):    # array voltages lsb = 1mV
+def v_update_array(bat_voltage):    # array voltages lsb = 1mV
+    if ATTiny_Talking == True:
+        bat_number = i2c_read(0x31)
+        welded =  i2c_read(0x33)                    # batGroup bitmap (zero based)
+        b_present = i2c_read(0x32)
+
+    else:
+        bat_number = 1      # defaults if we can't talk to the ATTiny 
+        welded = 0x0F 
+        b_present = 0x0F
+        # perhaps block out the multi-bat page if we can't talk to ATTiny ??
+
     voltage_array[0] = bat_number
     # store voltage (lsb = 1 mV) directly to local array
     voltage_array[bat_number] = bat_voltage     # bat_number is 1 based
-    welded =  i2c_read(0x33)                    # batGroup bitmap (zero based)
+
     if ((1 << (bat_number -1)) & welded) > 0:   # current battery part of welded group
         for n in range(4):                      # set all voltages in welded group to current bat voltage
             if ((1<<n)&welded) > 0:
                 voltage_array[n+1] = bat_voltage  # lsb = 1mV
-    b_present = i2c_read(0x32)
     for n in range(4):                      # set all voltages for batteries not present to 0
         if ((1<<n)&b_present) == 0:
             voltage_array[n+1] = 0  
@@ -73,9 +84,24 @@ def v_update_array(bat_number, bat_voltage):    # array voltages lsb = 1mV
 
 def get_in_use():
     in_use_map = i2c_read(0x33)
-    return in_use_map        
+    return in_use_map   
 
+# test to see if ATTiny i2c communication still working
+# We will call this ONCE each Hats loop and use the state of ATTiny during that loop
+def check_ATTiny():
+    result1 = i2c_read(0x51) 
+    time.sleep(0.3)
+    result2 = i2c_read(0x51)
+    if result1 == result2:
+        ATTiny_Talking = False
+        logging.error("ERROR: ATTiny i2c failed)")
+    else:
+        ATTiny_Talking = True            
 
+def reset_ATTiny():
+    if ATTiny_Talking == True:
+        logging.info("Resetting battery registers (i2c_read(0x40))")
+        result1 = mb_utilities.i2c_read(0x40)    
 
 
 # Here is a collection of battery read utilities for use by pages requiring battery voltage

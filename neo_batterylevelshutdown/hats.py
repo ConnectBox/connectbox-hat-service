@@ -358,15 +358,13 @@ class Axp209HAT(BasePhysicalHAT):
         # Set LEVEL2 voltage i.e. 3.0V
         self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x3B, 0x18)
 
+        # Call this to test if ATTiny is still talking
+        mb_utilities.check_ATTiny()
+
         # Tell ATTiny to cycle through all batteries so AXP209 can read the voltages
-        logging.info("Resetting battery registers (i2c_read(0x40))")
-#        time.sleep(10)  # delay to trap i2c on logic analyzer
-        result1 = mb_utilities.i2c_read(0x40)    
-        time.sleep(1)
-        result = mb_utilities.i2c_read(0x40)
-        # return value incremented every 200 ms so if the same the i2c isn't working right
-        if result1 == result:
-            logging.error("ERROR: ATTiny i2c failed)")
+        #  Function to reset battery registers moved to multiBat_Utilities.py
+        mb_utilities.reset_ATTiny()
+
         logging.info("AXP209HAT __init__ complete")
 
         super().__init__(displayClass)
@@ -460,25 +458,12 @@ class Axp209HAT(BasePhysicalHAT):
                 try:
                     batteryVoltage = int(self.axp.battery_voltage)
                 except:
-                    batteryVoltage = 3100   # AXP209 i2c fails at 3100 mV    
-                result = batteryNumber = mb_utilities.i2c_read(0x31)
-                if (result != -1):          # valid read of ATTiny so ATTiny handling battery switching
-                    wr_scaled = int(batteryVoltage/16)
-                    if (wr_scaled > 0xFF):
-                        wr_scaled = 0xFF
-                    reread = mb_utilities.i2c_read(0x31)
-                    if (batteryNumber == reread):
-                        wr_result = mb_utilities.i2c_write(0x20+batteryNumber, wr_scaled)
-                        # store unscaled voltage directly to array 
-                        mb_utilities.v_update_array(batteryNumber,batteryVoltage) 
+                    batteryVoltage = 3100   # AXP209 i2c fails at 3100 mV 
 
-
-                else:       
-                    # no ATTiny, so read the voltage of the battery and store
-                    #  in the global array for use by the page_multi_bat.py code (and possibly others)
-                    #  (we store in reverse order to leave the array thinking battery 1 is active)
-                    for i in range (1,5):
-                        mb_utilities.v_update_array(5-i,batteryVoltage) 
+                # Call this once each loop to test if ATTiny is still talking
+                mb_utilities.check_ATTiny()
+                mb_utilities.v_update_array(batteryVoltage) 
+      
  
     # Perhaps here we add a call to update the current page
     #  self.display.redrawCurrentPage()
