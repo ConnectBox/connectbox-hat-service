@@ -94,6 +94,7 @@ def check_ATTiny():
     result2 = i2c_read(0x51)
     if result1 == result2:
         ATTiny_Talking = False
+        globals.screen_enable[3]=0   # turn of multi batt screen if ATTiny communication fails
         logging.error("ERROR: ATTiny i2c failed)")
     else:
         ATTiny_Talking = True            
