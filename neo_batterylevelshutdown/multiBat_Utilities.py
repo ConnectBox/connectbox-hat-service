@@ -2,6 +2,7 @@
 import logging
 import smbus2
 from . import globals
+import time
 
 
 # JRA - 011322
@@ -58,6 +59,7 @@ def test():
     p = 9    
 
 def v_update_array(bat_voltage):    # array voltages lsb = 1mV
+    global ATTiny_Talking
     if ATTiny_Talking == True:
         bat_number = i2c_read(0x31)
         welded =  i2c_read(0x33)                    # batGroup bitmap (zero based)
@@ -89,20 +91,22 @@ def get_in_use():
 # test to see if ATTiny i2c communication still working
 # We will call this ONCE each Hats loop and use the state of ATTiny during that loop
 def check_ATTiny():
+    global ATTiny_Talking
     result1 = i2c_read(0x51) 
     time.sleep(0.3)
     result2 = i2c_read(0x51)
     if result1 == result2:
         ATTiny_Talking = False
-        globals.screen_enable[3]=0   # turn of multi batt screen if ATTiny communication fails
+        globals.screen_enable[3]=0   # turn off multi batt screen if ATTiny communication fails
         logging.error("ERROR: ATTiny i2c failed)")
     else:
         ATTiny_Talking = True            
 
 def reset_ATTiny():
+    global ATTiny_Talking
     if ATTiny_Talking == True:
         logging.info("Resetting battery registers (i2c_read(0x40))")
-        result1 = mb_utilities.i2c_read(0x40)    
+        result1 = i2c_read(0x40)    
 
 
 # Here is a collection of battery read utilities for use by pages requiring battery voltage
