@@ -116,7 +116,7 @@ class PageMain:
                 d.text((43, 51), "!", font=font10, fill="black")
             else:
                 # start of battery level= 37px, end = 57px
-                battgauge = min(battgauge, 100)
+                battgauge = min(battgauge, 99)
                 logging.debug("battery gauge is "+str( battgauge ))
 
                 x = int((57 - 37) * (battgauge / 100)) + 37
