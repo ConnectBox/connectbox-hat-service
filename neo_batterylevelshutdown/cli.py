@@ -149,7 +149,7 @@ def fixfiles(a, c):
     f = open('/etc/network/interfaces.j2','r', encoding='utf-8')
     g = open('/etc/network/interfaces.tmp','w', encoding='utf-8')
     x = 0
-    wlan_num  = 4                                        #number of wlanX references in the AP side before the #CLIENT# in /etc/network/interfaces.j2 text file
+    wlan_num  = 8                                        #number of wlanX references in the AP side before the #CLIENT# in /etc/network/interfaces.j2 text file
     skip_rest = 0
     l = ""
     n = ""
@@ -157,24 +157,31 @@ def fixfiles(a, c):
         if skip_rest == 0:
             if 'wlan' in l:
                 m = l.split('wlan')
-                if x< (wlan_num+1):                       #Set this number to 1 more than the number of wlan references in text before the client code in /etc/network/interfaces.j2
-                    n = m[0]+'wlan'+a                     #insert the AP wlan
+                while (len(m)>1):
+                    if x< (wlan_num+1):                       #Set this number to 1 more than the number of wlan references in text before the client code in /etc/network/interfaces.j2
+                         m[0] = m[0]+'wlan'+a                     #insert the AP wlan
 #                    logging.debug("on interface line were setting $1: "+n)
-                else:
-                    if c=="":
-                        m[0] = '#'+m[0]+'wlan'+str(int(a)+1)
                     else:
-                        if "#" == m[0][0]:
-                            while m[0][1]=="#":             #take out any extra comment lines
-                                m[0]=m[0][1:]
-                            if len(m[0])<30:
-                                m[0] = m[0][1:]             #if the line is not a real command line but a comment then take out the # in front ssince we have C
-                    n = m[0]+'wlan'+c
+                        if c=="":
+                            m[0] = '#'+m[0]+'wlan'+str(int(a)+1)
+                        else:
+                            if "#" == m[0][0]:
+                                while m[0][1]=="#":             #take out any extra comment lines
+                                    m[0]=m[0][1:]
+                                if len(m[0])<30:
+                                    m[0] = m[0][1:]             #if the line is not a real command line but a comment then take out the # in front ssince we have C
+                        m[0] = m[0]+'wlan'+c
 #                   logging.debug("on interface line were setting $2: "+n)
-                x += 1
-                while m[1][0].isnumeric():
-                    m[1] = m[1][1:]                        #Remove numeric characters
-                n = str(n + m[1])
+                    x += 1
+                    while m[1][0].isnumeric():
+                        m[1] = m[1][1:]                        #Remove numeric characters
+                    z=1
+                    m[0]=m[0]+m[1]
+                    while z < (len(m)-1):
+                        m[z]=m[z+1]
+                        z += 1
+                    m.pop()
+                n = str(m[0])
             else:
                 if "#CLIENTIF#" in l:                      #if we hit here and have no client ie: c="" then we skip the rest fo the file
                     if c == "":
@@ -280,7 +287,7 @@ def fixfiles(a, c):
         f.close()
     except:
         pass
- 
+
     os.system("sync")                                #we will ensure we clear all files and pending write data
 
 # Now we are done with the network/interface.tmp, dnsmasq.tmp and hostapd.tmp file creations time to put them into action.
@@ -304,7 +311,7 @@ def fixfiles(a, c):
     os.system("cp /etc/dnsmasq.tmp /etc/dnsmasq.conf")
     os.system("cp /etc/network/interfaces.tmp /etc/network/interfaces")
     os.system("cp /etc/dhcpcd.tmp /etc/dhcpcd.conf")
-    
+
     os.system("systemctl daemon-reload")             #we reload all the daemons since we changed the config.
     logging.info("We have completed the file copy copleteions")
     logging.info("we will reboot to setup the new interfaces")
@@ -348,7 +355,7 @@ def getNetworkClass():
                 i -=1
             s = r.pop()                                           #remove the last item in the list
             i = len(r)
-    logging.info("We finished the wlan lookup and arfe now going to edit the files.")
+    logging.info("We finished the wlan lookup and are now going to edit the files.")
     AP = ""                                                         #access point interface
     CI = ""                                                         #client interface
     rbt = 0                                                         #reboot set to no
@@ -380,7 +387,7 @@ def getNetworkClass():
                 f.close()
                 os.sync()
                 res=os.popen("update-initramfs -u")
-                os.sync() 
+                os.sync()
         rbt = fixfiles(AP,CI)                                       #Go for fixing all the file entries
         f = open(progress_file, "w")
         f.write("rewrite_netfiles_done")
