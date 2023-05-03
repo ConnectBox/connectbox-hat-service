@@ -407,12 +407,9 @@ def getNetworkClass():
             if AP== "":
                 AP = netwk[1][0]                                    #interface 2 has the rtl and will be AP
                 CI = netwk[0][0]                                    #interface 1 is on board or other andd will be the client side for network
-            else:
-                if "8812" in netwk[1][1] or "8192" in netwk[1][1]:
+                if "8812" in netwk[1][1] or "8192" in netwk[1][1] or "88XX" in netwk[1][1] or "8852" in netwk[1][1]:
                     AP = netwk[1][0]                                #intreface 2 will be the Client network connection even if it is an rtl device
                     CI = netwk[0][0]
-                else:
-                    CI = netwk[1][0]
         logging.info("AP will be: wlan"+AP+" etherneet facing is: wlan"+CI)
         if len(netwk) >=3:
             logging.info("we have more interfaces so they must be manually managed") # if we have more than 2 interfaces then they must be manually managed. rbt = fixfiles(AP,CI) #Go for fixing all the file entries 
