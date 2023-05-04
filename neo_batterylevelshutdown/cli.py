@@ -149,7 +149,7 @@ def fixfiles(a, c):
     f = open('/etc/network/interfaces.j2','r', encoding='utf-8')
     g = open('/etc/network/interfaces.tmp','w', encoding='utf-8')
     x = 0
-    wlan_num  = 8                                        #number of wlanX references in the AP side before the #CLIENT# in /etc/network/interfaces.j2 text file
+    wlan_num  = 4      #actually 5 instances, but code error somewhere below...  #number of wlanX references in the AP side before the #CLIENT# in /etc/network/interfaces.j2 text file
     skip_rest = 0
     l = ""
     n = ""
@@ -486,6 +486,10 @@ def main(verbose):
         os.system("shutdown -r now")
     else:
       logging.debug("Finished netowrk class")
+      logging.info("Restart wlan0 and wlan1 interfaces")
+      os.system("ifconfig wlan0 up")
+      os.system("ifconfig wlan1 up")
+
       hatClass = getHATClass()
       displayClass =getDisplayClass(hatClass)
       logging.info("Finished display class")
