@@ -60,6 +60,7 @@ class BasePhysicalHAT:
         self.solidLED()
 
 #    @classmethod
+# Called when AXP209 signals NEO that power is about to go down
     def shutdownDevice(self):
         # Turn off the LED, as some people associate that with wifi being
         #  active (the HAT can stay powered after shutdown under some
@@ -75,7 +76,7 @@ class BasePhysicalHAT:
     def shutdownDeviceCallback(self, channel):
         logging.info("Triggering device shutdown based on edge detection "
                       "of GPIO %s.", channel)
-        # do some verification that the IRQ is still low after 100 ms
+        # do some verification that the signal is still low after 100 ms
         time.sleep(0.1)
         # if interrupt line is high, this was a false trigger... just return
         if GPIO.input(self.PIN_AXP_INTERRUPT_LINE):
@@ -299,9 +300,9 @@ class Axp209HAT(BasePhysicalHAT):
     MIN_BATTERY_THRESHOLD_PERC_SINGLE_FLASH = 33  # Parity with PIN_VOLT_3_71
     MIN_BATTERY_THRESHOLD_PERC_DOUBLE_FLASH = 3   # Parity with PIN_VOLT_3_45
     BATTERY_WARNING_THRESHOLD_PERC = MIN_BATTERY_THRESHOLD_PERC_DOUBLE_FLASH
-    BATTERY_WARNING_VOLTAGE = 3400                # CM4 warning voltage (mV)
-    BATTERY_SHUTDOWN_VOLTAGE = 3000               # CM4 shutdown voltage (mV)
-    BATTERY_SHUTDOWN_THRESHOLD_PERC = 1
+    BATTERY_WARNING_VOLTAGE = 3200                # CM4 warning voltage (mV)
+#    BATTERY_SHUTDOWN_VOLTAGE = 3000               # ref only: AXP209 controlled shutdown voltage
+#    BATTERY_SHUTDOWN_THRESHOLD_PERC = 1           # no longer used
     DISPLAY_TIMEOUT_SECS = 120
     # possibly should be moved elsewhere
 
@@ -324,12 +325,6 @@ class Axp209HAT(BasePhysicalHAT):
         #   real use case)
         self.nextBatteryCheckTime = 0
         
-        # Clear all IRQ Enable Control Registers. We may subsequently
-        #  enable interrupts on certain actions below, but let's start
-        #  with a known state for all registers.
-        for ec_reg in (0x40, 0x41, 0x42, 0x43, 0x44):
-            self.axp.bus.write_byte_data(AXP209_ADDRESS, ec_reg, 0x00)
-
         # Write the charge control 1 - limit/ current control register 
         #  (Vtarget = 4.1 volts, end charging when below 10% of set charge current, 
         #   charge current = 1200 mA )
@@ -342,28 +337,25 @@ class Axp209HAT(BasePhysicalHAT):
         #        results in a battery error warning LED (?)
         self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x82, 0xF3)
 
+        # The Voff level exclusively controls shutdown due to low voltage.
+        # The monitoring of voltage by this code for purposes of shutting down due to insufficient
+        #  voltage has been DEPRICATED.
         # Change Voff voltage level (level of IPS_OUT below which causes AXP209 to shutdown)
         #  to 3.0V. 
         self.axp.bus.write_byte_data(AXP209_ADDRESS,0x31,0x04)  # AXP209 trigger shutdown at Vbatt = 3.0V
-
-
-        # Now all interrupts are disabled, clear the previous state
-        self.clearAllPreviousInterrupts()
 
         # shutdown delay time to 3 secs (they delay before axp209 yanks power
         #  when it determines a shutdown is required) (default is 2 sec)
         hexval = self.axp.bus.read_byte_data(AXP209_ADDRESS, 0x32)
         hexval = hexval | 0x03
         self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x32, hexval)
-        # Set LEVEL2 voltage i.e. 3.0V
-        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x3B, 0x18)
 
-        # Call this to test if ATTiny is still talking
-        mb_utilities.check_ATTiny()
-
-        # Tell ATTiny to cycle through all batteries so AXP209 can read the voltages
-        #  Function to reset battery registers moved to multiBat_Utilities.py
-        mb_utilities.reset_ATTiny()
+        # If processor is CM4, call this to test if ATTiny is still talking
+        if globals.device_type == "CM":
+            mb_utilities.check_ATTiny()
+            # Tell ATTiny to cycle through all batteries so AXP209 can read the voltages
+            #  Function to reset battery registers moved to multiBat_Utilities.py
+            mb_utilities.reset_ATTiny()
 
         logging.info("AXP209HAT __init__ complete")
 
@@ -417,29 +409,6 @@ class Axp209HAT(BasePhysicalHAT):
         self.blinkLED(times=3)
 
 
-
-    def clearAllPreviousInterrupts(self):
-        """
-        Reset interrupt state by writing a 1 to all bits of the state regs
-
-        From the AXP209 datasheet:
-        When certain events occur, AXP209 will inform the Host by pulling down
-        the IRQ interrupt line, and the interrupt state will be stored in
-        interrupt state registers (See registers REG48H, REG49H, REG4AH, REG4BH
-        and REG4CH). The interrupt can be cleared by writing 1 to corresponding
-        state register bit.
-
-        Note that 0x4B is the only one that's enabled at this stage, but let's
-        be thorough so that we don't need to change this if we start using the
-        others.
-        """
-        # (IRQ status register 1-5)
-        for stat_reg in (0x48, 0x49, 0x4A, 0x4B, 0x4C):
-            self.axp.bus.write_byte_data(AXP209_ADDRESS, stat_reg, 0xFF)
-        logging.debug("IRQ records cleared")
-
-
-
     def mainLoop(self):
         while True:
             # The following ensures that the while loop only executes once every 
@@ -449,81 +418,48 @@ class Axp209HAT(BasePhysicalHAT):
                 if time.time() > self.displayPowerOffTime:
                     self.display.powerOffDisplay()
 
+                # ATTiny battery handling only in CM4 HAT    
+                if globals.device_type == "CM":
+                    try:
+                        batteryVoltage = int(self.axp.battery_voltage)
+                    except:
+                        batteryVoltage = 3100   # AXP209 i2c fails at 3100 mV 
 
-    # Read the battery in use number from ATTiny, read the voltage from AXP209, re-read the battery number
-    #  (make sure battery didn't change), write the battery voltage/16 to ATTiny
-    #  and to local array bat_voltage[]
-    # With ATTiny rev 0x19, we don't need to store battery voltages in 0x21-0x24
-    #  but we will store there anyway for backwards compatibility
-                try:
-                    batteryVoltage = int(self.axp.battery_voltage)
-                except:
-                    batteryVoltage = 3100   # AXP209 i2c fails at 3100 mV 
-
-                # Call this once each loop to test if ATTiny is still talking
-                mb_utilities.check_ATTiny()
-                mb_utilities.v_update_array(batteryVoltage) 
-      
+                    # Call this once each loop to test if ATTiny is still talking
+                    mb_utilities.check_ATTiny()
+                    mb_utilities.v_update_array(batteryVoltage) 
  
-    # Perhaps here we add a call to update the current page
-    #  self.display.redrawCurrentPage()
-    #   PERHAPS ADD TEST TO DO THIS ONLY FOR PAGES 0 -> 4
-                #logging.info("... redraw current page")
+                # Here we add a call to update the current page so info is regularly updated
                 self.display.redrawCurrentPage()
+                
+# DEPRICATED - Voltage monitoring for power down purposes is depricated. 
+#   We will let AXP209 (exclusively) handle the shutdown via the Voff facility (Reg 0x31 - set to 3.0V).
+#     The AXP209 i2C communication becomes unreliable at IPS voltages below 3.1V.
+#  Also note... We do NOT have a connection between the AXP209 IRQ line (pin 48) and the NEO so 
+#    we can't service the LEVEL2 IRQ (or any other AXP209 IRQ) anyway.
 
-                # Check battery and possibly shutdown or show low battery page
-                # Do this less frequently than updating LEDs. We could do
-                #  these checks more frequently if we wanted to - the battery
-                #  impact is probably minimal but that would mean we need to
-                #  check for whether the battery is connected on each loop so
-                #  readability doesn't necessarily improve
-                # (added test for battery exists for removable battery systems)
-                try:
-                    axp_there = self.axp.battery_exists
-                except:
-                    axp_there = False      # AXP209 i2c shutdown, likely Vbatt<3.1V
-                # if axp_there == False, we will allow the AXP to do shutdown based on 
-                #     V(level2) triggering the IRQ for power off
-                #  otherwise, continue to monitor Vbatt from AXP209   
-                if (time.time() > self.nextBatteryCheckTime) and (axp_there):
-#                    logging.info("BATTERY VOLTAGE CHECK BEGINS")
-                    if not self.batteryLevelAboveVoltage(
-                            self.BATTERY_SHUTDOWN_VOLTAGE):
-                        logging.info("BATTERY_SHUTDOWN_VOLTAGE reached")
-                        hexval = self.axp.bus.read_byte_data(AXP209_ADDRESS, 0x32)
-                        hexval = hexval | 0x80      # signal AXP209 to shutdown power
-                        self.display.showPoweringOff()
-                        logging.info("Exiting for Shutdown due to battery exhaustion")
-                        time.sleep(5)       # show power down screen for 5 seconds
-                        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x32, hexval)
-                        while True:
-                            pass        # stick here while irq is serviced
+                if self.batteryLevelAboveVoltage(
+                        self.BATTERY_WARNING_VOLTAGE):
+                    # Battery now ok so hide the low battery warning, if we're currently showing it
+                    self.display.hideLowBatteryWarning()
+                else:
+                    logging.info("BATTERY_WARNING_VOLTAGE reached")
+                    # show (or keep showing) the low battery warning page
+                    self.display.showLowBatteryWarning()
+                    # Don't blank the display while we're in the
+                    #  warning period so the low battery warning shows to the end
+                    self.displayPowerOffTime = sys.maxsize
+                    # we are near shutdown... force check every time around loop (5 sec)
+                    self.BATTERY_CHECK_FREQUENCY_SECS = 4   
 
+                self.nextBatteryCheckTime = \
+                    time.time() + self.BATTERY_CHECK_FREQUENCY_SECS
 
-                    if self.batteryLevelAboveVoltage(
-                            self.BATTERY_WARNING_VOLTAGE):
-                        # Hide the low battery warning, if we're currently
-                        #  showing it
-                        self.display.hideLowBatteryWarning()
-                    else:
-                        logging.info("BATTERY_WARNING_VOLTAGE reached")
-                         # show (or keep showing) the low battery warning page
-                        self.display.showLowBatteryWarning()
-                        # Don't blank the display while we're in the
-                        #  warning period so the low battery warning shows
-                        #  to the end
-                        self.displayPowerOffTime = sys.maxsize
-                        # we are near shutdown... force check every time around loop (5 sec)
-                        self.BATTERY_CHECK_FREQUENCY_SECS = 4   
+                # Give a rough idea of battery capacity based on the LEDs
+                self.updateLEDState()
 
-                    self.nextBatteryCheckTime = \
-                        time.time() + self.BATTERY_CHECK_FREQUENCY_SECS
-
-                    # Give a rough idea of battery capacity based on the LEDs
-                    self.updateLEDState()
-
-                    # Check to see if anyone changed the brand.txt file if so we need to reload
-                    globals.init()
+                # Check to see if anyone changed the brand.txt file if so we need to reload
+                globals.init()
 
 
 class q3y2018HAT(Axp209HAT): 
@@ -622,13 +558,12 @@ class q4y2018HAT(Axp209HAT):
 
         # We only enable interrupts on this HAT, rather than in the superclass
         #  because not all HATs with AXP209s have a line that we can use to
-        #  detect the interrupt
-        # Enable interrupts [ DEPRICATED -- when battery goes below LEVEL2] or when
-        #  N_OE (the power switch) goes high
-        # Note that the axp209 will do a shutdown based on register 0x31[2:0]
-        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x43, 0x40)
-        # We've masked all other interrupt sources for the AXP interrupt line
-        #  so the desired action here is always to shutdown
+        #  detect the interrupt.
+        # (Note... this is NOT the AXP209 IRQ line... it is the AXP209 power down signal)
+
+    # This interrupt handler services a powerdown signal from the RC modified AXP209 EXTEN (pin 20)
+    #  line. That line goes low on reaching the Voff (Reg 0x31[0:2]) voltage of 3.0V (see line #347)
+    #  or upon detection of the PB1 being held longer than 8 sec.   
         GPIO.add_event_detect(self.PIN_AXP_INTERRUPT_LINE, GPIO.FALLING,
                               callback=self.shutdownDeviceCallback)
         self.handleOtgSelect(self.PIN_OTG_SENSE)
@@ -637,7 +572,7 @@ class q4y2018HAT(Axp209HAT):
 
 class q3y2021HAT(Axp209HAT):
 
-    # Q3Y2021 - HAT 7.0.x - NEO ONLY
+    # Q3Y2021 - HAT 7.0.x (NEO)- Also, NEO V8
 
     def __init__(self, displayClass):
 
@@ -675,17 +610,11 @@ class q3y2021HAT(Axp209HAT):
                                callback=self.handleOtgSelect,
                                bouncetime=125)
 
-        # We only enable interrupts on this HAT, rather than in the superclass
-        #  because not all HATs with AXP209s have a line that we can use to
-        #  detect the interrupt
-        # Enable interrupts when battery goes below LEVEL2 or when
-        #  N_OE (the power switch) goes high
-        # Note that the axp209 will do a shutdown based on register 0x31[2:0]
-        #  which is set to 2.9V by default, and as we're triggering a shutdown
-        #  based on LEVEL2 that mechanism should never be necessary
-        self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x43, 0x41)
-        # We've masked all other interrupt sources for the AXP interrupt line
-        #  so the desired action here is always to shutdown
+ 
+    # This interrupt handler responds to the EXTEN signal of the AXP209. It gives us
+    #  a heads up that power is going down either because the IPS OUT voltage is below Voff (0x31[2:0])
+    #  or because the user has pushed PB1 longer than 8 seconds
+
         GPIO.add_event_detect(self.PIN_AXP_INTERRUPT_LINE, GPIO.FALLING,
                               callback=self.shutdownDeviceCallback)
         self.handleOtgSelect(self.PIN_OTG_SENSE)
