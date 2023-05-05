@@ -384,8 +384,8 @@ class Axp209HAT(BasePhysicalHAT):
             logging.error("Unable to read from AXP")
             voltagelevel = -1
 
-        return voltagelevel < 0 or \
-            voltagelevel > level
+        return voltagelevel < 1000 or \
+            voltagelevel > level             # if <1000 we have no battery so return TRUE so we don't see the low bat warning
 
 
     def updateLEDState(self):
