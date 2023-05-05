@@ -149,31 +149,35 @@ def fixfiles(a, c):
     f = open('/etc/network/interfaces.j2','r', encoding='utf-8')
     g = open('/etc/network/interfaces.tmp','w', encoding='utf-8')
     x = 0
-    wlan_num  = 4      #actually 5 instances, but code error somewhere below...  #number of wlanX references in the AP side before the #CLIENT# in /etc/network/interfaces.j2 text file
     skip_rest = 0
     l = ""
     n = ""
     for y,l in enumerate(f):
         if skip_rest == 0:
+            if '#CLIENTIF#' in l:       # #CLIENTIF# signals the end of AP and start of CI section
+                x = 1                   #  signals we are in the ClientInterface section
             if 'wlan' in l:
                 m = l.split('wlan')
                 while (len(m)>1):
-                    if x< (wlan_num+1):                       #Set this number to 1 more than the number of wlan references in text before the client code in /etc/network/interfaces.j2
+
+                    if x == 0:              # processing AP directives (this number is 0 until the CLIENTIF word is seen)
                          m[0] = m[0]+'wlan'+a                     #insert the AP wlan
 #                    logging.debug("on interface line were setting $1: "+n)
-                    else:
+                    else:                   # We are processing Client Interface directives
                         if c=="":
                             m[0] = '#'+m[0]+'wlan'+str(int(a)+1)
                         else:
                             if "#" == m[0][0]:
                                 while m[0][1]=="#":             #take out any extra comment lines
+# ?? colon in the next statement??
                                     m[0]=m[0][1:]
                                 if len(m[0])<30:
+# ?? colon in the next statement??                                    
                                     m[0] = m[0][1:]             #if the line is not a real command line but a comment then take out the # in front ssince we have C
                         m[0] = m[0]+'wlan'+c
-#                   logging.debug("on interface line were setting $2: "+n)
-                    x += 1
+
                     while m[1][0].isnumeric():
+# ?? colon in next line??
                         m[1] = m[1][1:]                        #Remove numeric characters
                     z=1
                     m[0]=m[0]+m[1]
@@ -182,15 +186,15 @@ def fixfiles(a, c):
                         z += 1
                     m.pop()
                 n = str(m[0])
-            else:
-                if "#CLIENTIF#" in l:                      #if we hit here and have no client ie: c="" then we skip the rest fo the file
+            else:                           # all lines of the enumerate of interfaces.j2 which DON'T contain 'wlan'
+                if x>0:                     # we are done with AccessPoint directives... on to Client Interface directives
                     if c == "":
-                        skip_rest=1
-                else:
-                    if x > (wlan_num)  and l != "\n" and c =="" :     #See above... but set it to the number of AP wlan references in text file interfaces.  if its  a line in the AP section without wlan we justg pass it through 
-                        l = "#" + l                                   # if for some reason we don't have a #ClIENTIF# reverence theen we comment out all of the client iff c=""
+                        skip_rest=1         #if we hit here and have no client ie: c="" then we skip the rest fo the file
+                    if l != "\n" and c =="":
+                        l = "#" + l            # if for some reason we don't have a #ClIENTIF# reverence theen we comment out all of the client if c=""   
                 n = str(l)
             g.write(n)
+
     g.flush()
     f.close()
     g.close()
