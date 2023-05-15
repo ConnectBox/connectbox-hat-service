@@ -85,16 +85,24 @@ def v_update_array(bat_voltage):    # array voltages lsb = 1mV
 
 
 def get_in_use():
-    in_use_map = i2c_read(0x33)
-    return in_use_map   
+    global ATTiny_Talking
+    if ATTiny_Talking == True:
+        in_use_map = i2c_read(0x33)
+    else: 
+        in_use_map = 0xF     
+    return in_use_map 
 
 # test to see if ATTiny i2c communication still working
 # We will call this ONCE each Hats loop and use the state of ATTiny during that loop
 def check_ATTiny():
     global ATTiny_Talking
-    result1 = i2c_read(0x51) 
-    time.sleep(0.3)
-    result2 = i2c_read(0x51)
+    try:
+        result1 = i2c_read(0x51) 
+        time.sleep(0.3)
+        result2 = i2c_read(0x51)
+    except:
+        result1 = result2 = 0
+
     if result1 == result2:
         ATTiny_Talking = False
         globals.screen_enable[3]=0   # turn off multi batt screen if ATTiny communication fails
