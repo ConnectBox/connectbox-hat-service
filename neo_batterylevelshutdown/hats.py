@@ -352,6 +352,7 @@ class Axp209HAT(BasePhysicalHAT):
 
         # If processor is CM4, call this to test if ATTiny is still talking
         if globals.device_type == "CM":
+            mb_utilities.init_ATTiny_Talking()      # set ATTiny_Talking (global) to true
             mb_utilities.check_ATTiny()
             # Tell ATTiny to cycle through all batteries so AXP209 can read the voltages
             #  Function to reset battery registers moved to multiBat_Utilities.py

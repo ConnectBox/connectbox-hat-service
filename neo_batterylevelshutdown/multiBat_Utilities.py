@@ -17,7 +17,10 @@ import time
 
 ATTINY_ADDRESS = 0x14
 I2C_BUS_NR = 10
-ATTiny_Talking = True
+
+def init_ATTiny_Talking():
+    global ATTiny_Talking
+    ATTiny_Talking = True
 
 # Utilities for reading i2c devices ... default address is ATTINY
 
@@ -96,19 +99,18 @@ def get_in_use():
 # We will call this ONCE each Hats loop and use the state of ATTiny during that loop
 def check_ATTiny():
     global ATTiny_Talking
-    try:
-        result1 = i2c_read(0x51) 
-        time.sleep(0.3)
-        result2 = i2c_read(0x51)
-    except:
-        result1 = result2 = 0
-
-    if result1 == result2:
-        ATTiny_Talking = False
-        globals.screen_enable[3]=0   # turn off multi batt screen if ATTiny communication fails
-        logging.error("ERROR: ATTiny i2c failed)")
-    else:
-        ATTiny_Talking = True            
+    if ATTiny_Talking == True:
+        try:
+            result1 = i2c_read(0x51) 
+            time.sleep(0.3)
+            result2 = i2c_read(0x51)
+            if result1 == result2:
+                ATTiny_Talking = False          # ATTiny giving stuck answer (i2c working... just not useful)
+                globals.screen_enable[3]=0      # turn off multi batt screen if ATTiny communication fails
+        except:                                 # if here, i2c to ATTiny has failed
+            ATTiny_Talking = False
+            globals.screen_enable[3]=0      # turn off multi batt screen if ATTiny communication fails
+            logging.error("ERROR: ATTiny i2c failed)")
 
 def reset_ATTiny():
     global ATTiny_Talking
