@@ -18,7 +18,7 @@ class USB:
         (does not depend on stick being mounted)
         :return: True / False
         '''
-        return os.path.exists(devPath)
+        return(os.path.exists(devPath))
 
     @staticmethod
     def unmount(curPath='/media/usb0'):
@@ -28,7 +28,7 @@ class USB:
         '''
         logging.debug("Unmounting file at location %s", curPath)
         response = subprocess.call(['umount', curPath])  # unmount drive
-        return response == 0
+        return(response)
 
     @staticmethod
     def mount(devPath='/dev/sda1', newPath='/media/usb11'):
@@ -43,14 +43,13 @@ class USB:
             x = ord(devPath[len(devPath)-2]) + 1
             devPath = "/dev/sd"+chr(x)+"1"
 
-        # try:
         logging.debug("Mounting USB at %s to %s", devPath, newPath)
         if not os.path.exists(newPath):  # see if desired mounting directory exists
             os.makedirs(newPath)  # create directory and all of the intermediary directories
         response = subprocess.call(['mount', '-o', 'sync,noexec,nodev,noatime,nodiratime,utf8',
                                     devPath, newPath])
         logging.debug("Response: %s", response)
-        return response == 0
+        return(response)
 
     @staticmethod
     def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0', ext='/content/'):
@@ -67,8 +66,19 @@ class USB:
         :return:  True / False
         '''
         logging.info("Copying from: "+sourcePath+" to: "+destPath)
-        with open('/usr/local/connectbox/PauseMount', "w") as fp:
-            pass
+        with open('/usr/local/connectbox/brand.txt', "a") as fp:
+            m = fp.read()
+            if 'usb0NoMount":0' in m:
+                NoMountOrig = 0x                                #Hang on to the original value to restore as needed
+                x = str(m).find("usb0NoMount")
+                if x>0:
+                    m[x+13:x+13] = "1"
+                    fp.write(m)
+                else:
+                    fp.close()
+                    logging.info("Error trying to change usb0NoMount value to 1 for copy")
+                    return(False)
+            else: NoMountOirg = 1                               #Hang on to the original value to restore as needed
         fp.close()
         time.sleep(2)  # give time for Pause of the Mount
         y = 0
@@ -110,7 +120,9 @@ class USB:
                                 raise Error(errors)
                         if not errors:
                             y = 1
-                        logging.debug("Done copying to: "+destPath+b)
+                        logging.info("Done copying to: "+destPath+b)
+                       else:
+                            logging.info("Done copying but errored: ",errors)
 #   Find the next USB key in the system to copy to destination
                     if a != '/media/usb0':
                         if len(a)==12: a = "/media/usb0"
@@ -122,16 +134,68 @@ class USB:
 
                 if (y == 1):
                     logging.info("Everything copied all done")
-                    return True
+                    if NoMountOrig == 0:
+                        open('/usr/local/connectbox/brand.txt', "a") as fp:
+                        m = fp.read()
+                        if 'usb0NoMount":1' in m:
+                            x = str(m).find("usb0NoMount")
+                            if x>0:
+                                m[x+13:x+13] = "1"
+                                fp.write(m)
+                            else:
+                                fp.close()
+                                logging.info("Error trying to change usb0NoMount value to 1 for copy")
+                                return(False)
+                        fp.close()                        
+                    return(True)
                 else:
                     logging.info("nothing copied all done")
-                    return False
+                    if NoMountOrig == 0:
+                        open('/usr/local/connectbox/brand.txt', "a") as fp:
+                        m = fp.read()
+                        if 'usb0NoMount":1' in m:
+                            x = str(m).find("usb0NoMount")
+                            if x>0:
+                                m[x+13:x+13] = "1"
+                                fp.write(m)
+                            else:
+                                fp.close()
+                                logging.info("Error trying to change usb0NoMount value to 1 for copy")
+                                return(False)
+                        fp.close()                        
+                    return(False)
             else:
                 logging.info("failed destination path")
-                return False
+                if NoMountOrig == 0:
+                    open('/usr/local/connectbox/brand.txt', "a") as fp:
+                    m = fp.read()
+                    if 'usb0NoMount":1' in m:
+                        x = str(m).find("usb0NoMount")
+                        if x>0:
+                            m[x+13:x+13] = "1"
+                            fp.write(m)
+                        else:
+                            fp.close()
+                            logging.info("Error trying to change usb0NoMount value to 1 for copy")
+                            return(False)
+                    fp.close()                        
+                return(False)
         else:
             logging.info("there was not a /content/ directory on the USB key")
-            return False
+            if NoMountOrig == 0:
+                open('/usr/local/connectbox/brand.txt', "a") as fp:
+                m = fp.read()
+                if 'usb0NoMount":1' in m:
+                    x = str(m).find("usb0NoMount")
+                    if x>0:
+                        m[x+13:x+13] = "1"
+                        fp.write(m)
+                    else:
+                        fp.close()
+                        logging.info("Error trying to change usb0NoMount value to 1 for copy")
+                        return(False)
+                fp.close()                        
+            return(False)
 
     def checkSpace(self, sourcePath='/media/usb11', destPath='/media/usb0', sourdest=1):
         '''
@@ -164,7 +228,7 @@ class USB:
                 logging.info("total source size:"+str(sourceSize)+"  bytes, total destination size "+str(destSize))
                 return(destSize, sourceSize)
         logging.info("total source size:"+str(sourceSize)+"  bytes, total destination size "+str(destSize))
-        return (destSize, sourceSize)
+        return(destSize, sourceSize)
 
     # pylint: disable=unused-variable
     # Looks like this isn't summing subdirectories?
@@ -181,7 +245,7 @@ class USB:
             for f in filenames:
                 fp = os.path.join(dirpath, f)
                 total_size += os.path.getsize(fp)
-        return total_size
+        return(total_size)
 
     @staticmethod
     def getFreeSpace(path='/media/usb0'):
@@ -195,9 +259,10 @@ class USB:
         # this is the cushion of space we want to leave free on our internal card
         freeSpaceCushion = 1073741824  # 1 GiB
         stat = os.statvfs(path)
-        free = stat.f_bfree * stat.f_bsize
+        free = stat.f_bavail * stat.f_frsize
         adjustedFree = free - freeSpaceCushion
-        return adjustedFree
+        if adjustedFree< 0 : adjustedFree = 0
+        return(adjustedFree)
 
     def moveMount(self, devMount='/dev/sda1', curMount='/media/usb0', destMount='/media/usb11'):
         '''
@@ -238,9 +303,9 @@ class USB:
             fp.close()
             time.sleep(2)  # give time for Pause of the Mount
             self.unmount(curMount)
-            return self.mount(devMount, destMount)
+            return(self.mount(devMount, destMount))
         else:
-            return x
+            return(x)
 
 
     def getDev(self, curMount):
@@ -260,7 +325,7 @@ class USB:
                 break
             else:
                 x = ""
-        return x
+        return(x)
 
 
 
@@ -282,6 +347,6 @@ class USB:
                 break
             else:
                 x = ""
-        return x
+        return(x)
 
 
