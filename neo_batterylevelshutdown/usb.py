@@ -69,7 +69,7 @@ class USB:
         with open('/usr/local/connectbox/brand.txt', "a") as fp:
             m = fp.read()
             if 'usb0NoMount":0' in m:
-                NoMountOrig = 0x                                #Hang on to the original value to restore as needed
+                NoMountOrig = 0                                #Hang on to the original value to restore as needed
                 x = str(m).find("usb0NoMount")
                 if x>0:
                     m[x+13:x+13] = "1"
@@ -120,8 +120,8 @@ class USB:
                                 raise Error(errors)
                         if not errors:
                             y = 1
-                        logging.info("Done copying to: "+destPath+b)
-                       else:
+                            logging.info("Done copying to: "+destPath+b)
+                        else:
                             logging.info("Done copying but errored: ",errors)
 #   Find the next USB key in the system to copy to destination
                     if a != '/media/usb0':
@@ -135,7 +135,7 @@ class USB:
                 if (y == 1):
                     logging.info("Everything copied all done")
                     if NoMountOrig == 0:
-                        open('/usr/local/connectbox/brand.txt', "a") as fp:
+                        fp=open('/usr/local/connectbox/brand.txt', "a")
                         m = fp.read()
                         if 'usb0NoMount":1' in m:
                             x = str(m).find("usb0NoMount")
@@ -151,7 +151,7 @@ class USB:
                 else:
                     logging.info("nothing copied all done")
                     if NoMountOrig == 0:
-                        open('/usr/local/connectbox/brand.txt', "a") as fp:
+                        fp = open('/usr/local/connectbox/brand.txt', "a") fp
                         m = fp.read()
                         if 'usb0NoMount":1' in m:
                             x = str(m).find("usb0NoMount")
@@ -167,7 +167,7 @@ class USB:
             else:
                 logging.info("failed destination path")
                 if NoMountOrig == 0:
-                    open('/usr/local/connectbox/brand.txt', "a") as fp:
+                    fp = open('/usr/local/connectbox/brand.txt', "a")
                     m = fp.read()
                     if 'usb0NoMount":1' in m:
                         x = str(m).find("usb0NoMount")
@@ -183,7 +183,7 @@ class USB:
         else:
             logging.info("there was not a /content/ directory on the USB key")
             if NoMountOrig == 0:
-                open('/usr/local/connectbox/brand.txt', "a") as fp:
+                fp = open('/usr/local/connectbox/brand.txt', "a")
                 m = fp.read()
                 if 'usb0NoMount":1' in m:
                     x = str(m).find("usb0NoMount")
