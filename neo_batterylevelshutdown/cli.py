@@ -334,7 +334,7 @@ def getNetworkClass():
     a = ""
     b = ""
     logging.debug("starting the get network class tool of cli.py on the battery page")
-    res = os.popen("lshw -c network").read()
+    res = os.popen("lshw -c Network").read()
     i=3
     if "wlan" in res:
         r = res.split("wlan")
@@ -357,7 +357,7 @@ def getNetworkClass():
             while i>1:
                 r[len(r)-i] = r[len(r)-i+1]
                 i -=1
-            s = r.pop()                                           #remove the last item in the list
+            s = r.pop(len(r)-1)                                       #remove the last item in the list
             i = len(r)
     logging.info("We finished the wlan lookup and are now going to edit the files.")
     AP = ""                                                         #access point interface
@@ -369,68 +369,58 @@ def getNetworkClass():
         logging.info("single interface wlan"+a+" with driver "+b)
         # now we need to update the files for a single AP and no client
         AP = a;
-        res = os.popen("ip link show "+AP).read()
-        x = res.find("permaddr:")
-        if ( x > 0 ):
-            addr = res[(x+9):(x+26)]
-        else:
-            x = res.find("link/ether")
-            if (x > 0):
-                addr = res[(x+11):(x+27)]
-            else:
-                addr = 0
-        if (addr > 0):
-        # now that we have the AP file lets setup the /etc/systemd/network/10-wlanX.link file
-            d = "/etc/systemd/network/10-"+AP+".link"
-            try:
-                f = open(d,'r')
-                f.close()
-            except:
-                f = open(d, "w")
-                f.write("\n[Match]\nMACAddress="+dap+"\n[Link]\nName="+AP+"\nMACAddressPolicy=random\n")
-                f.close()
-                os.sync()
-                res=os.popen("update-initramfs -u")
-                os.sync()
-        rbt = fixfiles(AP,CI)                                       #Go for fixing all the file entries
-        f = open(progress_file, "w")
-        f.write("rewrite_netfiles_done")
-        f.close()
-        os.sync()
-        return(rbt)
 
     elif len(netwk) > 1:                                            #multiple wlan's so both AP and client interfaces
         logging.info("wlan"+netwk[0][0]+" with driver "+netwk[0][1])
         logging.info("wlan"+netwk[1][0]+" with driver "+netwk[1][1])
             # we have an rtl driver on this first wlan
-        if "rtl" in netwk[0][1]:                                    #if we have an rtl on the first wlan we will use it for AP
+        if "rtl88" in netwk[0][1]:                                  #if we have an rtl on the first wlan we will use it for AP
             AP = netwk[0][0]
             CI = netwk[1][0]
             #regardless of what we have there since its RTL-X we will use it for AP since we have no others
-        if "rtl" in netwk[1][1]:                                    #if we have an rtl on the second wlan we will use it for AP
-            if AP== "":
-                AP = netwk[1][0]                                    #interface 2 has the rtl and will be AP
-                CI = netwk[0][0]                                    #interface 1 is on board or other andd will be the client side for network
-                if "8812" in netwk[1][1] or "8192" in netwk[1][1] or "88XX" in netwk[1][1] or "8852" in netwk[1][1]:
-                    AP = netwk[1][0]                                #intreface 2 will be the Client network connection even if it is an rtl device
-                    CI = netwk[0][0]
+        if "rtl88" in netwk[1][1]:                                  #if we have an rtl on the second wlan we will use it for AP
+            AP = netwk[1][0]                                    #interface 2 has the rtl and will be AP
+            CI = netwk[0][0]                                    #interface 1 is on board or other andd will be the client side for network
+
         logging.info("AP will be: wlan"+AP+" etherneet facing is: wlan"+CI)
         if len(netwk) >=3:
             logging.info("we have more interfaces so they must be manually managed") # if we have more than 2 interfaces then they must be manually managed. rbt = fixfiles(AP,CI) #Go for fixing all the file entries 
             return(1)
-        else:
-            rbt = fixfiles(AP,CI)
-            f = open(progress_file, "w")
-            f.write("rewrite_netfiles_done")
-            f.close()
-            os.sync()
-            return(rbt)
+
     else:                                                           # we don't have even 1 interface
         logging.info("We have no wlan interfaces we can't function this way, rebooting to try to find the device")
         return(1)
 
+    res = os.popen("ip link show "+AP).read()
+    x = res.find("permaddr:")
+    if ( x > 0 ):
+        addr = res[(x+9):(x+26)]
+    else:
+         x = res.find("link/ether")
+         if (x > 0):
+             addr = res[(x+11):(x+27)]
+         else:
+             addr = 0
+    if (addr > 0):
+    # now that we have the AP file lets setup the /etc/systemd/network/10-wlanX.link file
+         d = "/etc/systemd/network/10-"+AP+".link"
+         try:
+             f = open(d,'r')
+             f.close()
+         except:
+             f = open(d, "w")
+             f.write("\n[Match]\nMACAddress="+dap+"\n[Link]\nName="+AP+"\nMACAddressPolicy=random\n")
+             f.close()
+             os.sync()
+             res=os.popen("update-initramfs -u")
+             os.sync()
+    rbt = fixfiles(AP,CI)                                       #Go for fixing all the file entries
 
-
+    f = open(progress_file, "w")
+    f.write("rewrite_netfiles_done")
+    f.close()
+    os.sync()
+    return(rbt)
 
 
 @click.command()
