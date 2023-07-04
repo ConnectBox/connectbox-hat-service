@@ -151,7 +151,7 @@ class USB:
                 else:
                     logging.info("nothing copied all done")
                     if NoMountOrig == 0:
-                        fp = open('/usr/local/connectbox/brand.txt', "a") fp
+                        fp = open('/usr/local/connectbox/brand.txt', "a")
                         m = fp.read()
                         if 'usb0NoMount":1' in m:
                             x = str(m).find("usb0NoMount")
