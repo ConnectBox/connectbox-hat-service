@@ -120,8 +120,14 @@ def getDisplayClass(hatClass):
 
 
 def fixfiles(a, c):
-# This function is called to fix the files and restart the network interfaces based on what we have loaded.  AP represents the Wlan that will serve as the Access point.  CI is the ethernet interface which may or may not be there
-# in a standard configuration. The values of a and c are numbers only.
+# This function is called to fix the files and restart the network daemons (if neeeded) based on what we have loaded.  
+#  AP represents the Wlan that will serve as the Access point (passed in variable "a").  
+#  CI is the ethernet interface which may or may not be there (passed in variable "c")
+#  (Note: the values of a and c are numbers only.)
+
+#  At the end of this function, wificonf.txt is written and reflects the settings in ALL required files
+#   so if it is correct is wificonfig.txt, the supporting files are correct.
+
     logging.debug("Entering fix files")
 
     at = ""
@@ -134,6 +140,7 @@ def fixfiles(a, c):
     except:
         pass
     logging.info("wificonf.txt holds "+ct[0]+" and "+ct[1]+" for detected paramaters (AP, Client) "+a+" and "+c)
+    
     if ("AccessPointIF=wlan"+ a) == ct[0] and (("ClientIF=wlan"+ c == ct[1] and c!="") | (c == "" and ct[1] == "ClientIF=")):
         logging.info("Skipped file reconfiguration as the configuration is the same")
         os.system("ifup wlan"+a)   # restart wlan ... other restarts needed??n
@@ -279,6 +286,7 @@ def fixfiles(a, c):
     logging.debug("We have finished the temp /etc/dhcpcd.tmp file")
 
 #  Now lets make sure we write out the configuration for future
+#  (wificonf.txt reflects contents of all files which might need changes)
     try:
         f = open("/usr/local/connectbox/wificonf.txt", 'w')
         f.write("AccessPointIF=wlan"+ a +"\n")
@@ -382,7 +390,7 @@ def getNetworkClass():
             AP = netwk[1][0]                                    #interface 2 has the rtl and will be AP
             CI = netwk[0][0]                                    #interface 1 is on board or other andd will be the client side for network
 
-        logging.info("AP will be: wlan"+AP+" etherneet facing is: wlan"+CI)
+        logging.info("AP will be: wlan"+AP+" ethernet facing is: wlan"+CI)
         if len(netwk) >=3:
             logging.info("we have more interfaces so they must be manually managed") # if we have more than 2 interfaces then they must be manually managed. rbt = fixfiles(AP,CI) #Go for fixing all the file entries 
             return(1)
@@ -472,26 +480,27 @@ def main(verbose):
     GPIO.setwarnings(False)
 
 # Go find the netowrk interfaces and seteup the wans
-    if getNetworkClass():        #sets up the AP and Client interfaces if it returns a 1 we need  to shutdown and start over
-        logging.info("getNetworkClass  asked for a reboot \g\g")
-        GPIO.cleanup()       # clean up GPIO on  reboot
-        os.sync()
-        time.sleep(2)
-        os.system("shutdown -r now")
-    else:
-      logging.debug("Finished netowrk class")
-      logging.info("Restart wlan0 and wlan1 interfaces")
-      os.system("ifconfig wlan0 up")
-      os.system("ifconfig wlan1 up")
+#    if getNetworkClass():        #sets up the AP and Client interfaces if it returns a 1 we need  to shutdown and start over
+#        logging.info("getNetworkClass  asked for a reboot \g\g")
+#        GPIO.cleanup()       # clean up GPIO on  reboot
+#        os.sync()
+#        time.sleep(2)
+#        os.system("shutdown -r now")
+#    else:
+#      logging.debug("Finished netowrk class")
+#     logging.info("Restart wlan0 and wlan1 interfaces")
+#      os.system("ifconfig wlan0 up")
+#      os.system("ifconfig wlan1 up")
 
-      hatClass = getHATClass()
-      displayClass =getDisplayClass(hatClass)
-      logging.info("Finished display class")
-      logging.info("writing running to progress_file")
-    f = open(progress_file, "w")
-    f.write("running")
-    f.close()
-    os.sync()
+#      logging.info("Finished display class")
+#      logging.info("writing running to progress_file")
+#    f = open(progress_file, "w")
+#    f.write("running")
+#   f.close()
+#    os.sync()
+
+    hatClass = getHATClass()
+    displayClass =getDisplayClass(hatClass)
 
 #    logging.debug("display Class is: "+str(displayClass))
 #    logging.debug("finished display class starting main loop")
