@@ -11,6 +11,8 @@ import os.path
 import io
 import sys
 import time
+import subprocess
+
 
 #JRA - 011322
 #import smbus2
@@ -182,15 +184,43 @@ class BasePhysicalHAT:
     # End of the OTG interrupt handler.......
 
 
+    def check_AP_up(self):
+        f = open("/usr/local/connectbox/wificonf.txt", "r")
+        wifi = f.read()
+        f.close()
+        apwifi = wifi.partition("AccessPointIF=")[2].split("\n")[0]
+        AP = int(apwifi.split("wlan")[1])
+        wlanx = "wlan"+str(AP)
+        cmd = "iwconfig"
+        rv = subprocess.check_output(cmd)
+        rvs = rv.decode("utf-8").split(wlanx)
+
+        if (len(rvs) >= 2):       # rvs is an array split on wlanx    
+            wlanx_flags = rvs[1].split("Mode:Master")
+            if (len(wlanx_flags)) > 1:
+    # we are up
+                return(1)
+    # we are not up... either iwconfig has no wlanAP or the wlanAP Mode: is wrong    
+        return (0)  
+
+
+
     def blinkLED(self, times, flashDelay=0.3):
-        for _ in range(0, times):
-            GPIO.output(self.PIN_LED, GPIO.HIGH)
-            time.sleep(flashDelay)
-            GPIO.output(self.PIN_LED, GPIO.LOW)
-            time.sleep(flashDelay)
+        if self.check_AP_up() == 1:
+            for _ in range(0, times):
+                GPIO.output(self.PIN_LED, GPIO.HIGH)
+                time.sleep(flashDelay)
+                GPIO.output(self.PIN_LED, GPIO.LOW)
+                time.sleep(flashDelay)
+        else:
+             GPIO.output(self.PIN_LED, GPIO.HIGH)
+           
 
     def solidLED(self):
-        GPIO.output(self.PIN_LED, GPIO.LOW)
+        if self.check_AP_up() == 1:
+            GPIO.output(self.PIN_LED, GPIO.LOW)
+        else:    
+            GPIO.output(self.PIN_LED, GPIO.HIGH)
 
 
 class DummyHAT:
