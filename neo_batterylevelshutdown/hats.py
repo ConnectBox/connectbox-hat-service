@@ -189,7 +189,10 @@ class BasePhysicalHAT:
         wifi = f.read()
         f.close()
         apwifi = wifi.partition("AccessPointIF=")[2].split("\n")[0]
-        AP = int(apwifi.split("wlan")[1])
+        try:
+            AP = int(apwifi.split("wlan")[1])
+        except:
+            return (0)    
         wlanx = "wlan"+str(AP)
         cmd = "iwconfig"
         rv = subprocess.check_output(cmd)
