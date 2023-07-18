@@ -226,15 +226,20 @@ class BasePhysicalHAT:
             GPIO.output(self.PIN_LED, GPIO.HIGH)
 
 
-class DummyHAT:
+class DummyHAT(BasePhysicalHAT):
 
     def __init__(self, displayClass):
+        super().__init__(displayClass)
         pass
 
     # pylint: disable=no-self-use
     # This is a standard interface - it's ok not to use self for a dummy impl
     def mainLoop(self):
         logging.info("There is no HAT, so there's nothing to do using DummyHat")
+        logging.info("globals.device_type = "+globals.device_type)
+        while True:
+            self.solidLED()
+            time.sleep(3)
 
 
 class q1y2018HAT(BasePhysicalHAT):
