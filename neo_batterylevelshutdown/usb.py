@@ -122,7 +122,7 @@ class USB:
                         shutil.copystat(files_in_dir, files_to_dir)
                     except OSError as err:
                         if err.winerror is None:
-                        errors.extend(files_in_dir, files_to_dir, str(err))
+                            errors.extend(files_in_dir, files_to_dir, str(err))
                             y = 1
                     if y != 1:
                         logging.info("Done copying to: "+a+" to: "+destPath+b)
@@ -140,7 +140,7 @@ class USB:
                             a = "/media/usb0"
                     x = ord(a[-1]) + 1
                     a = '/media/usb'+chr(x)
-                    while (not os.path.exists(a+b) and (x < ord(':')) or (a in sourcepath):
+                    while (not os.path.exists(a+b) and (x < ord(':')) or (a in sourcepath)):
                         x = ord(a[-1]) + 1
                         a = "/media/usb"+chr(x)
  
@@ -153,8 +153,8 @@ class USB:
         else: 
             y = 1
             logging.info("Error on the call of copy due to destination not being a directory or source indicie out of range ")
-            if NoMountOrig = 0:
-                open('/usr/local/connectbox/brand.txt', "a") as fp:
+            if NoMountOrig == 0:
+                fp = open('/usr/local/connectbox/brand.txt', "a")
                 m = fp.read()
                 if 'usb0NoMount":1' in m:
                     x = str(m).find("usb0NoMount")
@@ -266,7 +266,7 @@ class USB:
         '''
 
         if x:
-            open('/usr/local/connectbox/brand.txt', "a") as fp:
+            fp = open('/usr/local/connectbox/brand.txt', "a")
             m = fp.read()
             if 'usb0NoMount":0' in m:
                 NoMountOrig = 0                                #Hang on to the original value to restore as needed
@@ -290,7 +290,7 @@ class USB:
             if y > 0:
                 logging.info("Error trying to  mount "+str(devMount)+"  error: "+str(y))                
             if NoMountOrig == 0:
-                open('/usr/local/connectbox/brand.txt', "a") as fp:
+                fp = open('/usr/local/connectbox/brand.txt', "a")
                 m = fp.read()
                 if 'usb0NoMount":0' in m:
                     NoMountOrig = 0                                #Hang on to the original value to restore as needed
@@ -310,7 +310,8 @@ class USB:
                         logging.info("usb0NoMount not found in brand.txt")
                         fp.close()
                         return(False)
-            else: NoMountOrig = 1                               #Hang on to the original value to restore as needed
+            else: 
+                NoMountOrig = 1                               #Hang on to the original value to restore as needed
                 fp.close()
                 time.sleep(2)  # give time for Pause of the Mount
     

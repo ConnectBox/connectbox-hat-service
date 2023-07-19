@@ -29,7 +29,7 @@ class BUTTONS:
         self.l = []
 
 
-    def checkReturn(self, x)
+    def checkReturn(self, x):
         with open('/usr/local/connectbox/brand.txt', "a") as fp:
             m = fp.read()
             if (('usb0NoMount":1' in m) and (x != 1)):
@@ -42,7 +42,8 @@ class BUTTONS:
                     os.sync()
                     logging.info("Error trying to change usb0NoMount value to 1 for copy")
                     return(False)
-            else: x = 0                               #Hang on to the original value to restore as needed
+            else: 
+                x = 0                               #Hang on to the original value to restore as needed
                 fp.close()
                 os.sync()
                 time.sleep(2)  # give time for Pause of the Mount
@@ -113,7 +114,7 @@ class BUTTONS:
                     self.display.pageStack = 'error'
                     logging.info("move of usb0 to usb11 failed")
                     checkReturn(self, NoMountOrig)
-                   return
+                    return
             logging.info("Preparing to check space of source "+(usb.getMount(dev)))
             self.display.showWaitPage("Checking Space\n    "+str(dev))
             (d,s) = usb.checkSpace(usb.getMount(dev))                           # verify that source is smaller than destination
@@ -421,8 +422,6 @@ class BUTTONS:
             self.display.pageStack = 'success'
             self.display.showSuccessPage()
             logging.debug("Success page now deleting the PauseMount file")
-            except:
-                pass
             checkReturn(self, NoMountOrig)
             return
 
