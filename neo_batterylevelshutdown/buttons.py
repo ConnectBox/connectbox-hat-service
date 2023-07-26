@@ -389,7 +389,9 @@ class BUTTONS:
             # We finished the umounts
             self.display.pageStack = 'success'
             self.display.showSuccessPage()
-c            logging.debug("Success page now deleting the PauseMount file")
+
+            logging.debug("Success page now deleting the PauseMount file")
+
             checkReturn(self, NoMountOrig)
             return(0)
 

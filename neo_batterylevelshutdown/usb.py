@@ -88,6 +88,7 @@ class USB:
                         x = logging.info("Copying tree: "+files_in_dir+" to: "+files_to_dir)
                         shutil.copytree(files_in_dir, files_to_dir, symlinks=False, ignore_dangling_symlinks=True)
                         logging.info("Used copytree to move files")
+
                     else:
                         logging.info("Copying: "+files_in_dir+" to: "+files_to_dir)
                         x = shutil.copy2(files_in_dir, files_to_dir)
