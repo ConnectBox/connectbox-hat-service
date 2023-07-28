@@ -52,11 +52,11 @@ class PageDisplayImage:
         #device that is offending
         if self.devicename != "":
             if self.imageName=='wait.png':
-                d.text((5, 30), "{:<}".format(self.devicename), font=font14, fill="black")
+                d.text((5, 15), "{:<}".format(self.devicename), font=font14, fill="black")
             elif self.imageName== 'error.png':
-                d.text((5, 30), "{:<}".format(self.devicename), font=font14, fill="black")
+                d.text((5, 20), "{:<}".format(self.devicename), font=font14, fill="black")
             else:
-                d.text((33, 38), "{:<}".format(self.devicename), font=font14, fill="black")
+                d.text((33, 20), "{:<}".format(self.devicename), font=font14, fill="black")
         out = Image.alpha_composite(img, txt)
         self.device.display(out.convert(self.device.mode))
         self.device.show()
