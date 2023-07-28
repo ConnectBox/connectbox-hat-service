@@ -135,8 +135,8 @@ class USB:
         try:
             stat = os.statvfs(destPath)
         except:
-            stat = stat.f_bfree = 0
-            stat = stat.f_bsize=0
+            stat.f_bfree = 0
+            stat.stat.f_bsize=0
         logging.info("Codfmpleted the os.statvfs of: "+destPath)
         free = stat.f_bfree * stat.f_bsize
         adjustedFree = free - freeSpaceCushion
@@ -257,7 +257,7 @@ class USB:
             logging.info("Error trying to  unmount "+str(curMount)+"  error: "+str(y))
         else:
             logging.info("Unmount succeeded")
-        y = usb.mount(x, destMount)
+        y = subprocess.call(['mount',"-t", "auto", "-o", "utf8", x, destMount])
         if y > 0:
             logging.info("Error trying to  mount "+str(x)+"  error: "+str(y))
         else:

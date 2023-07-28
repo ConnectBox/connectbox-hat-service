@@ -31,15 +31,19 @@ class BUTTONS:
 
 
     def checkReturn(self, val):
-        fp = open('/usr/local/connectbox/brand.txt', "r+")
+        fp = open('/usr/local/connectbox/brand.txt', "r")
         m = str(fp.read())
-        if (('usb0NoMount":1' in m) and (x != 1)):
+        if (('usb0NoMount": 1' in m)  and (x != 1)):
             x = m.find("usb0NoMount")
             if x >= 0:
-                x = x + 13
-                m = m[0:x-1]+str(val)+n[x+1:]
+                x = x + 14
+                if m[x] != '1' : m = m[0:(x-2)]+" "+m[(x-1):]
+                m = m[0:(x-1)]+str(val)+m[(x+1):]
                 try:
+                    fp.close()
+                    fp = open("/usr/local/connectbox/brand.txt", "w")
                     fp.write(m)
+                    logging.info("Wrote File brand.txt file as : "+str(m))
                     fp.close()
                     os.sync()
                 except:
@@ -83,12 +87,11 @@ class BUTTONS:
 
             logging.info("copy from USB")
             x = "a"
-            x = usb.isUsbPresent('/dev/sd'+x+"1")                               # check to see if usb is inserted
-            if x == False:
-                logging.info("No USB key found ")
-                self.display.showNoUsbPage()                                    # if not, alert as this is required
+            while (usb.isUsbPresent('/dev/sd'+x+"1") == False):                 # check to see if usb is inserted
+                x = chr(ord(x)+1)
                 self.display.pageStack = 'error'
-                return                                                          # cycle back to menu
+                self.display.showInsertUsbPage()
+                if x > "j" : x = "a" 
             dev = '/dev/sd'+x+'1'
             self.pageStack = 'wait'                                             # Dont allow the display to turn off
             self.display.showWaitPage("Checking Space")
@@ -97,18 +100,22 @@ class BUTTONS:
             logging.info("mounting location is : "+mnt)
             if mnt == '/media/usb0':
                 logging.info("we found were mounted on usb0 so we need to move")
-                fp = open('/usr/local/connectbox/brand.txt', "r+")
+                fp = open('/usr/local/connectbox/brand.txt', "r")
                 m = str(fp.read())
-                if 'usb0NoMount":0' in m:
-                    NoMountOrig = 0                                              #Hang on to the original value to restore as needed
+                logging.info("read /usr/local/connectbox/brand.txt : " + str(m))
+                if ('usb0NoMount": 0' in m):
+                    NoMountOrig = 0                                            #Hang on to the original value to restore as needed
+                    logging.info('Found usb0NoMount": 0')
                     x = m.find("usb0NoMount")
                     if x >= 0:
                         logging.info("Found the usb0NoMount at location: "+str(x))
-                        x = x + 13
+                        x = x + 14
                         m = m[0:x-1]+"1"+m[x+1:]
                         try:
+                            fp.close()
+                            fp = open("/usr/local/connectbox/brand.txt", "w")
                             fp.write(m)
-                            logging.info("Wrote File")
+                            logging.info("Wrote File brand.txt file as :"+str(m))
                             fp.close()
                             os.sync()
                         except:
@@ -119,12 +126,13 @@ class BUTTONS:
                         logging.info("Error trying to change usb0NoMount value to 1 for copy")
                         return(False)
                 else:
-                    fp.close()
-                    NoMountOirg = 1
-                    logging.info("NoMountOrig is 1 due to the value being 1 in brand")    #Hang on to the original value to restore as needed
+                        fp.close()
+               	        NoMountOirg = 1
+               	        logging.info("NoMountOrig is 1 due to the value being 1 in brand")    #Hang on to the original value to restore as needed
+
                 time.sleep(2)  # give time for Pause of the Mount
                 logging.info("Moving /media/usb0 to /media/usb11 to be able to copy")
-                if (not os.path.exists('/media/usb11')):                            # check that usb11 exsists to be able to move the mount
+                if (not os.path.exists('/media/usb11')):                            # check that usb11 exists to be able to move the mount
                     os.mkdir('/media/usb11')                                        # make the directory
                 if (not (usb.moveMount(mnt, '/media/usb11'))== 0):                      # see if our remount was successful
                     self.display.showErrorPage("Moving Mount")                      # if not generate error page and exit
@@ -138,14 +146,44 @@ class BUTTONS:
                         logging.info("post mount shows that the mount didn't finish correctly")
                         return(False)
                     logging.info("move mount completed correctly and were good to go")
+
             else:
+                logging.info("We are not mounted on /media/usb0")
+                fp = open('/usr/local/connectbox/brand.txt', "r")
+                m = str(fp.read())
+                if ('usb0NoMount": 0' in m):
+                    NoMountOrig = 0                                              #Hang on to the original value to restore as needed
+                    x = m.find("usb0NoMount")
+                    if x >= 0:
+                        logging.info("Found the usb0NoMount at location: "+str(x))
+                        x = x + 14
+                        m = m[0:x-1]+"1"+m[x+1:]
+                        try:
+                            fp.close()
+                            fp = open("/usr/local/connectbox/brand.txt", "w")
+                            fp.write(m)
+                            logging.info("Wrote File brand.txt"+str(m))
+                            fp.close()
+                            os.sync()
+                        except:
+                            logging.info("couldn't write the info back")
+                            fp.close()
+                    else:
+                        fp.close()
+                        logging.info("Error trying to change usb0NoMount value to 1 for copy")
+                        return(False)
+                else:
+                        fp.close()
+               	        NoMountOirg = 1
+               	        logging.info("NoMountOrig is 1 due to the value being 1 in brand")    #Hang on to the original value to restore as needed
+                time.sleep(2)  # give time for Pause of the Mount
                 logging.info("Starting to find the  mount point for : "+dev)
                 mnt = usb.getMount(dev)
                 logging.info("mount is not USB0 but is : "+mnt)
                 if mnt == "":
                     x = 11
                     logging.info("we were not mounted as /media/usb0 and we were supposed to be mouted but are not")
-                    while (not(os.path.exists("/media/usb"+str(x)))) and x > 1:
+                    while (os.path.exists("/media/usb"+str(x))) and x > 1:
                         x -= 1
                     mnt = "/media/usb"+str(x)
                     if (not (os.path.exists(mnt))):
@@ -155,7 +193,7 @@ class BUTTONS:
 
             logging.info("Preparing to check space of source "+mnt)
             if os.path.exists("/media/usb0"+ext):
-                logging.info("Destination path already exsistss erasing before copy")
+                logging.info("Destination path already existss erasing before copy")
                 try:
                     x = shutil.rmtree("/media/usb0"+ext)
                 except:
@@ -205,15 +243,15 @@ class BUTTONS:
                     pass
                 fp = open('/usr/local/connectbox/brand.txt', "r+")
                 m = str(fp.read())
-                if (('usb0NoMount":1' in m) and (NoMountOrig == 0)):
+                if (('usb0NoMount": 1' in m) and (NoMountOrig == 0)):
                     x = m.find("usb0NoMount")
                     if x >= 0:
                          logging.info("Found the usb0NoMount at location: "+str(x))
-                         x = x + 13
+                         x = x + 14
                          m = m[0:x-1]+"0"+m[x+1:]
                          try:
                             fp.write(m)
-                            logging.info("Wrote File")
+                            logging.info("Wrote File brand.txt as : "+str(m))
                             fp.close()
                             os.sync()
                          except:
@@ -271,21 +309,23 @@ class BUTTONS:
             dev = '/dev/sd'+chr(z)+'1'
             while (usb.isUsbPresent(dev) == False):                         # only checks for one USB key
                 self.display.pageStack = 'error'
-                self.display.showInsertUsbPage()                            # tell them to inert new keys
-            try:
-                dev = "/dev/sd"+(usb.isUsbPresent(dev))+"1"
-            except:
-                self.display.showNoUsbPage()                                    # if not, alert as this is required
-                self.display.pageStack = 'error'
+                self.display.showInsertUsbPage()
+                z += 1
+                if z > ord("j"):
+                    z = ord("a")
+                dev = '/dev/sd'+chr(z)+'1'                                  # tell them to inert new keys
 
-            fp = open('/usr/local/connectbox/brand.txt', "r+")
+            logging.info("Found USB key at "+dev)
+            fp = open('/usr/local/connectbox/brand.txt', "r")
             m = str(fp.read())
-            if 'usb0NoMount":0' in m:
-                NoMountOrig = 0                                #Hang on to the original value to restore as needed
+            if 'usb0NoMount": 0' in m:
+                NoMountOrig = 0                                             #Hang on to the original value to restore as needed
                 x = str(m).find("usb0NoMount")
                 if x >= 0:
-                    x = x+ 13
+                    x = x+ 14
                     m = m[0:x-1]+"1"+m[x+1:]
+                    fp.close()
+                    fp = open('/usr/local/connectbox/brand.txt', "w")
                     fp.write(m)
                     fp.close()
                     os.sync()
@@ -295,15 +335,16 @@ class BUTTONS:
                     return(False)
             else:
                 fp.close()
-                NoMountOirg = 1                               #Hang on to the original value to restore as needed
+                NoMountOirg = 1                                              #Hang on to the original value to restore as needed
             self.display.pageStack = 'wait'
             self.display.showWaitPage("Checking Sizes")
 
             logging.debug("we have found at least one usb to copy to: "+dev)
 
-            if (usb.getMount(dev) == '/media/usb0'):                                  # if the key is mounted on '/media/usb0' then we have to move it.
+            dd = usb.getMount(dev)
+            if (dd == '/media/usb0'):                                               # if the key is mounted on '/media/usb0' then we have to move it.
                 logging.info("Moving /media/usb0 to /media/usb11 be able to copy")
-                if not os.path.exists('/media/usb11'):                              # check that usb11 exsists to be able to move the mount
+                if not os.path.exists('/media/usb11'):                              # check that usb11 exists to be able to move the mount
                     os.mkdir('/media/usb11')                                        # make the directory
                 if not usb.moveMount(dev, '/media/usb11'):                          # see if our remount was successful
                         self.display.showErrorPage("Moving Mount")                  # if not generate error page and exit
@@ -312,23 +353,34 @@ class BUTTONS:
                         checkReturn(self, NoMountOrig)
                         return(1)
                 else:
-                    if usb.getMount(dev) == "":
+                    if dd == "":
                         self.display.showErrorPage("USB not mounted")               # if not generate error page and exit
                         self.display.pageStack = 'error'
                         checkReturn(self, NoMountOrig)
                         return(1)
-            logging.info("We are getting the size for source: "+(usb.getMount(dev))+" and destination: "+dev)
-#            if os.path.isdir("/media/usb0"+ext):
-#            try:
-#                shutil.rmtree((dev+ext), ignore_errors=True)         #remove old data from /source/ directory
-#                except OSError:
-#                    logging.info("had a problem deleting the destination file: ",zz+ext)
-#                    checkReturn(self, NoMountOrig)
-#                    return
-            dd = usb.getMount(dev)
-            (d,s) = usb.checkSpace('/media/usb0', dd)                  # verify that source is smaller than destination
+            else:
+                if dd == "":
+                    if not os.path.exists("/media/usb11"):
+                        os.mkdir("/media/usb11")
+                    try:
+                        usb.mount(dev,'/media/usb11')
+                        dd = "/media/usb11"
+                    except:
+                        self.display.showErrorPage("USB not mounted")
+                        self.display.pageStack = 'error'
+                        return(1)
+
+            logging.info("We are getting the size for source: /media/usb0 and destination: "+dd)
+            if os.path.isdir(dd):
+                try:
+                    shutil.rmtree((dd+ext), ignore_errors=True)                        #remove old data from /source/ directory
+                except OSError:
+                    logging.info("had a problem deleting the destination file: ",+ext)
+                    checkReturn(self, NoMountOrig)
+                    return(1)
+            (d,s) = usb.checkSpace('/media/usb0', dd)                   # verify that source is smaller than destination
             logging.info("Space of Destination  is : "+str(d)+" , Source: "+str(s)+" at: "+dd)
-            if d<s or s==0:                                             #if destination free is less than source we don't have enough space
+            if d<s or s==0:                                            #if destination free is less than source we don't have enough space
                 if d<s: logging.info("source exceeds destination at"+dev+ext)
                 else: logging.info("source is 0 bytes in length so nothing to copy")
                 while usb.isUsbPresent(dev):
@@ -346,16 +398,14 @@ class BUTTONS:
                 logging.info("Space of Destination is ok for source to copy to "+dev+ext)
                 # we think we have keys to work with if we go forward from here. where the size is ok for the copy
                 logging.info("There is enough space so we will go forward with the copy")
-                a = dd
-                logging.info("starting to do the copy with device "+a+ext)
+                logging.info("starting to do the copy with device "+dd+ext)
                 self.display.showWaitPage("Copying Files\nSize:"+str(int(s/1000))+"MB")
-                if ((usb.copyFiles("/media/usb0",a, ext)) > 0 ):                     # see if we copied successfully
+                if ((usb.copyFiles("/media/usb0",dd, ext)) > 0 ):                     # see if we copied successfully
                     logging.info("failed the copy. display an error page")
                     self.display.showErrorPage("Failed Copy")                   # if not generate error page and exit
                     self.display.pageStack = 'error'
                     if usb.getMount(dev) == '/media/usb11':
-                        logging.info("since we moved the mount we want /media/usb0 back")
-                        usb.moveMount("/media/usb11", "/media/usb0")
+                        logging.info("we don't know the state of the mount so we just leave it")
                     checkReturn(self, NoMountOrig)
                     return(1)
                 else:
@@ -364,9 +414,6 @@ class BUTTONS:
                 os.sync()
                 usb.unmount(dd)                                                 #unmount the key
                 time.sleep(2)
-#                try: os.rmdir(ext)                                               #Remove the usb11 directory or whatever we had
-#                except:
-#                  pass
 
                 z = ord('a')
                 curDev='/dev/sda1'
@@ -390,8 +437,7 @@ class BUTTONS:
             self.display.pageStack = 'success'
             self.display.showSuccessPage()
 
-            logging.debug("Success page now deleting the PauseMount file")
-
+            logging.debug("Success page now restoring the Usb0NoMount flag")
             checkReturn(self, NoMountOrig)
             return(0)
 
