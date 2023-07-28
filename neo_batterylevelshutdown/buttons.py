@@ -73,15 +73,15 @@ class BUTTONS:
         usb = USB()
         if command == 'remove_usb':
             logging.debug("In remove usb page")
-            if usb.isUsbPresent():                                              # check to see if usb is inserted
+            while usb.isUsbPresent():                                              # check to see if usb is inserted
                 logging.debug("USB still present")
                 self.display.showRemoveUsbPage()                                # tell them to remove it if so
                 self.display.pageStack = 'removeUsb'                            # let handleButtonPress know to repeat
                 self.command_to_reference = 'remove_usb'                        # let executeCommands know what we want
-            else:                                                               # if they were good and removed USB
-                logging.debug("USB removed")
-                self.display.pageStack = 'success'                              # let out handleButtonPress know
-                self.display.showSuccessPage()                                  # display our success page
+                                                                                # if they were good and removed USB
+            logging.debug("USB removed")
+            self.display.pageStack = 'success'                                  # let out handleButtonPress know
+            self.display.showSuccessPage()                                      # display our success page
 
         elif command == 'copy_from_usb':
 
@@ -135,8 +135,8 @@ class BUTTONS:
                 if (not os.path.exists('/media/usb11')):                            # check that usb11 exists to be able to move the mount
                     os.mkdir('/media/usb11')                                        # make the directory
                 if (not (usb.moveMount(mnt, '/media/usb11'))== 0):                      # see if our remount was successful
-                    self.display.showErrorPage("Moving Mount")                      # if not generate error page and exit
                     self.display.pageStack = 'error'
+                    self.display.showErrorPage("Moving Mount")                      # if not generate error page and exit
                     logging.info("move of "+mnt+" to usb11 failed")
                     checkReturn(self, NoMountOrig)
                     return(False)
@@ -198,8 +198,8 @@ class BUTTONS:
                     x = shutil.rmtree("/media/usb0"+ext)
                 except:
                     logging.info("Errored outon the remaoval of the destination directory with: "+str(x))
-                    self.display.showErrorPage("Failed Copy")                   # if not generate error page and exit
                     self.display.pageStack = 'error'
+                    self.display.showErrorPage("Failed Copy")                   # if not generate error page and exit
                     return(1)
                 logging.info("Erase before copy Completed")
 
@@ -227,14 +227,17 @@ class BUTTONS:
                 self.display.showWaitPage("Copying Files\nSize:"+str(int(s/1000))+"MB")
                 if ((usb.copyFiles(a, "/media/usb0", ext)) > 0 ):                     # see if we copied successfully
                     logging.info("failed the copy. display an error page")
-                    self.display.showErrorPage("Failed Copy")                   # if not generate error page and exit
                     self.display.pageStack = 'error'
+                    self.display.showErrorPage("Failed Copy")                   # if not generate error page and exit
                     if usb.getMount(dev) == '/media/usb11':
                         logging.info("since we moved the mount we want /media/usb0 back")
                         usb.moveMount("/media/usb11", "/media/usb0")
                 else:
                     pass    						         # we have finished the copy so we want to unmount the media/usb11 and run on the internal
                 logging.info("Ok were going to clean up now")
+                self.display.pageStack = 'error'
+                self.display.showwaitPage("Copy Complete\nFinished Success")
+                time.sleep(4)
                 os.sync()
                 usb.unmount(ext)                                                 #unmount the key
                 time.sleep(2)
