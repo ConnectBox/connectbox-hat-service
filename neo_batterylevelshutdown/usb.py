@@ -7,7 +7,7 @@ import shutil
 
 class USB:
 
-    def __init__(self):
+    def __init__(self, hat_class):
         pass
 
 
@@ -27,7 +27,7 @@ class USB:
             logging.info("at position "+x+" key is "+str(z))
             if ((z != False) and (y == 0)):
                 logging.info("found  usb key at: "+x)
-                return(x)
+                return('/dev/sd'+x+"1")
             x = chr(ord(x)+1)
         return(False)                                                           #return the first USB key or 0 for none
 
@@ -85,14 +85,18 @@ class USB:
                 if files_to_dir[-1] != "/": files_t0_dir = files_to_dir + "/"
                 try:
                     if os.path.isdir(files_in_dir):
+                       self.hat.displayPowerOffTime = sys.maxsize
                         x = logging.info("Copying tree: "+files_in_dir+" to: "+files_to_dir)
                         shutil.copytree(files_in_dir, files_to_dir, symlinks=False, ignore_dangling_symlinks=True)
                         logging.info("Used copytree to move files")
+                        self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS
 
                     else:
+                       self.hat.displayPowerOffTime = sys.maxsize
                         logging.info("Copying: "+files_in_dir+" to: "+files_to_dir)
                         x = shutil.copy2(files_in_dir, files_to_dir)
                         logging.info("used copy2 to move files")
+                        self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS
                 except OSError as err:
                     logging.info("Copytree Errored out with error of: "+str(x)+" err: "+str(err))
                     y = 1

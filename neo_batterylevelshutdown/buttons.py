@@ -68,9 +68,11 @@ class BUTTONS:
         '''
 
         ext = "/content/"
+        if not(self.hats.batteryLevelAboveVoltage(self.hats.BATTERY_WARNING_VOLTAGE)):
+            return                                  # If low battery we can't do admin functions as we may run out of power.
 
         logging.debug("Execute Command: %s", command)
-        usb = USB()
+
         if command == 'remove_usb':
             logging.debug("In remove usb page")
             while usb.isUsbPresent():                                              # check to see if usb is inserted
@@ -87,13 +89,11 @@ class BUTTONS:
 
             logging.info("copy from USB")
             x = "a"
-            while (usb.isUsbPresent('/dev/sd'+x+"1") == False):                 # check to see if usb is inserted
-                x = chr(ord(x)+1)
-                self.display.pageStack = 'error'
+            if (usb.isUsbPresent('/dev/sd'+x+"1") == False):                    # check to see if usb is inserted
+                self.display.pageStack = 'insertUSB'
                 self.display.showInsertUsbPage()
-                if x > "j" : x = "a" 
-            dev = '/dev/sd'+x+'1'
-            self.pageStack = 'wait'                                             # Dont allow the display to turn off
+            dev = usb.isUsbPresent('/dev/sda1')
+            self.pageStack = 'checkSpace'                                       # Dont allow the display to turn off
             self.display.showWaitPage("Checking Space")
             logging.info("Using location "+dev+" as media copy location")
             mnt = usb.getMount(dev)
@@ -268,11 +268,11 @@ class BUTTONS:
                     fp.close()
                     logging.info("NoMountOrig is 1 due to the value being 1 in brand")    #Hang on to the original value to restore as needed
                 time.sleep(2)                                                       # give time for Pause of the Mount
-                while usb.isUsbPresent(dev):
+                if (usb.isUsbPresent(dev) != False):
                     self.display.showRemoveUsbPage()                               #show the remove usb page
                     self.display.pageStack = 'removeUsb'                           #show we removed the usb key
                     self.command_to_reference = 'remove_usb'
-                    while usb.isUsbPresent(dev):
+                    while (usb.isUsbPresent(dev) != False):
                         time.sleep(3)                                       #Wait for the key to be removed 
                 self.display.pageStack= "success"
                 self.display.showSuccessPage()
@@ -283,11 +283,11 @@ class BUTTONS:
 
         elif command == 'erase_folder':
             file_exists = False  # in regards to README.txt file
-            while usb.isUsbPresent():
+            if (usb.isUsbPresent() != False):
                 self.display.showRemoveUsbPage()                    #show the remove usb page
                 self.display.pageStack = 'removeUsb'                #show we removed the usb key
                 self.command_to_reference = 'remove_usb'
-                while usb.isUsbPresent():
+                while (usb.isUsbPresent() != False):
                     time.sleep(3)                                       #Wait for the key to be removed 
                 self.display.pageStack= "success"
                 self.display.showSuccessPage()
@@ -308,15 +308,12 @@ class BUTTONS:
 
         elif command == 'copy_to_usb':
             logging.debug("got to copy to usb code")
-            z = ord('a')                                                    # Z is the ordinal of the USB key in DEV
             dev = '/dev/sd'+chr(z)+'1'
             while (usb.isUsbPresent(dev) == False):                         # only checks for one USB key
-                self.display.pageStack = 'error'
+                self.display.pageStack = 'insertUSB'
                 self.display.showInsertUsbPage()
-                z += 1
-                if z > ord("j"):
-                    z = ord("a")
-                dev = '/dev/sd'+chr(z)+'1'                                  # tell them to inert new keys
+                time.sleep(2)
+            dev = isUsbPresent("/dev/sda1")                                  # tell them to inert new keys
 
             logging.info("Found USB key at "+dev)
             fp = open('/usr/local/connectbox/brand.txt', "r")
@@ -386,11 +383,11 @@ class BUTTONS:
             if d<s or s==0:                                            #if destination free is less than source we don't have enough space
                 if d<s: logging.info("source exceeds destination at"+dev+ext)
                 else: logging.info("source is 0 bytes in length so nothing to copy")
-                while usb.isUsbPresent(dev):
+                if usb.isUsbPresent(dev) != False:
                     self.display.showRemoveUsbPage()                    #show the remove usb page
                     self.display.pageStack = 'removeUsb'                #show we removed the usb key
                     self.command_to_reference = 'remove_usb'
-                    while usb.isUsbPresent(dev):
+                    while (usb.isUsbPresent(dev) != False):
                         time.sleep(3)                                   #Wait for the key to be removed 
                     self.display.pageStack= "success"
                     self.display.showSuccessPage()
@@ -421,7 +418,7 @@ class BUTTONS:
                 z = ord('a')
                 curDev='/dev/sda1'
                 while z < ord("k"):
-                    if usb.isUsbPresent(curDev):
+                    if (usb.isUsbPresent(curDev) != False):
                         if (usb.getMount(curDev) != ""):
                             try:
                                 usb.umount(usb.getMount(curDev))
@@ -432,7 +429,7 @@ class BUTTONS:
                         self.display.pageStack = 'removeUsb'                                  #show we removed the usb key
                         self.command_to_reference = 'remove_usb'
                         time.sleep(3)                                                         #Wait a second for the removeal
-                        while (usb.isUsbPresent(curDev)):
+                        while (usb.isUsbPresent(curDev) != False):
                             time.sleep(3)
                     z += 1                                                                    # lets look at the next one
                     curDev = '/dev/sd'+chr(z)+'1'                                             #create the next curdev
