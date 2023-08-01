@@ -198,6 +198,6 @@ def main(verbose):
     except KeyboardInterrupt:
             GPIO.cleanup()       # clean up GPIO on CTRL+C exit
 
-   
+
 if __name__ == "__main__":
     main()  # pylint: disable=no-value-for-parameter

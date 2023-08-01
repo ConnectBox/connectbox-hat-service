@@ -5,10 +5,10 @@ import sys
 import shutil
 import os
 import RPi.GPIO as GPIO
-from .usb import USB
 from . import page_display_image
 import time
 import neo_batterylevelshutdown.globals as globals
+import neo_batterylevelshutdown.usb as usb
 import logging
 
 DEBUG = True
@@ -60,22 +60,22 @@ class BUTTONS:
 
     # pylint: disable=too-many-branches, too-many-branches, too-many-return-statements, too-many-statements
     def executeCommands(self, command):
-      '''
-       This is where we will actually be executing the commands
-    
-       :param command: the command we want to execute
-       :return: Nothing
-      '''
+        '''
+         :This is where we will actually be executing the commands
+         :param command: the command we want to execute
+         :return: Nothing
+        '''
 
-       ext = "/content/"
-        if not (self.hats.batteryLevelAboveVoltage(self.hats.BATTERY_WARNING_VOLTAGE)):
+        ext = "/content/"
+
+        if not (self.hat.batteryLevelAboveVoltage(self.hat.BATTERY_WARNING_VOLTAGE)):
             return  # If low battery, we can't do admin functions as we may run out of power.
 
         logging.debug("Execute Command: %s", command)
 
         if command == 'remove_usb':
             logging.debug("In remove usb page")
-            while usb.isUsbPresent() != False     #check  to see if usb is inserted
+            while (usb.isUsbPresent() != False):     #check  to see if usb is inserted
                 logging.debug("USB still present")
                 self.display.showRemoveUsbPage()  # tell them to remove it if so
                 self.display.pageStack = 'removeUsb'  # let handleButtonPress know to repeat
@@ -119,9 +119,8 @@ class BUTTONS:
                 logging.info("NoMountOrig is 1 due to the value being 1 in brand")  # Hang on to the original value to restore as needed
             time.sleep(2)  # give time for Pause of the Mount
 
-
             x = "a"
-            if not (usb.isUsbPresent('/dev/sd' + x + "1") == False):  # check to see if usb is inserted
+            if not (usb.isUsbPresent ('/dev/sd' + x + "1") == False):  # check to see if usb is inserted
                 self.display.pageStack = 'insertUSB'
                 self.display.showInsertUsbPage()
                 while (usb.isUsbPresent() == False):
@@ -161,7 +160,7 @@ class BUTTONS:
                     mnt = "/media/usb" + str(x)
                     if not os.path.exists(mnt):
                         os.mkdir(mnt)
-                    if usb.mount(dev, mnt):
+                    if mount(dev, mnt):
                         logging.info("mounted USB device as " + mnt + " since it wasn't mounted")
 
             logging.info("Preparing to check space of source " + mnt)
@@ -171,8 +170,8 @@ class BUTTONS:
                     x = shutil.rmtree("/media/usb0" + ext)
                 except:
                     pass
-            (d, s) = usb.checkSpace('/media/usb0', dd)  # verify that source is smaller than destination
-            logging.info("Space of Destination is: " + str(d) + ", Source: " + str(s) + " at: " + dd)
+            (d, s) = usb.checkSpace('/media/usb0', mnt)  # verify that source is smaller than destination
+            logging.info("Space of Destination is: " + str(d) + ", Source: " + str(s) + " at: " + mnt)
             if d < s or s == 0:  # if destination free is less than source we don't have enough space
                 if d < s:
                     logging.info("source exceeds destination at" + dev + ext)
@@ -193,9 +192,9 @@ class BUTTONS:
                 logging.info("Space of Destination is ok for source to copy to " + dev + ext)
                 # we think we have keys to work with if we go forward from here. where the size is ok for the copy
                 logging.info("There is enough space so we will go forward with the copy")
-                logging.info("starting to do the copy with device " + dd + ext)
+                logging.info("starting to do the copy with device " + mnt + ext)
                 self.display.showWaitPage("Copying Files\nSize:" + str(int(s / 1000)) + "MB")
-                if usb.copyFiles("/media/usb0", dd, ext) > 0:  # see if we copied successfully
+                if usb.copyFiles("/media/usb0", mnt, ext) > 0:  # see if we copied successfully
                     logging.info("failed the copy. display an error page")
                     self.display.showErrorPage("Failed Copy")  # if not generate error page and exit
                     self.display.pageStack = 'error'
@@ -207,17 +206,17 @@ class BUTTONS:
                     pass  # we have finished the copy so we want to unmount the media/usb11 and run on the internal
                 logging.info("Ok were going to clean up now")
                 os.sync()
-                usb.unmount(dd)  # unmount the key
+                usb.unMount(mnt)  # unmount the key
                 time.sleep(2)
 
                 z = ord('a')
                 curDev = '/dev/sda1'
                 while z < ord("k"):
                     if usb.isUsbPresent(curDev) != False:
-                        if usb.getMunt(curDev) != "":
+                        if getMunt(curDev) != "":
                             try:
-                                usb.umount(usb.getMount(curDev))
-                                usb.umount(curDev)
+                                umount(usb.getMount(curDev))
+                                umount(curDev)
                             except:
                                 pass
                         self.display.showRemoveUsbPage()  # show the remove usb page
@@ -269,7 +268,7 @@ class BUTTONS:
                 self.display.pageStack = 'insertUSB'
                 self.display.showInsertUsbPage()
                 time.sleep(2)
-            dev = isUsbPresent("/dev/sda1")                                  # tell them to inert new keys
+            dev = usb.isUsbPresent("/dev/sda1")                                  # tell them to inert new keys
 
             logging.info("Found USB key at "+dev)
             fp = open('/usr/local/connectbox/brand.txt', "r")
@@ -319,7 +318,7 @@ class BUTTONS:
                     if not os.path.exists("/media/usb11"):
                         os.mkdir("/media/usb11")
                     try:
-                        usb.mount(dev,'/media/usb11')
+                        mount(dev,'/media/usb11')
                         dd = "/media/usb11"
                     except:
                         self.display.showErrorPage("USB not mounted")
@@ -366,11 +365,11 @@ class BUTTONS:
                         logging.info("we don't know the state of the mount so we just leave it")
                     checkReturn(self, NoMountOrig)
                     return 1
-             else:
+                else:
                     pass  # we have finished the copy so we want to unmount the media/usb11 and run on the internal
                 logging.info("Ok were going to clean up now")
                 os.sync()
-                usb.unmount(dd)  # unmount the key
+                usb.unMount(dd)  # unmount the key
                 time.sleep(2)
 
                 z = ord('a')
@@ -379,8 +378,8 @@ class BUTTONS:
                     if usb.isUsbPresent(curDev) != False:
                         if usb.getMount(curDev) != "":
                             try:
-                                usb.umount(usb.getMount(curDev))
-                                usb.umount(curDev)
+                                umount(usb.getMount(curDev))
+                                umount(curDev)
                             except:
                                 pass
                         self.display.showRemoveUsbPage()  # show the remove usb page

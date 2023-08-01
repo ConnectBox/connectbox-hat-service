@@ -21,8 +21,9 @@ from axp209 import AXP209, AXP209_ADDRESS
 import neo_batterylevelshutdown.globals as globals
 import RPi.GPIO as GPIO  # pylint: disable=import-error
 from .buttons import BUTTONS
+import neo_batterylevelshutdown.usb as usb
 import neo_batterylevelshutdown.multiBat_Utilities as mb_utilities
-    
+
 @contextmanager
 def min_execution_time(min_time_secs):
     """
@@ -82,7 +83,7 @@ class BasePhysicalHAT:
         time.sleep(0.1)
         # if interrupt line is high, this was a false trigger... just return
         if GPIO.input(self.PIN_AXP_INTERRUPT_LINE):
-            return   
+            return
         self.shutdownDevice()
 
     def handleOtgSelect(self, channel):
@@ -192,19 +193,19 @@ class BasePhysicalHAT:
         try:
             AP = int(apwifi.split("wlan")[1])
         except:
-            return (0)    
+            return (0)
         wlanx = "wlan"+str(AP)
         cmd = "iwconfig"
         rv = subprocess.check_output(cmd)
         rvs = rv.decode("utf-8").split(wlanx)
 
-        if (len(rvs) >= 2):       # rvs is an array split on wlanx    
+        if (len(rvs) >= 2):       # rvs is an array split on wlanx
             wlanx_flags = rvs[1].split("Mode:Master")
             if (len(wlanx_flags)) > 1:
     # we are up
                 return(1)
-    # we are not up... either iwconfig has no wlanAP or the wlanAP Mode: is wrong    
-        return (0)  
+    # we are not up... either iwconfig has no wlanAP or the wlanAP Mode: is wrong
+        return (0)
 
 
 
@@ -217,12 +218,12 @@ class BasePhysicalHAT:
                 time.sleep(flashDelay)
         else:
              GPIO.output(self.PIN_LED, GPIO.HIGH)
-           
+
 
     def solidLED(self):
         if self.check_AP_up() == 1:
             GPIO.output(self.PIN_LED, GPIO.LOW)
-        else:    
+        else:
             GPIO.output(self.PIN_LED, GPIO.HIGH)
 
 
@@ -362,7 +363,7 @@ class Axp209HAT(BasePhysicalHAT):
         #  (removed assumption that battery will not be added or removed in
         #   real use case)
         self.nextBatteryCheckTime = 0
-        
+
         # Write the charge control 1 - limit/ current control register 
         #  (Vtarget = 4.1 volts, end charging when below 10% of set charge current, 
         #   charge current = 1200 mA )
@@ -457,7 +458,7 @@ class Axp209HAT(BasePhysicalHAT):
                 if time.time() > self.displayPowerOffTime:
                     self.display.powerOffDisplay()
 
-                # ATTiny battery handling only in CM4 HAT    
+                # ATTiny battery handling only in CM4 HAT
                 if globals.device_type == "CM":
                     try:
                         batteryVoltage = int(self.axp.battery_voltage)
@@ -467,10 +468,10 @@ class Axp209HAT(BasePhysicalHAT):
                     # Call this once each loop to test if ATTiny is still talking
                     mb_utilities.check_ATTiny()
                     mb_utilities.v_update_array(batteryVoltage) 
- 
+
                 # Here we add a call to update the current page so info is regularly updated
                 self.display.redrawCurrentPage()
-                
+
 # DEPRICATED - Voltage monitoring for power down purposes is depricated. 
 #   We will let AXP209 (exclusively) handle the shutdown via the Voff facility (Reg 0x31 - set to 3.0V).
 #     The AXP209 i2C communication becomes unreliable at IPS voltages below 3.1V.
@@ -628,7 +629,7 @@ class q3y2021HAT(Axp209HAT):
             self.PIN_AXP_INTERRUPT_LINE = 23      #PG8
             self.PIN_OTG_SENSE = 17               #PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
-            loggitng.info("found q3y2021HAT for Pi")
+            logging.info("found q3y2021HAT for Pi")
 
 
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
