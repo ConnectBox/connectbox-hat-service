@@ -3,7 +3,8 @@ import os
 import time
 import subprocess
 import shutil
-
+import sys
+import neo_batterylevelshutdown.hats as hat
 
 #    @staticmethod
 def isUsbPresent(devPath='/dev/sda1'):
@@ -67,6 +68,8 @@ def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0', ext='/content/'
     :param destPath:  where we want to copy them to
     :return:  True / False
     '''
+
+    DISPLAY_TIMEOUT_SECS = 120
     logging.info("Copying from: "+sourcePath+" to: "+destPath)
     y = 0
     if (os.path.exists(sourcePath+ext)):
@@ -77,23 +80,23 @@ def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0', ext='/content/'
             if files_to_dir[-1] != "/": files_t0_dir = files_to_dir + "/"
             try:
                 if os.path.isdir(files_in_dir):
-                    self.hat.displayPowerOffTime = sys.maxsize
+                    hat.displayPowerOffTime = sys.maxsize
                     x = logging.info("Copying tree: "+files_in_dir+" to: "+files_to_dir)
                     shutil.copytree(files_in_dir, files_to_dir, symlinks=False, ignore_dangling_symlinks=True)
                     logging.info("Used copytree to move files")
-                    self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS
+                    hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
                 else:
-                    self.hat.displayPowerOffTime = sys.maxsize
+                    hat.displayPowerOffTime = sys.maxsize
                     logging.info("Copying: "+files_in_dir+" to: "+files_to_dir)
                     x = shutil.copy2(files_in_dir, files_to_dir)
                     logging.info("used copy2 to move files")
-                    self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS
+                    hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
             except OSError as err:
-                logging.info("Copytree Errored out with error of: "+str(x)+" err: "+str(err))
+                logging.info("Copytree Errored out with error of OSError err: "+str(err))
                 y = 1
                 return(1)
             except BaseException as err:
-                logging.info("Copytree Errored out with BaseException with: "+str(x)+" err: "+str(err))
+                logging.info("Copytree Errored out with BaseException with BaseException:  err: "+str(err))
                 y = 1
                 return(1)
             logging.info("going to try and copy the  stats over to the target!")
@@ -131,14 +134,14 @@ def checkSpace( sourcePath='/media/usb11', destPath='/media/usb0'):
     except:
         stat.f_bfree = 0
         stat.stat.f_bsize=0
-    logging.info("Codfmpleted the os.statvfs of: "+destPath)
+    logging.info("Completed the os.statvfs of: "+destPath)
     free = stat.f_bfree * stat.f_bsize
     adjustedFree = free - freeSpaceCushion
     if adjustedFree< 0 : adjustedFree = 0
     logging.info("Returning free space of : "+str(adjustedFree))
     destSize = adjustedFree
     logging.info("got Destination size of :"+str(destSize))
-    sourceSize = 0
+    SourceSize = 0
     y = 0
     a = sourcePath
     if a[-1]=="/":
@@ -154,18 +157,18 @@ def checkSpace( sourcePath='/media/usb11', destPath='/media/usb0'):
                 fp = os.path.join(dirpath, f)
                 try:
                     total_size += os.path.getsize(fp)
+#                    logging.info("total size is now "+str(total_size))
                 except:
                     pass
                 total_count += 1
-            logging.info("File completed of directory ")
+#            logging.info("Source Files completed of directory ")
         SourceSize = total_size
-        logging.info("got source size as : "+str(sourceSize)+" Path is: "+(a+b))
-        logging.info("Source size:"+str(sourceSize)+"  bytes, destination size:"+str(destSize))
+        logging.info("got source size as : "+str(SourceSize)+" Path is: "+(a+b))
     else:
         logging.info("source path "+a+b+" dosn't exsist so there is no length for source")
-        sourceSize = 0
-    logging.info("total source size:"+str(sourceSize)+"  bytes, total destination size "+str(destSize))
-    return(destSize, sourceSize)
+        SourceSize = 0
+    logging.info("total source size:"+str(SourceSize)+"  bytes, total destination size "+str(destSize))
+    return(destSize, SourceSize)
 
     # pylint: disable=unused-variable
     # Looks like this isn' summing subdirectories?

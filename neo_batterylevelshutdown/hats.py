@@ -24,6 +24,8 @@ from .buttons import BUTTONS
 import neo_batterylevelshutdown.usb as usb
 import neo_batterylevelshutdown.multiBat_Utilities as mb_utilities
 
+
+
 @contextmanager
 def min_execution_time(min_time_secs):
     """
@@ -257,6 +259,7 @@ class q1y2018HAT(BasePhysicalHAT):
         #  PIN_VOLT_3_0, then we're about to get the power yanked so attempt
         #  a graceful shutdown immediately.
 
+
         if globals.device_type == "NEO":
         # Pin numbers specified in BCM format
             PIN_VOLT_3_0 =  8       # PG6 
@@ -342,7 +345,6 @@ class Axp209HAT(BasePhysicalHAT):
     BATTERY_WARNING_VOLTAGE = 3200                # CM4 warning voltage (mV)
 #    BATTERY_SHUTDOWN_VOLTAGE = 3000               # ref only: AXP209 controlled shutdown voltage
 #    BATTERY_SHUTDOWN_THRESHOLD_PERC = 1           # no longer used
-    DISPLAY_TIMEOUT_SECS = 120
     # possibly should be moved elsewhere
 
 
@@ -508,6 +510,7 @@ class q3y2018HAT(Axp209HAT):
 
     def __init__(self, displayClass):
 
+
         if globals.device_type == "NEO":
             self.PIN_L_BUTTON =   8             #  PA1
             self.PIN_R_BUTTON =   10            #  PG7
@@ -527,6 +530,8 @@ class q3y2018HAT(Axp209HAT):
         # Run parent constructors before adding event detection
         #  as some callbacks require objects only initialised
         #  in parent constructors
+
+
         super().__init__(displayClass)
         GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
                               callback=self.buttons.handleButtonPress,
@@ -549,6 +554,7 @@ class q4y2018HAT(Axp209HAT):
 
     # Q4Y2018 - AXP209/OLED (Anker) Unit run specific pins
     # All pin references are now BCM format
+
 
     def __init__(self, displayClass):
 
@@ -581,6 +587,8 @@ class q4y2018HAT(Axp209HAT):
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_AXP_INTERRUPT_LINE, GPIO.IN)
         GPIO.setup(self.PIN_OTG_SENSE, GPIO.IN)
+
+
         # Run parent constructors before adding event detection
         #  as some callbacks require objects only initialised
         #  in parent constructors
@@ -615,6 +623,8 @@ class q3y2021HAT(Axp209HAT):
     # Q3Y2021 - HAT 7.0.x (NEO)- Also, NEO V8
 
     def __init__(self, displayClass):
+
+
 
         if globals.device_type == "NEO":
             self.PIN_L_BUTTON = 8                 #PG6

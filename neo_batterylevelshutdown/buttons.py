@@ -9,6 +9,7 @@ from . import page_display_image
 import time
 import neo_batterylevelshutdown.globals as globals
 import neo_batterylevelshutdown.usb as usb
+import neo_batterylevelshutdown.hats as hat
 import logging
 
 DEBUG = True
@@ -20,6 +21,7 @@ class BUTTONS:
     BUTTON_PRESS_TIMEOUT_SEC = 0.25  # Prevent bouncing of the handleButtonPress function
     BUTTON_PRESS_CLEARED_TIME = time.time()  # When was the handleButtonPress was last cleared
     CHECK_PRESS_THRESHOLD_SEC = 3  # Threshold for what qualifies as a long press
+    DISPLAY_TIMEOUT_SECS = 120     #screen on time before auto off
 
     def __init__(self, hat_class, display_class):
         self.display = display_class
@@ -28,7 +30,7 @@ class BUTTONS:
         self.USABLE_BUTTONS = self.hat.USABLE_BUTTONS
         self.command_to_reference = ''
         self.l = []
-
+        NoMountOrig = 0
 
     def checkReturn(self, val):
         fp = open('/usr/local/connectbox/brand.txt', "r")
@@ -71,7 +73,7 @@ class BUTTONS:
         if not (self.hat.batteryLevelAboveVoltage(self.hat.BATTERY_WARNING_VOLTAGE)):
             return  # If low battery, we can't do admin functions as we may run out of power.
 
-        logging.debug("Execute Command: %s", command)
+        logging.info("Execute Command: %s", command)
 
         if command == 'remove_usb':
             logging.debug("In remove usb page")
@@ -87,10 +89,9 @@ class BUTTONS:
         elif command == 'copy_from_usb':
             logging.info("copy from USB")
 
-
             fp = open('/usr/local/connectbox/brand.txt', "r")
             m = str(fp.read())
-            logging.info("read /usr/local/connectbox/brand.txt: " + str(m))
+            logging.info("read /usr/local/connectbox/brand.txt: " + m)
             if 'usb0NoMount": 0' in m:
                 NoMountOrig = 0  # Hang on to the original value to restore as needed
                 logging.info('Found usb0NoMount": 0')
@@ -103,7 +104,7 @@ class BUTTONS:
                         fp.close()
                         fp = open("/usr/local/connectbox/brand.txt", "w")
                         fp.write(m)
-                        logging.info("Wrote File brand.txt file as: " + str(m))
+                        logging.info("Wrote File brand.txt file as: " + m)
                         fp.close()
                         os.sync()
                     except:
@@ -120,7 +121,7 @@ class BUTTONS:
             time.sleep(2)  # give time for Pause of the Mount
 
             x = "a"
-            if not (usb.isUsbPresent ('/dev/sd' + x + "1") == False):  # check to see if usb is inserted
+            if (usb.isUsbPresent ('/dev/sd' + x + "1") == False):  # check to see if usb is inserted
                 self.display.pageStack = 'insertUSB'
                 self.display.showInsertUsbPage()
                 while (usb.isUsbPresent() == False):
@@ -128,7 +129,7 @@ class BUTTONS:
             dev = usb.isUsbPresent('/dev/sda1')
             self.pageStack = 'checkSpace'  # Don't allow the display to turn off
             self.display.showWaitPage("Checking Space")
-            logging.info("Using location " + dev + " as media copy location")
+            logging.info("Using location " +str(dev) + " as media copy location")
             mnt = usb.getMount(dev)
             logging.info("mounting location is: " + mnt)
             if mnt == '/media/usb0':
@@ -139,7 +140,7 @@ class BUTTONS:
                     self.display.pageStack = 'errorMvMnt'
                     self.display.showErrorPage("Moving Mount")  # if not generate error page and exit
                     logging.info("move of " + mnt + " to usb11 failed")
-                    checkReturn(self, NoMountOrig)
+                    self.checkReturn( NoMountOrig)
                     return False
                 else:
                     mounts = str(subprocess.check_output(['df']))
@@ -147,6 +148,7 @@ class BUTTONS:
                         logging.info("post mount shows that the mount didn't finish correctly")
                         return False
                     logging.info("move mount completed correctly and we're good to go")
+                    mnt = "/media/usb11"
             else:
                 logging.info("We are not mounted on /media/usb0")
                 logging.info("Starting to find the mount point for: " + dev)
@@ -160,7 +162,7 @@ class BUTTONS:
                     mnt = "/media/usb" + str(x)
                     if not os.path.exists(mnt):
                         os.mkdir(mnt)
-                    if mount(dev, mnt):
+                    if usb.mount(dev, mnt):
                         logging.info("mounted USB device as " + mnt + " since it wasn't mounted")
 
             logging.info("Preparing to check space of source " + mnt)
@@ -170,7 +172,7 @@ class BUTTONS:
                     x = shutil.rmtree("/media/usb0" + ext)
                 except:
                     pass
-            (d, s) = usb.checkSpace('/media/usb0', mnt)  # verify that source is smaller than destination
+            (d, s) = usb.checkSpace(mnt,'/media/usb0')  # verify that source is smaller than destination
             logging.info("Space of Destination is: " + str(d) + ", Source: " + str(s) + " at: " + mnt)
             if d < s or s == 0:  # if destination free is less than source we don't have enough space
                 if d < s:
@@ -186,53 +188,53 @@ class BUTTONS:
                     self.display.pageStack = "success"
                     self.display.showSuccessPage()
                     logging.info("success on removing USB key!")
-                    checkReturn(self, NoMountOrig)
-                    return 1
+                    self.checkReturn( NoMountOrig)
+                    return(1)
             else:
                 logging.info("Space of Destination is ok for source to copy to " + dev + ext)
                 # we think we have keys to work with if we go forward from here. where the size is ok for the copy
                 logging.info("There is enough space so we will go forward with the copy")
                 logging.info("starting to do the copy with device " + mnt + ext)
                 self.display.showWaitPage("Copying Files\nSize:" + str(int(s / 1000)) + "MB")
-                if usb.copyFiles("/media/usb0", mnt, ext) > 0:  # see if we copied successfully
+                if usb.copyFiles(mnt, "/media/usb0", ext) > 0:  # see if we copied successfully
                     logging.info("failed the copy. display an error page")
+                    hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                     self.display.showErrorPage("Failed Copy")  # if not generate error page and exit
                     self.display.pageStack = 'error'
-                    if usb.getMount(dev) == '/media/usb11':
-                        logging.info("we don't know the state of the mount so we just leave it")
-                    checkReturn(self, NoMountOrig)
+                    self.checkReturn( NoMountOrig)
                     return 1
                 else:
                     pass  # we have finished the copy so we want to unmount the media/usb11 and run on the internal
                 logging.info("Ok were going to clean up now")
                 os.sync()
-                usb.unMount(mnt)  # unmount the key
+                usb.unmount(mnt)  # unmount the key
                 time.sleep(2)
 
                 z = ord('a')
                 curDev = '/dev/sda1'
                 while z < ord("k"):
                     if usb.isUsbPresent(curDev) != False:
-                        if getMunt(curDev) != "":
+                        if usb.getMount(curDev) != "":
                             try:
-                                umount(usb.getMount(curDev))
-                                umount(curDev)
+                                usb.umount(usb.getMount(curDev))
+                                usb.umount(curDev)
                             except:
                                 pass
+                        hat.displayPowerOffTime = time.time() + sys.maxsize
                         self.display.showRemoveUsbPage()  # show the remove usb page
                         self.display.pageStack = 'removeUsb'  # show we removed the usb key
                         self.command_to_reference = 'remove_usb'
-                        time.sleep(3)  # Wait a second for the removal
                         while usb.isUsbPresent(curDev) != False:
                             time.sleep(3)
                     z += 1  # lets look at the next one
                     curDev = '/dev/sd' + chr(z) + '1'  # create the next curdev
             # We finished the umounts
+            hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
             self.display.pageStack = 'success'
             self.display.showSuccessPage()
 
-            logging.debug("successssss page now restoring the Usb0NoMount flag")
-            checkReturn(self, NoMountOrig)
+            logging.debug("succes page now restoring the Usb0NoMount flag")
+            self.checkReturn( NoMountOrig)
             return 0
 
 
@@ -263,13 +265,16 @@ class BUTTONS:
 
         elif command == 'copy_to_usb':
             logging.debug("got to copy to usb code")
+            z = ord("a")
             dev = '/dev/sd'+chr(z)+'1'
+            hat.displayPowerOffTime = time.time() + sys.maxsize
             while (usb.isUsbPresent(dev) == False):                         # only checks for one USB key
                 self.display.pageStack = 'insertUSB'
                 self.display.showInsertUsbPage()
                 time.sleep(2)
             dev = usb.isUsbPresent("/dev/sda1")                                  # tell them to inert new keys
 
+            hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
             logging.info("Found USB key at "+dev)
             fp = open('/usr/local/connectbox/brand.txt', "r")
             m = str(fp.read())
@@ -282,8 +287,10 @@ class BUTTONS:
                     fp.close()
                     fp = open('/usr/local/connectbox/brand.txt', "w")
                     fp.write(m)
+                    logging.info("updated brand.txt ",m)
                     fp.close()
                     os.sync()
+                    logging.info("NoMountOrig ="+str(NoMountOrig))
                 else:
                     fp.close()
                     logging.info("Error trying to change usb0NoMount value to 1 for copy")
@@ -291,85 +298,100 @@ class BUTTONS:
             else:
                 fp.close()
                 NoMountOirg = 1                                              #Hang on to the original value to restore as needed
+            hat.displayPowerOffTime = time.time() + sys.maxsize
             self.display.pageStack = 'wait'
             self.display.showWaitPage("Checking Sizes")
 
             logging.debug("we have found at least one usb to copy to: "+dev)
 
-            dd = usb.getMount(dev)
-            if (dd == '/media/usb0'):                                               # if the key is mounted on '/media/usb0' then we have to move it.
+            mnt = usb.getMount(dev)
+            if (mnt == '/media/usb0'):                                               # if the key is mounted on '/media/usb0' then we have to move it.
                 logging.info("Moving /media/usb0 to /media/usb11 be able to copy")
                 if not os.path.exists('/media/usb11'):                              # check that usb11 exists to be able to move the mount
                     os.mkdir('/media/usb11')                                        # make the directory
-                if not usb.moveMount(dev, '/media/usb11'):                          # see if our remount was successful
+                if not usb.moveMount(mnt, '/media/usb11'):                          # see if our remount was successful
+                        hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                         self.display.showErrorPage("Moving Mount")                  # if not generate error page and exit
-                        self.display.pageStack = 'error mounting'
+                        self.display.pageStack = 'error'
                         os.rmdir("/media/usb11")
-                        checkReturn(self, NoMountOrig)
+                        self.checkReturn( NoMountOrig)
                         return(1)
                 else:
-                    if dd == "":
+                    if mnt == "":
+                        hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                         self.display.showErrorPage("USB not mounted")               # if not generate error page and exit
                         self.display.pageStack = 'error'
-                        checkReturn(self, NoMountOrig)
+                        self.checkReturn( NoMountOrig)
                         return(1)
             else:
-                if dd == "":
+                if mnt == "":
                     if not os.path.exists("/media/usb11"):
                         os.mkdir("/media/usb11")
                     try:
-                        mount(dev,'/media/usb11')
-                        dd = "/media/usb11"
+                        usb.mount(dev,'/media/usb11')
+                        mnt = "/media/usb11"
                     except:
+                        hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                         self.display.showErrorPage("USB not mounted")
                         self.display.pageStack = 'error'
                         return(1)
 
-            logging.info("We are getting the size for source: /media/usb0 and destination: "+dd)
-            if os.path.isdir(dd):
+            logging.info("We are getting the size for source: /media/usb0 and destination: "+mnt)
+            if os.path.isdir(mnt):
                 try:
-                    shutil.rmtree((dd+ext), ignore_errors=True)                        #remove old data from /source/ directory
+                    shutil.rmtree((mnt+ext), ignore_errors=True)                        #remove old data from /source/ directory
                 except OSError:
                     logging.info("had a problem deleting the destination file: ",+ext)
-                    checkReturn(self, NoMountOrig)
+                    hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
+                    self.display.showErrorPage("failed deletion")
+                    self.display.pageStack = 'error'
+                    self.checkReturn( NoMountOrig)
                     return(1)
-            (d, s) = usb.checkSpace('/media/usb0', dd)  # verify that source is smaller than destination
-            logging.info("Space of Destination is: " + str(d) + ", Source: " + str(s) + " at: " + dd)
+            (d, s) = usb.checkSpace('/media/usb0', mnt)  # verify that source is smaller than destination
+            logging.info("Space of Destination is: " + str(d) + ", Source: " + str(s) + " at: " + mnt)
             if d < s or s == 0:  # if destination free is less than source we don't have enough space
                 if d < s:
                     logging.info("source exceeds destination at" + dev + ext)
                 else:
                     logging.info("source is 0 bytes in length so nothing to copy")
                 if usb.isUsbPresent(dev) != False:
+                    hat.displayPowerOffTime = time.time() + sys.maxsize
                     self.display.showRemoveUsbPage()  # show the remove usb page
                     self.display.pageStack = 'removeUsb'  # show we removed the usb key
                     self.command_to_reference = 'remove_usb'
                     while usb.isUsbPresent(dev) != False:
                         time.sleep(3)  # Wait for the key to be removed
+                    hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                     self.display.pageStack = "success"
                     self.display.showSuccessPage()
                     logging.info("success on removing USB key!")
-                    checkReturn(self, NoMountOrig)
-                    return 1
+                    self.checkReturn( NoMountOrig)
+                    return(1)
             else:
                 logging.info("Space of Destination is ok for source to copy to " + dev + ext)
                 # we think we have keys to work with if we go forward from here. where the size is ok for the copy
                 logging.info("There is enough space so we will go forward with the copy")
-                logging.info("starting to do the copy with device " + dd + ext)
+                logging.info("starting to do the copy with device " + mnt + ext)
                 self.display.showWaitPage("Copying Files\nSize:" + str(int(s / 1000)) + "MB")
-                if usb.copyFiles("/media/usb0", dd, ext) > 0:  # see if we copied successfully
+                if usb.copyFiles("/media/usb0", mnt, ext) > 0:  # see if we copied successfully
                     logging.info("failed the copy. display an error page")
+                    hat.displayPowerOffTime = time.time() + sys.maxsize
                     self.display.showErrorPage("Failed Copy")  # if not generate error page and exit
                     self.display.pageStack = 'error'
-                    if usb.getMount(dev) == '/media/usb11':
-                        logging.info("we don't know the state of the mount so we just leave it")
-                    checkReturn(self, NoMountOrig)
-                    return 1
+                    time.sleep(self.DISPLAY_TIMEOUT_SECS)
+                    self.display.showRemoveUsbPage()
+                    self.display.pageStack = 'removeUsb'
+                    while usb.getMount(dev) != False:
+                        time.sleep(2)
+                    logging.info("we don't know the state of the mount so we just leave it")
+                    hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
+                    self.checkReturn( NoMountOrig)
+                    return(1)
                 else:
                     pass  # we have finished the copy so we want to unmount the media/usb11 and run on the internal
                 logging.info("Ok were going to clean up now")
                 os.sync()
-                usb.unMount(dd)  # unmount the key
+                usb.unmount(mnt)  # unmount the key
                 time.sleep(2)
 
                 z = ord('a')
@@ -378,24 +400,25 @@ class BUTTONS:
                     if usb.isUsbPresent(curDev) != False:
                         if usb.getMount(curDev) != "":
                             try:
-                                umount(usb.getMount(curDev))
-                                umount(curDev)
+                                usb.umount(usb.getMount(curDev))
+                                usb.umount(curDev)
                             except:
                                 pass
+                        hat.displayPowerOffTime = time.time() + sys.maxsize
                         self.display.showRemoveUsbPage()  # show the remove usb page
                         self.display.pageStack = 'removeUsb'  # show we removed the usb key
                         self.command_to_reference = 'remove_usb'
-                        time.sleep(3)  # Wait a second for the removal
                         while usb.isUsbPresent(curDev) != False:
                             time.sleep(3)
                     z += 1  # lets look at the next one
                     curDev = '/dev/sd' + chr(z) + '1'  # create the next curdev
             # We finished the umounts
+
+            hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
             self.display.pageStack = 'success'
             self.display.showSuccessPage()
-
             logging.debug("successss page now restoring the Usb0NoMount flag")
-            checkReturn(self, NoMountOrig)
+            self.checkReturn( NoMountOrig)
             return 0
 
     def handleButtonPress(self, channel):
@@ -545,7 +568,7 @@ class BUTTONS:
         self.command_to_reference = ''                                                          # really don't want to leave this one loaded
         self.display.switchPages()                                                              # drops back to the admin pages
         # reset the display power off time
-        self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS
+        self.hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
 
     def chooseEnter(self, pageStack):
         """ method for use when enter selected"""
@@ -568,19 +591,19 @@ class BUTTONS:
             self.executeCommands(self.command_to_reference)
 
         # reset the display power off time
-        self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS
+        self.hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
 
     def switchPages(self):
         """method for use on button press to change display options"""
         logging.debug("You have now entered, the SwitchPages")
         self.display.switchPages()
         # reset the display power off time
-        self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS
+        self.hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
 
     def moveToStartPage(self,channel):
         self.display.moveToStartPage()
         # reset the display power off time
-        self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS
+        self.hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
 
 
     def moveForward(self, channel):
@@ -588,11 +611,11 @@ class BUTTONS:
         logging.debug("Processing press on GPIO %s (move forward)", channel)
         self.display.moveForward()
         # reset the display power off time
-        self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS
+        self.hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
 
     def moveBackward(self, channel):
         """method for use on button press to cycle display"""
         logging.debug("Processing press on GPIO %s (move backward)", channel)
         self.display.moveBackward()
         # reset the display power off time
-        self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS
+        self.hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS

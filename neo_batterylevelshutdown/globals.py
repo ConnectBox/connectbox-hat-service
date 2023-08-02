@@ -85,7 +85,7 @@ def init():
         device_type = js["Device_type"]
     except:
         pass
-  
+
     try:
         usbnomount = js["usb0NoMount"]
     except:
@@ -156,4 +156,4 @@ def init():
     f = open("/usr/local/connectbox/wificonf.txt","r")
     dat = f.read()
     f.close()
-    clientIF = dat.split("\n")[0].partition("AccessPointIF=")[2]   
+    clientIF = dat.split("\n")[0].partition("AccessPointIF=")[2]

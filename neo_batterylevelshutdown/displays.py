@@ -18,6 +18,7 @@ from . import page_power_down
 from . import page_display_image
 from . import page_multi_bat
 
+import neo_batterylevelshutdown.hats as hat
 import neo_batterylevelshutdown.globals as globals
 
 
@@ -86,7 +87,7 @@ class OLED:
         self.adminPages = [
             page_display_image.PageDisplayImage(self.display_device, 'copy_from_usb.png'),
             page_display_image.PageDisplayImage(self.display_device, 'erase_folder.png'),
-            page_display_image.PageDisplayImage(self.display_device, 'copy_to_usb.png'),      
+            page_display_image.PageDisplayImage(self.display_device, 'copy_to_usb.png'),
             page_display_image.PageDisplayImage(self.display_device, 'exit.png')             #must be last
         ]
         self.adminPageNames = [
@@ -98,7 +99,8 @@ class OLED:
 
         self.pages = self.statusPages
         self.pageStack = 'status'
-
+        DISPLAY_TIMEOUT_SECS=120
+        hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS  # reset
         self._curPage = self.pages[self.STARTING_PAGE_INDEX]
         # callbacks run in another thread, so we need to lock access to the
         #  current page variable as it can be modified from the main loop
@@ -214,7 +216,7 @@ class OLED:
             self._curPage = self.pages[self.STARTING_PAGE_INDEX]
             self.pageStack = 'admin'
             self._curPage.draw_page()
-            
+
 
     def moveForward(self):
         with self._curPageLock:
@@ -295,11 +297,14 @@ class OLED:
             self.powerOffDisplay()
 
     def powerOffDisplay(self):
+
+        DISPLAY_TIMEOUT_SECS = 120
+
         if self._curPage == self.blank_page:
             # nothing to do
             return
         if self.pageStack == 'wait'or self.pageStack == 'remove_usb' :  # we do not want to reset if we're on a wait screen
-            self.hat.displayPowerOffTime = time.time() + self.hat.DISPLAY_TIMEOUT_SECS  # reset
+            hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS  # reset
             return  # keep waiting
         if self.pageStack != 'status':  # if we're not on the default status pages
             self.pageStack = 'admin'  # this is to prep to return to the status pages
