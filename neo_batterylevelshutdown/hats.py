@@ -361,17 +361,17 @@ class Axp209HAT(BasePhysicalHAT):
         #  than incrementing i.e. we're not referencing the old value
         self.displayPowerOffTime = time.time() + 3
         # establish self.nextBatteryChecktime so that if
-        #  we have a battery, perform a level check at our first chance 
+        #  we have a battery, perform a level check at our first chance
         #  (removed assumption that battery will not be added or removed in
         #   real use case)
         self.nextBatteryCheckTime = 0
 
-        # Write the charge control 1 - limit/ current control register 
-        #  (Vtarget = 4.1 volts, end charging when below 10% of set charge current, 
+        # Write the charge control 1 - limit/ current control register
+        #  (Vtarget = 4.1 volts, end charging when below 10% of set charge current,
         #   charge current = 1200 mA )
         self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x33, 0xC9)    # V(trgt) = 4.2V (was 0x89... 4.1V)
 
-        # Enable AC_IN current and voltage ADCs (also ADCs for Battery voltage, Battery current, 
+        # Enable AC_IN current and voltage ADCs (also ADCs for Battery voltage, Battery current,
         #  and APS voltage.)
         #  note: APS monitors the IPSOUT voltage and shuts down system if < 2.9 volts.
         #        also, the Battery Temp Sense (TS) ADC is left enabled because disabling it
@@ -382,7 +382,7 @@ class Axp209HAT(BasePhysicalHAT):
         # The monitoring of voltage by this code for purposes of shutting down due to insufficient
         #  voltage has been DEPRICATED.
         # Change Voff voltage level (level of IPS_OUT below which causes AXP209 to shutdown)
-        #  to 3.0V. 
+        #  to 3.0V.
         self.axp.bus.write_byte_data(AXP209_ADDRESS,0x31,0x04)  # AXP209 trigger shutdown at Vbatt = 3.0V
 
         # shutdown delay time to 3 secs (they delay before axp209 yanks power
@@ -453,7 +453,7 @@ class Axp209HAT(BasePhysicalHAT):
 
     def mainLoop(self):
         while True:
-            # The following ensures that the while loop only executes once every 
+            # The following ensures that the while loop only executes once every
             #  LED_CYCLE_TIME_SECS...
             with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
                 # Perhaps power off the display
@@ -465,19 +465,19 @@ class Axp209HAT(BasePhysicalHAT):
                     try:
                         batteryVoltage = int(self.axp.battery_voltage)
                     except:
-                        batteryVoltage = 3100   # AXP209 i2c fails at 3100 mV 
+                        batteryVoltage = 3100   # AXP209 i2c fails at 3100 mV
 
                     # Call this once each loop to test if ATTiny is still talking
                     mb_utilities.check_ATTiny()
-                    mb_utilities.v_update_array(batteryVoltage) 
+                    mb_utilities.v_update_array(batteryVoltage)
 
                 # Here we add a call to update the current page so info is regularly updated
                 self.display.redrawCurrentPage()
 
-# DEPRICATED - Voltage monitoring for power down purposes is depricated. 
+# DEPRICATED - Voltage monitoring for power down purposes is depricated.
 #   We will let AXP209 (exclusively) handle the shutdown via the Voff facility (Reg 0x31 - set to 3.0V).
 #     The AXP209 i2C communication becomes unreliable at IPS voltages below 3.1V.
-#  Also note... We do NOT have a connection between the AXP209 IRQ line (pin 48) and the NEO so 
+#  Also note... We do NOT have a connection between the AXP209 IRQ line (pin 48) and the NEO so
 #    we can't service the LEVEL2 IRQ (or any other AXP209 IRQ) anyway.
 
                 if self.batteryLevelAboveVoltage(
@@ -492,7 +492,7 @@ class Axp209HAT(BasePhysicalHAT):
                     #  warning period so the low battery warning shows to the end
                     self.displayPowerOffTime = sys.maxsize
                     # we are near shutdown... force check every time around loop (5 sec)
-                    self.BATTERY_CHECK_FREQUENCY_SECS = 4   
+                    self.BATTERY_CHECK_FREQUENCY_SECS = 4
 
                 self.nextBatteryCheckTime = \
                     time.time() + self.BATTERY_CHECK_FREQUENCY_SECS
@@ -504,7 +504,7 @@ class Axp209HAT(BasePhysicalHAT):
                 globals.init()
 
 
-class q3y2018HAT(Axp209HAT): 
+class q3y2018HAT(Axp209HAT):
 
     # HAT 4.6.7 - This is ONLY a NEO HAT
 

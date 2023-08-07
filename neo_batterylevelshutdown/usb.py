@@ -84,13 +84,13 @@ def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0', ext='/content/'
                     x = logging.info("Copying tree: "+files_in_dir+" to: "+files_to_dir)
                     shutil.copytree(files_in_dir, files_to_dir, symlinks=False, ignore_dangling_symlinks=True)
                     logging.info("Used copytree to move files")
-                    hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
+#                    hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
                 else:
                     hat.displayPowerOffTime = sys.maxsize
                     logging.info("Copying: "+files_in_dir+" to: "+files_to_dir)
                     x = shutil.copy2(files_in_dir, files_to_dir)
                     logging.info("used copy2 to move files")
-                    hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
+#                    hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
             except OSError as err:
                 logging.info("Copytree Errored out with error of OSError err: "+str(err))
                 y = 1

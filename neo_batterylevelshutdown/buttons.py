@@ -80,7 +80,7 @@ class BUTTONS:
             while (usb.isUsbPresent() != False):     #check  to see if usb is inserted
                 logging.debug("USB still present")
                 self.display.showRemoveUsbPage()  # tell them to remove it if so
-                self.display.pageStack = 'removeUsb'  # let handleButtonPress know to repeat
+                self.display.pageStack = 'remove_usb'  # let handleButtonPress know to repeat
                 time.sleep(2)
             logging.debug("USB removed")
             self.display.pageStack = 'success'  # let out handleButtonPress know
@@ -181,7 +181,7 @@ class BUTTONS:
                     logging.info("source is 0 bytes in length so nothing to copy")
                 if usb.isUsbPresent(dev) != False:
                     self.display.showRemoveUsbPage()  # show the remove usb page
-                    self.display.pageStack = 'removeUsb'  # show we removed the usb key
+                    self.display.pageStack = 'remove_usb'  # show we removed the usb key
                     self.command_to_reference = 'remove_usb'
                     while usb.isUsbPresent(dev) != False:
                         time.sleep(3)  # Wait for the key to be removed
@@ -220,18 +220,18 @@ class BUTTONS:
                                 usb.umount(curDev)
                             except:
                                 pass
-                        hat.displayPowerOffTime = time.time() + sys.maxsize
                         self.display.showRemoveUsbPage()  # show the remove usb page
-                        self.display.pageStack = 'removeUsb'  # show we removed the usb key
+                        self.display.pageStack = 'remove_usb'  # show we removed the usb key
                         self.command_to_reference = 'remove_usb'
+                        hat.displayPowerOffTime = sys.maxsize
                         while usb.isUsbPresent(curDev) != False:
                             time.sleep(3)
                     z += 1  # lets look at the next one
                     curDev = '/dev/sd' + chr(z) + '1'  # create the next curdev
             # We finished the umounts
-            hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
             self.display.pageStack = 'success'
             self.display.showSuccessPage()
+            hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
 
             logging.debug("succes page now restoring the Usb0NoMount flag")
             self.checkReturn( NoMountOrig)
@@ -241,14 +241,16 @@ class BUTTONS:
         elif command == 'erase_folder':
             file_exists = False  # in regards to README.txt file
             if (usb.isUsbPresent() != False):
+                hat.displayPowerOffTime = sys.maxsize
                 self.display.showRemoveUsbPage()                    #show the remove usb page
-                self.display.pageStack = 'removeUsb'                #show we removed the usb key
+                self.display.pageStack = 'remove_usb'                #show we removed the usb key
                 self.command_to_reference = 'remove_usb'
                 while (usb.isUsbPresent() != False):
                     time.sleep(3)                                       #Wait for the key to be removed 
                 self.display.pageStack= "success"
                 self.display.showSuccessPage()
                 logging.info("succes on removing USB key before erase!")
+                hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                 return
 
             for file_object in os.listdir('/media/usb0'+ext):
@@ -267,7 +269,7 @@ class BUTTONS:
             logging.debug("got to copy to usb code")
             z = ord("a")
             dev = '/dev/sd'+chr(z)+'1'
-            hat.displayPowerOffTime = time.time() + sys.maxsize
+            hat.displayPowerOffTime = sys.maxsize
             while (usb.isUsbPresent(dev) == False):                         # only checks for one USB key
                 self.display.pageStack = 'insertUSB'
                 self.display.showInsertUsbPage()
@@ -298,7 +300,7 @@ class BUTTONS:
             else:
                 fp.close()
                 NoMountOirg = 1                                              #Hang on to the original value to restore as needed
-            hat.displayPowerOffTime = time.time() + sys.maxsize
+            hat.displayPowerOffTime = sys.maxsize
             self.display.pageStack = 'wait'
             self.display.showWaitPage("Checking Sizes")
 
@@ -310,18 +312,18 @@ class BUTTONS:
                 if not os.path.exists('/media/usb11'):                              # check that usb11 exists to be able to move the mount
                     os.mkdir('/media/usb11')                                        # make the directory
                 if not usb.moveMount(mnt, '/media/usb11'):                          # see if our remount was successful
-                        hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                         self.display.showErrorPage("Moving Mount")                  # if not generate error page and exit
                         self.display.pageStack = 'error'
                         os.rmdir("/media/usb11")
                         self.checkReturn( NoMountOrig)
+                        hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                         return(1)
                 else:
                     if mnt == "":
-                        hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                         self.display.showErrorPage("USB not mounted")               # if not generate error page and exit
                         self.display.pageStack = 'error'
                         self.checkReturn( NoMountOrig)
+                        hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                         return(1)
             else:
                 if mnt == "":
@@ -331,9 +333,9 @@ class BUTTONS:
                         usb.mount(dev,'/media/usb11')
                         mnt = "/media/usb11"
                     except:
-                        hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                         self.display.showErrorPage("USB not mounted")
                         self.display.pageStack = 'error'
+                        hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                         return(1)
 
             logging.info("We are getting the size for source: /media/usb0 and destination: "+mnt)
@@ -342,10 +344,10 @@ class BUTTONS:
                     shutil.rmtree((mnt+ext), ignore_errors=True)                        #remove old data from /source/ directory
                 except OSError:
                     logging.info("had a problem deleting the destination file: ",+ext)
-                    hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                     self.display.showErrorPage("failed deletion")
                     self.display.pageStack = 'error'
                     self.checkReturn( NoMountOrig)
+                    hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                     return(1)
             (d, s) = usb.checkSpace('/media/usb0', mnt)  # verify that source is smaller than destination
             logging.info("Space of Destination is: " + str(d) + ", Source: " + str(s) + " at: " + mnt)
@@ -355,17 +357,17 @@ class BUTTONS:
                 else:
                     logging.info("source is 0 bytes in length so nothing to copy")
                 if usb.isUsbPresent(dev) != False:
-                    hat.displayPowerOffTime = time.time() + sys.maxsize
+                    hat.displayPowerOffTime = sys.maxsize
                     self.display.showRemoveUsbPage()  # show the remove usb page
-                    self.display.pageStack = 'removeUsb'  # show we removed the usb key
+                    self.display.pageStack = 'remove_usb'  # show we removed the usb key
                     self.command_to_reference = 'remove_usb'
                     while usb.isUsbPresent(dev) != False:
                         time.sleep(3)  # Wait for the key to be removed
-                    hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                     self.display.pageStack = "success"
                     self.display.showSuccessPage()
                     logging.info("success on removing USB key!")
                     self.checkReturn( NoMountOrig)
+                    hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                     return(1)
             else:
                 logging.info("Space of Destination is ok for source to copy to " + dev + ext)
@@ -375,17 +377,17 @@ class BUTTONS:
                 self.display.showWaitPage("Copying Files\nSize:" + str(int(s / 1000)) + "MB")
                 if usb.copyFiles("/media/usb0", mnt, ext) > 0:  # see if we copied successfully
                     logging.info("failed the copy. display an error page")
-                    hat.displayPowerOffTime = time.time() + sys.maxsize
+                    hat.displayPowerOffTime = sys.maxsize
                     self.display.showErrorPage("Failed Copy")  # if not generate error page and exit
                     self.display.pageStack = 'error'
                     time.sleep(self.DISPLAY_TIMEOUT_SECS)
                     self.display.showRemoveUsbPage()
-                    self.display.pageStack = 'removeUsb'
+                    self.display.pageStack = 'remove_usb'
                     while usb.getMount(dev) != False:
                         time.sleep(2)
                     logging.info("we don't know the state of the mount so we just leave it")
-                    hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                     self.checkReturn( NoMountOrig)
+                    hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
                     return(1)
                 else:
                     pass  # we have finished the copy so we want to unmount the media/usb11 and run on the internal
@@ -404,9 +406,9 @@ class BUTTONS:
                                 usb.umount(curDev)
                             except:
                                 pass
-                        hat.displayPowerOffTime = time.time() + sys.maxsize
+                        hat.displayPowerOffTime = sys.maxsize
                         self.display.showRemoveUsbPage()  # show the remove usb page
-                        self.display.pageStack = 'removeUsb'  # show we removed the usb key
+                        self.display.pageStack = 'remove_usb'  # show we removed the usb key
                         self.command_to_reference = 'remove_usb'
                         while usb.isUsbPresent(curDev) != False:
                             time.sleep(3)
@@ -414,11 +416,11 @@ class BUTTONS:
                     curDev = '/dev/sd' + chr(z) + '1'  # create the next curdev
             # We finished the umounts
 
-            hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
             self.display.pageStack = 'success'
             self.display.showSuccessPage()
             logging.debug("successss page now restoring the Usb0NoMount flag")
             self.checkReturn( NoMountOrig)
+            hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
             return 0
 
     def handleButtonPress(self, channel):
@@ -481,7 +483,7 @@ class BUTTONS:
                     self.moveToStartPage(channel)
                 elif pageStack in ['confirm', 'error']:     # return to first page admin stack
                     self.chooseCancel()
-                elif pageStack in ['removeUsb']:            # never reach here... loops elsewhere until they remove the USB stick
+                elif pageStack in ['remove_usb']:            # never reach here... loops elsewhere until they remove the USB stick
                     self.chooseEnter(pageStack)
                 else:                                       # anything else, we treat as a moveForward (default) function
                     self.moveForward(channel)
