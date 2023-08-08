@@ -150,9 +150,14 @@ def init():
         else:           #all other Raspberry Pi version other than compute modules
             device_type = "PI"
             port = 1
+    if ("Radxa CM3" in filx):
+        device_type = "RM3"
+        port = 0               # i2c port 
+
 # Read the default AccessPoint Interface for the front panel display
 # note this will get re-read occassionally
     f.close()
+
     f = open("/usr/local/connectbox/wificonf.txt","r")
     dat = f.read()
     f.close()
