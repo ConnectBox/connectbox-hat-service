@@ -4,6 +4,11 @@
 # Modified 10/17/19 by JRA to add new class q4y2019HAT (HAT 5.0.9 board with OLED but no battery) ie, the NoBatt version
 #  11/30/21 JRA - Q4Y2019 Hat class removed - no battery instance handled in battery pages
 
+# 08/05/23  JRA - Configured for RM3 module 
+#  Note that GPIO setups are done in the init function of each class... specifically, the init
+#   of the called class is done first, then (by super __init()__) the init of that class's parent,
+#   then the init of the grandparent class.
+
 from contextlib import contextmanager
 import logging
 import os
@@ -14,12 +19,29 @@ import time
 import subprocess
 
 
+
 #JRA - 011322
 #import smbus2
 
 from axp209 import AXP209, AXP209_ADDRESS
 import neo_batterylevelshutdown.globals as globals
-import RPi.GPIO as GPIO  # pylint: disable=import-error
+logging.info("...hats.py globals.device_type = %s.", globals.device_type)
+
+# globals was initiated by cli, so no need to re initialize here
+# We do the imports here... but function calls inside of the code
+if globals.device_type == "RM3":
+    import radxa.CM3    # not required
+    import OPi.GPIO as GPIO  # pylint: disable=import-error
+elif globals.device_type == "NEO":
+    import RPi.GPIO as GPIO  # pylint: disable=import-error
+elif globals.device_type == "OZ2":
+    import RPi.GPIO as GPIO  # pylint: disable=import-error
+    import orangepi.zero2
+else:
+    import RPi.GPIO as GPIO  # pylint: disable=import-error
+
+
+
 from .buttons import BUTTONS
 import neo_batterylevelshutdown.usb as usb
 import neo_batterylevelshutdown.multiBat_Utilities as mb_utilities
@@ -39,6 +61,20 @@ def min_execution_time(min_time_secs):
     period = max(0, min_time_secs - duration)
     time.sleep(period)
 
+def setup_GPIO():
+    GPIO.cleanup()              # remove associations
+    GPIO.setwarnings(False)
+
+    if globals.device_type == "RM3":
+        GPIO.setmode(radxa.CM3.BOARD)  # not required... already set in cli.py
+    elif globals.device_type == "NEO":
+        GPIO.setmode(GPIO.BOARD)
+    elif globals.device_type == "OZ2":
+        GPIO.setmode(orangepi.zero2.BOARD)
+    else:
+       GPIO.setmode(GPIO.BCM)
+
+
 
 class BasePhysicalHAT:
 
@@ -48,15 +84,8 @@ class BasePhysicalHAT:
     # This is a standard interface - it's ok not to use
     def __init__(self, displayClass):
 
-        if globals.device_type == "NEO":
-            self.PIN_LED = 12    # PA6
-        if globals.device_type == "CM":
-            self.PIN_LED = 6    # GPIO6
-        if globals.device_type == "PI":
-            self.PIN_LED = 6    # GPIO6
-
-
-        GPIO.setup(self.PIN_LED, GPIO.OUT)
+#  cli.py wants hats.py to assign GPIO stuff... So we will do that starting here
+# imports are done in header... GPIO functions are done here
             # All HATs should turn on their LED on startup. Doing it in the base
             #  class constructor allows us the main loop to focus on transitions
             #  and not worry about initial state (and thus be simpler)
@@ -79,11 +108,14 @@ class BasePhysicalHAT:
     def shutdownDeviceCallback(self, channel):
         logging.info("Triggering device shutdown based on edge detection "
                       "of GPIO %s.", channel)
+        print("... IRQ Triggered")
         # do some verification that the signal is still low after 100 ms
         time.sleep(0.1)
         # if interrupt line is high, this was a false trigger... just return
         if GPIO.input(self.PIN_AXP_INTERRUPT_LINE):
             return
+#        print("...  for more than 0.1 sec....   DEBUG... returning") 
+#       return   
         self.shutdownDevice()
 
     def handleOtgSelect(self, channel):
@@ -230,6 +262,7 @@ class BasePhysicalHAT:
 class DummyHAT(BasePhysicalHAT):
 
     def __init__(self, displayClass):
+        setup_GPIO()
         super().__init__(displayClass)
         pass
 
@@ -256,9 +289,12 @@ class q1y2018HAT(BasePhysicalHAT):
         #  period before yanking the power, so if we have a falling edge on
         #  PIN_VOLT_3_0, then we're about to get the power yanked so attempt
         #  a graceful shutdown immediately.
+        
+        setup_GPIO()
 
         if globals.device_type == "NEO":
         # Pin numbers specified in BCM format
+            self.PIN_LED = 12    # PA6
             PIN_VOLT_3_0 =  8       # PG6 
             PIN_VOLT_3_45 = 10      # PG7
             PIN_VOLT_3_71 = 16      # PG8
@@ -266,6 +302,7 @@ class q1y2018HAT(BasePhysicalHAT):
             logging.info("Found Q1Y2018HAY for neo")
         else:
             # Pin numbers specified in BCM format
+            self.PIN_LED = 6    # GPIO6
             PIN_VOLT_3_0 =  14      # PG6 
             PIN_VOLT_3_45 = 15      # PG7
             PIN_VOLT_3_71 = 23      # PG8
@@ -275,6 +312,7 @@ class q1y2018HAT(BasePhysicalHAT):
 
         if (globals.device_type == "NEO"):
             logging.info("Initializing Pins")
+            GPIO.setup(self.PIN_LED, GPIO.OUT)
             GPIO.setup(self.PIN_VOLT_3_0, GPIO.IN)
             GPIO.setup(self.PIN_VOLT_3_45, GPIO.IN)
             GPIO.setup(self.PIN_VOLT_3_71, GPIO.IN)
@@ -450,6 +488,7 @@ class Axp209HAT(BasePhysicalHAT):
 
 
     def mainLoop(self):
+#        print("at entry axp209 hat main")
         while True:
             # The following ensures that the while loop only executes once every 
             #  LED_CYCLE_TIME_SECS...
@@ -471,7 +510,7 @@ class Axp209HAT(BasePhysicalHAT):
 
                 # Here we add a call to update the current page so info is regularly updated
                 self.display.redrawCurrentPage()
-
+   
 # DEPRICATED - Voltage monitoring for power down purposes is depricated. 
 #   We will let AXP209 (exclusively) handle the shutdown via the Voff facility (Reg 0x31 - set to 3.0V).
 #     The AXP209 i2C communication becomes unreliable at IPS voltages below 3.1V.
@@ -500,6 +539,7 @@ class Axp209HAT(BasePhysicalHAT):
 
                 # Check to see if anyone changed the brand.txt file if so we need to reload
                 globals.init()
+#                print("at end of axp hat main()")
 
 
 class q3y2018HAT(Axp209HAT): 
@@ -508,20 +548,24 @@ class q3y2018HAT(Axp209HAT):
 
     def __init__(self, displayClass):
 
+        setup_GPIO()
+
         if globals.device_type == "NEO":
+            self.PIN_LED = 12    # PA6
             self.PIN_L_BUTTON =   8             #  PA1
             self.PIN_R_BUTTON =   10            #  PG7
     #        self.PIN_AXP_INTERRUPT_LINE = 16
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q3y2018HAT for neo")
         else:
+            self.PIN_LED = 6    # GPIO6
             self.PIN_L_BUTTON =   14            #  PA1
             self.PIN_R_BUTTON =   15            #  PG7
     #        self.PIN_AXP_INTERRUPT_LINE = 23
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q3y2018HAT for Pi")
 
-
+        GPIO.setup(self.PIN_LED, GPIO.OUT)
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
         # Run parent constructors before adding event detection
@@ -545,14 +589,26 @@ class q3y2018HAT(Axp209HAT):
 
 class q4y2018HAT(Axp209HAT):
 
-    # The CM4 resolves to this HAT class
+    # The CM4 & RM3 resolves to this HAT class
 
     # Q4Y2018 - AXP209/OLED (Anker) Unit run specific pins
     # All pin references are now BCM format
 
     def __init__(self, displayClass):
 
-        if (globals.device_type == "NEO"):
+#        print("            begin q4y2018HAT __init__")
+        setup_GPIO()
+
+        if (globals.device_type == "RM3"):
+            self.PIN_LED = 31       # GPIO6
+            self.PIN_L_BUTTON = 5              # GPIO3
+            self.PIN_R_BUTTON = 7              # GPIO4
+            self.PIN_AXP_INTERRUPT_LINE = 10   # GPIO_15
+            self.PIN_OTG_SENSE = 11               #GPIO_17  (dummy)
+            self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
+            logging.info("found q4y2018HAT for neo")
+        elif (globals.device_type == "NEO"):
+            self.PIN_LED = 12    # PA6
             self.PIN_L_BUTTON = 8              # PG6
             self.PIN_R_BUTTON = 10              # PG7
             self.PIN_AXP_INTERRUPT_LINE = 16    # PG8
@@ -560,6 +616,7 @@ class q4y2018HAT(Axp209HAT):
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q4y2018HAT for neo")
         elif (globals.device_type =="CM"):
+            self.PIN_LED = 6    # GPIO6
             self.PIN_L_BUTTON = 3               # GPIO3/56
             self.PIN_R_BUTTON = 4               # GPIO4/54
             self.PIN_AXP_INTERRUPT_LINE = 15    # GPIO15/51
@@ -570,6 +627,7 @@ class q4y2018HAT(Axp209HAT):
         # We don't currently have a HAT for RPi... so we will get here if HAT wiring is same as CM4 for GPIO
         #  For the moment, we will assume a HAT with GPIO assignments the same as CM4
         else:                   #device type is Pi
+            self.PIN_LED = 6    # GPIO6
             self.PIN_L_BUTTON = 3               # GPIO3
             self.PIN_R_BUTTON = 4               # GPIO4
             self.PIN_AXP_INTERRUPT_LIINE = 15   # GPIO15
@@ -577,23 +635,48 @@ class q4y2018HAT(Axp209HAT):
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q4y2018HAT for Pi")
 
+        GPIO.setup(self.PIN_LED, GPIO.OUT)
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_AXP_INTERRUPT_LINE, GPIO.IN)
         GPIO.setup(self.PIN_OTG_SENSE, GPIO.IN)
+
         # Run parent constructors before adding event detection
         #  as some callbacks require objects only initialised
         #  in parent constructors
         super().__init__(displayClass)
-        GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
+
+# we handle interrupt setup different for RM3 because OPi.GPIO requires "lambda x:" in the setup
+#   ... but maybe RPi.GPIO will tolerate "lambda x:" ??
+
+# Status: these calls setup successfully... we can gett to the handleButtonPress, but
+#  the cancel of the event detect throws an error
+        if globals.device_type == "RM3":
+            GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
+                              callback= lambda x:self.buttons.handleButtonPress(self.PIN_L_BUTTON),
+                              bouncetime=125)
+            GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
+                              callback=lambda x: self.buttons.handleButtonPress(self.PIN_R_BUTTON),
+                              bouncetime=125)
+            GPIO.add_event_detect(self.PIN_OTG_SENSE, GPIO.BOTH,
+                               callback=lambda x:self.handleOtgSelect(),
+                               bouncetime=125)
+            GPIO.add_event_detect(self.PIN_AXP_INTERRUPT_LINE, GPIO.FALLING,
+                              callback=lambda x:self.shutdownDeviceCallback(self.PIN_AXP_INTERRUPT_LINE))
+#            print("registered button events")
+
+        else:
+            GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
                               callback=self.buttons.handleButtonPress,
                               bouncetime=125)
-        GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
+            GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
                               callback=self.buttons.handleButtonPress,
                               bouncetime=125)
-        GPIO.add_event_detect(self.PIN_OTG_SENSE, GPIO.BOTH,
+            GPIO.add_event_detect(self.PIN_OTG_SENSE, GPIO.BOTH,
                                callback=self.handleOtgSelect,
                                bouncetime=125)
+            GPIO.add_event_detect(self.PIN_AXP_INTERRUPT_LINE, GPIO.FALLING,
+                              callback=self.shutdownDeviceCallback)
 
 
         # We only enable interrupts on this HAT, rather than in the superclass
@@ -601,11 +684,11 @@ class q4y2018HAT(Axp209HAT):
         #  detect the interrupt.
         # (Note... this is NOT the AXP209 IRQ line... it is the AXP209 power down signal)
 
-    # This interrupt handler services a powerdown signal from the RC modified AXP209 EXTEN (pin 20)
-    #  line. That line goes low on reaching the Voff (Reg 0x31[0:2]) voltage of 3.0V (see line #347)
+    # The PIN_AXP_INTERRUPT_LINE interrupt handler services a powerdown signal from the RC 
+    #  modified AXP209 EXTEN (pin 20)line.
+    #  That line goes low on reaching the Voff (Reg 0x31[0:2]) voltage of 3.0V (see line #347)
     #  or upon detection of the PB1 being held longer than 8 sec.   
-        GPIO.add_event_detect(self.PIN_AXP_INTERRUPT_LINE, GPIO.FALLING,
-                              callback=self.shutdownDeviceCallback)
+
         self.handleOtgSelect(self.PIN_OTG_SENSE)
 
 
@@ -616,7 +699,10 @@ class q3y2021HAT(Axp209HAT):
 
     def __init__(self, displayClass):
 
+        setup_GPIO()
+
         if globals.device_type == "NEO":
+            self.PIN_LED = 31       # GPIO6
             self.PIN_L_BUTTON = 8                 #PG6
             self.PIN_R_BUTTON = 10                #PG7
             self.PIN_AXP_INTERRUPT_LINE = 16      #PG8
@@ -624,6 +710,7 @@ class q3y2021HAT(Axp209HAT):
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q3y2021HAT for neo")
         else:
+            self.PIN_LED = 6    # GPIO6
             self.PIN_L_BUTTON = 14                #PG6
             self.PIN_R_BUTTON = 15                #PG7
             self.PIN_AXP_INTERRUPT_LINE = 23      #PG8
@@ -631,7 +718,7 @@ class q3y2021HAT(Axp209HAT):
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q3y2021HAT for Pi")
 
-
+        GPIO.setup(self.PIN_LED, GPIO.OUT)
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_R_BUTTON, GPIO.IN)
         GPIO.setup(self.PIN_AXP_INTERRUPT_LINE, GPIO.IN)
@@ -657,4 +744,4 @@ class q3y2021HAT(Axp209HAT):
 
         GPIO.add_event_detect(self.PIN_AXP_INTERRUPT_LINE, GPIO.FALLING,
                               callback=self.shutdownDeviceCallback)
-        self.handleOtgSelect(self.PIN_OTG_SENSE)
+#        self.handleOtgSelect(self.PIN_OTG_SENSE)

@@ -4,12 +4,27 @@ import subprocess
 import sys
 import shutil
 import os
-import RPi.GPIO as GPIO
 from . import page_display_image
 import time
-import neo_batterylevelshutdown.globals as globals
 import neo_batterylevelshutdown.usb as usb
 import logging
+
+import neo_batterylevelshutdown.globals as globals
+
+# globals was initiated by cli, so no need to re initialize here
+# We do the imports here... but function calls inside of the code
+if globals.device_type == "RM3":
+    import radxa.CM3    # not required
+    import OPi.GPIO as GPIO  # pylint: disable=import-error
+elif globals.device_type == "NEO":
+    import RPi.GPIO as GPIO  # pylint: disable=import-error
+elif globals.device_type == "OZ2":
+    import RPi.GPIO as GPIO  # pylint: disable=import-error
+    import orangepi.zero2
+else:
+    import RPi.GPIO as GPIO  # pylint: disable=import-error
+
+
 
 DEBUG = True
 
@@ -22,6 +37,7 @@ class BUTTONS:
     CHECK_PRESS_THRESHOLD_SEC = 3  # Threshold for what qualifies as a long press
 
     def __init__(self, hat_class, display_class):
+
         self.display = display_class
         self.hat = hat_class
         self.display_type = display_class.display_type
@@ -407,6 +423,12 @@ class BUTTONS:
         :return: nothing
 
         '''
+
+        # For OPi.GPIO, it turns out that the state of the button can be read without
+        #  killing the event detect!
+
+        print("we have a button press on channel "+ str(channel))
+
         logging.info("we had a button press")
         if self.display_type == 'DummyDisplay':                                           # this device has no buttons or display, skip
             return
@@ -428,6 +450,10 @@ class BUTTONS:
 
         logging.debug("Handling button press")
         # get time single button was pressed along with the amount of time both buttons were pressed
+
+        print("just before check press time")
+
+
         channelTime, dualTime = self.checkPressTime(channel)
 
         logging.debug("time stamp for channel Time line 137: %s", channelTime)
@@ -479,6 +505,8 @@ class BUTTONS:
             self.switchPages()
 
     def checkPressTime(self, channel):
+        print("top of checkPressTime")
+
         '''
         This method checks for a long double press of the buttons.  Previously, we only
         had to deal with a single press of a single button.
@@ -498,11 +526,13 @@ class BUTTONS:
 
        '''
 
-
         # otherChannel is the button that has not been passed in by the channel parameter.
         otherChannel = self.USABLE_BUTTONS[0] if channel == self.USABLE_BUTTONS[1] else \
             self.USABLE_BUTTONS[1]
 
+        print("channel = "+str(channel) +"    and otherChannel = " +str(otherChannel))
+
+        # NEO ONLY
         # Temporarily turn off the push button interrupt handler
         #   and turn on the push button pins as regular inputs
         # Note that this is a specific case of buttons being on PG6 and PG7... 
@@ -510,6 +540,7 @@ class BUTTONS:
         if (globals.device_type == "NEO"):
             cmd = "devmem2 0x01c208d8 w 0x00777777 >/dev/null"
             os.popen(cmd).read()
+#            print("done with removing NEO event detects")
 
         # there are two timers here.  One is for total time the original button was pushed.
         # The second is for when the second button was pushed.  The timer gets restarted if
@@ -532,12 +563,17 @@ class BUTTONS:
 
         buttonTime = time.time() - startTime                                                    # How long was the original button down?
 
+#        print(" finished timing buttons")
+        print("    buttonTime = "+str(buttonTime)+ "dualTimeRecorded = "+str(dualTimeRecorded))
+
         # We are through with reading of the button states so turn interrupt handling back on
         if (globals.device_type == "NEO"):
             cmd = "devmem2 0x01c208d8 w 0x66777777 >/dev/null"
             os.popen(cmd).read()
+            print("after NEO re-establish interrupts")
 
         return buttonTime, dualTimeRecorded
+
 
     def chooseCancel(self):
         """ method for use when cancelling a choice"""
