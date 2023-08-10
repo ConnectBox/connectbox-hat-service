@@ -222,13 +222,13 @@ def main(verbose):
     f.close()
 #    print("into global inits")
 
-
 # in getHATClass we do GPIO pin assignments 
     hatClass = getHATClass()
     displayClass =getDisplayClass(hatClass)
 
 #    logging.info("display Class is: "+str(displayClass))
 #    logging.info("finished display class starting main loop")
+
     try:
         hatClass(displayClass).mainLoop()
     except KeyboardInterrupt:
