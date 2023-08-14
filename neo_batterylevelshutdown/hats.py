@@ -296,8 +296,8 @@ class q1y2018HAT(BasePhysicalHAT):
 
 
         if globals.device_type == "NEO":
-        # Pin numbers specified in BCM format
-            self.PIN_LED = 12    # PA6
+        # Pin numbers specified in BOARD format
+            self.PIN_LED = 12       # PA6
             PIN_VOLT_3_0 =  8       # PG6 
             PIN_VOLT_3_45 = 10      # PG7
             PIN_VOLT_3_71 = 16      # PG8
@@ -552,9 +552,9 @@ class q3y2018HAT(Axp209HAT):
         setup_GPIO()
 
         if globals.device_type == "NEO":
-            self.PIN_LED = 12    # PA6
-            self.PIN_L_BUTTON =   8             #  PA1
-            self.PIN_R_BUTTON =   10            #  PG7
+            self.PIN_LED =        12    # PA6
+            self.PIN_L_BUTTON =   8     # PA1
+            self.PIN_R_BUTTON =   10    # PG7
     #        self.PIN_AXP_INTERRUPT_LINE = 16
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q3y2018HAT for neo")
@@ -612,11 +612,11 @@ class q4y2018HAT(Axp209HAT):
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q4y2018HAT for neo")
         elif (globals.device_type == "NEO"):
-            self.PIN_LED = 12    # PA6
-            self.PIN_L_BUTTON = 8              # PG6
+            self.PIN_LED =      12              # PA6
+            self.PIN_L_BUTTON = 8               # PG6
             self.PIN_R_BUTTON = 10              # PG7
             self.PIN_AXP_INTERRUPT_LINE = 16    # PG8
-            self.PIN_OTG_SENSE = 11               #PA0
+            self.PIN_OTG_SENSE = 11             # PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q4y2018HAT for neo")
         elif (globals.device_type =="CM"):
@@ -706,11 +706,11 @@ class q3y2021HAT(Axp209HAT):
         setup_GPIO()
 
         if globals.device_type == "NEO":
-            self.PIN_LED = 31       # GPIO6
-            self.PIN_L_BUTTON = 8                 #PG6
-            self.PIN_R_BUTTON = 10                #PG7
-            self.PIN_AXP_INTERRUPT_LINE = 16      #PG8
-            self.PIN_OTG_SENSE = 11               #PA0
+            self.PIN_LED =      12                # PA6
+            self.PIN_L_BUTTON = 8                 # PG6
+            self.PIN_R_BUTTON = 10                # PG7
+            self.PIN_AXP_INTERRUPT_LINE = 16      # PG8
+            self.PIN_OTG_SENSE = 11               # PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q3y2021HAT for neo")
         else:
