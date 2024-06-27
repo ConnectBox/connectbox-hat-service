@@ -27,6 +27,10 @@ from axp209 import AXP209, AXP209_ADDRESS
 import neo_batterylevelshutdown.globals as globals
 logging.info("...hats.py globals.device_type = %s.", globals.device_type)
 
+comsFileName = "/usr/local/connectbox/creating_menus.txt"
+var_Indexing = False
+
+
 # globals was initiated by cli, so no need to re initialize here
 # We do the imports here... but function calls inside of the code
 if globals.device_type == "RM3":
@@ -80,7 +84,7 @@ def setup_GPIO():
 
 class BasePhysicalHAT:
 
-    LED_CYCLE_TIME_SECS = 5
+    LED_CYCLE_TIME_SECS = 4
 
     # pylint: disable=unused-argument
     # This is a standard interface - it's ok not to use
@@ -100,7 +104,7 @@ class BasePhysicalHAT:
         #  active (the HAT can stay powered after shutdown under some
         #  circumstances)
         GPIO.output(self.PIN_LED, GPIO.HIGH)
-        self.display.showPoweringOff()
+        self.display.PoweringOff()
         logging.info("Exiting for Shutdown")
         os.system("shutdown now")
         # Stick here to leave the showPoweringOff() display on to the end
@@ -274,7 +278,12 @@ class DummyHAT(BasePhysicalHAT):
         logging.info("There is no HAT, so there's nothing to do using DummyHat")
         logging.info("globals.device_type = "+globals.device_type)
         while True:
-            self.solidLED()
+            if os.path.isfile(comsFileName):
+                 self.display.showWaitPage("Indexing Data")
+                 var_Indexing = True
+            elif var_Indexing:
+                 self.display.showSuccessPage()
+                 var_Indexing = False
             time.sleep(3)
 
 
@@ -349,6 +358,24 @@ class q1y2018HAT(BasePhysicalHAT):
         logging.info("Starting Monitoring")
         while True:
             with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
+
+                if (time.time() > self.displayPowerOffTime) and (not var_Indexing):
+                    self.display.powerOffDisplay()
+
+                if os.path.isfile(comsFileName):
+                    self.display.showWaitPage("Indexing Data")
+                    var_Indexing = True
+                elif var_Indexing:
+                    self.display.showSuccessPage()
+                    var_Indexing = False
+
+                if os.path.isfile(comsFileName):
+                    self.display.showWaitPage("Indexing Data")
+                    var_Indexing = True
+                elif var_Indexing:
+                    self.display.showSuccessPage()
+                    var_Indexing = False
+
                 if GPIO.input(self.PIN_VOLT_3_84):
                     logging.debug("Battery voltage > 3.84V i.e. > ~63%")
                     self.solidLED()
@@ -491,13 +518,21 @@ class Axp209HAT(BasePhysicalHAT):
 
     def mainLoop(self):
 #        print("at entry axp209 hat main")
+        var_Indexing = False
         while True:
             # The following ensures that the while loop only executes once every
             #  LED_CYCLE_TIME_SECS...
             with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
                 # Perhaps power off the display
-                if time.time() > self.displayPowerOffTime:
+                if (time.time() > self.displayPowerOffTime) and (not var_Indexing):
                     self.display.powerOffDisplay()
+
+                if os.path.isfile(comsFileName):
+                    self.display.showWaitPage("Indexing Data")
+                    var_Indexing = True
+                elif var_Indexing:
+                    self.display.showSuccessPage()
+                    var_Indexing = False
 
                 # ATTiny battery handling only in CM4 HAT
                 if globals.device_type == "CM":

@@ -30,7 +30,7 @@ class PageDisplayImage:
         self.devicename = devicename
 
     def draw_page(self):
-        # display a specified impage
+        # display a specified image page
         logging.debug("Showing %s", self.imageName)
         dir_path = os.path.dirname(os.path.abspath(__file__))
         img_path = dir_path + '/assets/' + self.imageName
@@ -51,7 +51,7 @@ class PageDisplayImage:
 
         #device that is offending
         if self.devicename != "":
-            if self.imageName=='wait.png':
+            if 'wait' in self.imageName:
                 d.text((5, 15), "{:<}".format(self.devicename), font=font14, fill="black")
             elif self.imageName== 'error.png':
                 d.text((5, 20), "{:<}".format(self.devicename), font=font14, fill="black")

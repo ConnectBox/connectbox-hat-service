@@ -10,6 +10,7 @@ import io
 import os
 import json
 import logging
+import time
 
 # need to initialize the variables outside of the init() function
 # Then the init() will fill in the correct values
@@ -34,6 +35,11 @@ otg = "0"                       # 'none', 0 for normal positive OTG mode, 1 for 
 usbnomount = 0                  # enables and dissables auto mount.
 timestamp = ""
 clientIF = ""
+sequence_time = 0.0
+sequence = 0.0
+a = ""
+
+
 
 from . import page_battery
 from .HAT_Utilities import get_device
@@ -58,6 +64,11 @@ def init():
     global port
     global timestamp
     global clientIF
+    global sequence                 #Used for rotation of waiting symbol
+    global sequence_time
+    global a                        #Display value on screen
+
+ 
 
     logging.debug("Initializing Globals")
 
@@ -68,7 +79,8 @@ def init():
     f.close()
     js = json.loads(data)
     timestamp = os.path.getmtime('/usr/local/connectbox/brand.txt')
-
+    if (sequence >7) or (sequence < 0): sequence = 0
+    sequence_time = time.time()
 
 # May want to put some checks in to allow fields to be missing and
 #  if so, revert to defaults...

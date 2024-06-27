@@ -144,7 +144,10 @@ class BUTTONS:
                     time.sleep(2)
             dev = usb.isUsbPresent('/dev/sda1')
             self.pageStack = 'checkSpace'  # Don't allow the display to turn off
-            self.display.showWaitPage("Checking Space")
+            globals.sequence = 0
+            self.display.pageStack = 'wait'
+            globals.a = "Checking Space"
+            self.display.showWaitPage(globals.a)
             logging.info("Using location " +str(dev) + " as media copy location")
             mnt = usb.getMount(dev)
             logging.info("mounting location is: " + mnt)
@@ -211,7 +214,9 @@ class BUTTONS:
                 # we think we have keys to work with if we go forward from here. where the size is ok for the copy
                 logging.info("There is enough space so we will go forward with the copy")
                 logging.info("starting to do the copy with device " + mnt + ext)
-                self.display.showWaitPage("Copying Files\nSize:" + str(int(s / 1000)) + "MB")
+                globals.sequence = 0
+                globals.a = ("Copying Files\nSize:" + str(int(s / 1000)) + "MB")
+                self.display.showWaitPage(globals.a)
                 if usb.copyFiles(mnt, "/media/usb0", ext) > 0:  # see if we copied successfully
                     logging.info("failed the copy. display an error page")
                     hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
@@ -318,7 +323,9 @@ class BUTTONS:
                 NoMountOirg = 1                                              #Hang on to the original value to restore as needed
             hat.displayPowerOffTime = sys.maxsize
             self.display.pageStack = 'wait'
-            self.display.showWaitPage("Checking Sizes")
+            globals.sequence = 0
+            globals.a = "Checking Sizes"
+            self.display.showWaitPage(globals.a)
 
             logging.debug("we have found at least one usb to copy to: "+dev)
 
@@ -390,7 +397,9 @@ class BUTTONS:
                 # we think we have keys to work with if we go forward from here. where the size is ok for the copy
                 logging.info("There is enough space so we will go forward with the copy")
                 logging.info("starting to do the copy with device " + mnt + ext)
-                self.display.showWaitPage("Copying Files\nSize:" + str(int(s / 1000)) + "MB")
+                globals.sequence = 0
+                globals.a = ("Copying Files\nSize:" + str(int(s / 1000)) + "MB")
+                self.display.showWaitPage(globals.a)
                 if usb.copyFiles("/media/usb0", mnt, ext) > 0:  # see if we copied successfully
                     logging.info("failed the copy. display an error page")
                     hat.displayPowerOffTime = sys.maxsize
@@ -623,7 +632,8 @@ class BUTTONS:
                 self.display.showConfirmPage()                  # pageStack now = 'confirm'
         else:
             logging.debug("Choice confirmed")
-            self.display.showWaitPage("")
+            globals.sequence = 0
+            self.display.showWaitPage()
             self.display.pageStack = 'wait'
             logging.debug("Waiting Page shown")
             self.executeCommands(self.command_to_reference)

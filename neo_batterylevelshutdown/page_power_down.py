@@ -6,7 +6,7 @@
   https://github.com/ConnectBox/NEO_BatteryLevelShutdown
   License: MIT
   Version 1.0
-  DorJamJr - Sept 2021
+  KDW - Jun 2024
 ===========================================
 """
 
@@ -18,6 +18,7 @@ from .HAT_Utilities import get_device
 class PagePowerDown:
     def __init__(self, device):
         self.device = device
+
 
     def draw_page(self):
         dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +35,6 @@ class PagePowerDown:
 
 if __name__ == "__main__":
     try:
-        PagePowerDown(get_device()).draw_page()
+        Page_power_down(get_device()).draw_page()
     except KeyboardInterrupt:
         pass

@@ -17,6 +17,8 @@ import os
 
 import neo_batterylevelshutdown.globals as globals
 globals.init()
+globals.sequence = 0
+
 
 if globals.device_type == "RM3":
     import radxa.CM3
@@ -203,12 +205,12 @@ def main(verbose):
         f.write("ClientIF=\n")
         f.write("#####END######")
         f.close()
-        logging.info("wrote temp wificonf.txt file out\g\g\g")
+        logging.info("wrote temp wificonf.txt file out")
 
 #Initialize the Global Variables
 
     while not ( os.path.exists( progress_file )):
-      logging.info("waiting\g\g")
+      logging.info("waiting")
       time.sleep(5)	#we wait till we have a progress file
     time.sleep(2)	#make sure its filled 
     f = open(progress_file, "r")
@@ -224,8 +226,9 @@ def main(verbose):
 
 # in getHATClass we do GPIO pin assignments 
     hatClass = getHATClass()
+    print("hatClass is: " + str(hatClass))
     displayClass =getDisplayClass(hatClass)
-
+    print("DisplayClass is: " + str(displayClass))
 #    logging.info("display Class is: "+str(displayClass))
 #    logging.info("finished display class starting main loop")
 

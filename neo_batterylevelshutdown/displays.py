@@ -17,6 +17,8 @@ from . import page_battery_low
 from . import page_power_down
 from . import page_display_image
 from . import page_multi_bat
+#from . import page_waiting
+
 
 import neo_batterylevelshutdown.hats as hat
 import neo_batterylevelshutdown.globals as globals
@@ -150,11 +152,19 @@ class OLED:
 
             self._curPage.draw_page()
 
-    def showWaitPage(self,a):
+    def showWaitPage(self,b=''):
+        global sequence
+        global sequence_time
+        global a
+
         with self._curPageLock:
-            logging.debug("Showing wait page "+str(a))
+            logging.debug("Showing wait page "+ str(globals.sequence) + " " +str(b) + "time: " + str(time.time() - globals.sequence_time))
+            if (time.time() - globals.sequence_time) >= 1.0:
+                globals.sequence = ((globals.sequence + 1.0) % 7)
+                globals.sequence_time = time.time()
             self._curPage = page_display_image.PageDisplayImage(self.display_device,
-                                                                'wait.png',a)
+                                                                ('wait-' + str(int(globals.sequence)) + '.png'),b)
+            globals.a = b
             self._curPage.draw_page()
 
     def showConfirmPage(self):
@@ -291,7 +301,6 @@ class OLED:
             self._curPage.draw_page()
             logging.debug("Transitioned to page %s", self._curPage)
 
-
     def hideLowBatteryWarning(self):
         if self._curPage == self.low_battery_page:
             self.powerOffDisplay()
@@ -303,7 +312,8 @@ class OLED:
         if self._curPage == self.blank_page:
             # nothing to do
             return
-        if self.pageStack == 'wait'or self.pageStack == 'remove_usb' :  # we do not want to reset if we're on a wait screen
+        if self.pageStack == 'wait'or self.pageStack == 'remove_usb' :
+            if self.pageStack == 'wait': showWaitPage(globals.a)  # we do not want to reset if we're on a wait screen
             hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS  # reset
             return  # keep waiting
         if self.pageStack != 'status':  # if we're not on the default status pages
@@ -320,6 +330,7 @@ class OLED:
     def drawLogo(self):
         dir_path = os.path.dirname(os.path.abspath(__file__))
         img_path = dir_path + '/assets/' + globals.logo_image
+        print("Logo Image is: " + globals.logo_image)
         logo = Image.open(img_path).convert("RGBA")
         fff = Image.new(logo.mode, logo.size, (255,) * 4)
         background = Image.new("RGBA", self.display_device.size, "black")
@@ -335,7 +346,8 @@ class OLED:
     # refreshing the page during long display times
     def redrawCurrentPage(self):
         with self._curPageLock:
-            self._curPage.draw_page()
+            if (self.pageStack == 'wait'): showWaitPage(globals.a)
+            else: self._curPage.draw_page()
 
 
 
