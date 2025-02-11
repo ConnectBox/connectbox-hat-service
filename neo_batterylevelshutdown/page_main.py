@@ -15,7 +15,7 @@ import subprocess
 from PIL import Image, ImageFont, ImageDraw
 import axp209
 import neo_batterylevelshutdown.globals as globals
-from .HAT_Utilities import get_device, GetReleaseVersion
+from neo_batterylevelshutdown.HAT_Utilities import get_device, GetReleaseVersion
 import neo_batterylevelshutdown.multiBat_Utilities as mb_utilities
 
 

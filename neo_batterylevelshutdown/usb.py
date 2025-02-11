@@ -4,23 +4,25 @@ import time
 import subprocess
 import shutil
 import sys
-import neo_batterylevelshutdown.hats as hat
+import neo_batterylevelshutdown.hats  as hat
+import neo_batterylevelshutdown.displays as display
+from neo_batterylevelshutdown.globals import *
+
 
 #    @staticmethod
-def isUsbPresent(devPath='/dev/sda1'):
+def isUsbPresent(devPath ='/dev/sda1'):
     '''
 
     Returns if there is a USB plugged into specified devPath
     (does not depend on stick being mounted)
     :return: True / False
     '''
-    y = 0
     x = devPath[-2]
     logging.info("is USB Present x is: "+x)
     while (x < "k"):                                              #scan for usb keys  a - j
         z = (os.path.exists("/dev/sd"+x+"1"))
         logging.info("at position "+x+" key is "+str(z))
-        if ((z != False) and (y == 0)):
+        if (z != False):
             logging.info("found  usb key at: "+x)
             return('/dev/sd'+x+"1")
         x = chr(ord(x)+1)
@@ -44,6 +46,7 @@ def mount(devPath='/dev/sda1', newPath='/media/usb11'):
     Mount the USB drive at the devPath to the specified newPath location
      :return: True / False
     '''
+    response = 0
     x = ord(devPath[-2])
 #   Find the first USB key in the system
     while not os.path.exists(devPath) and (x < ord('k')):
@@ -51,14 +54,42 @@ def mount(devPath='/dev/sda1', newPath='/media/usb11'):
         devPath = "/dev/sd"+chr(x)+"1"
     logging.info("Mounting USB at %s to %s", devPath, newPath)
     if not os.path.exists(newPath):  # see if desired mounting directory exists
-        os.makedirs(newPath)  # create directory and all of the intermediary directories
-    response = subprocess.call(['mount',"-t", "auto", "-o", "utf8", devPath, newPath])
+        print ("directory path needed is "+newPath)
+        os.mkdir(newPath)  # create directory and all of the intermediary directories
+    x = os.system("uname -r")
+    y = str(x)
+    logging.info("the output of the current revision is: "+y)
+    if y>="5.15.0":
+       b = "mount " + devPath + " -t auto -o noatime,nodev,nosuid,sync,utf8" + newPath
+    else:
+       b = "mount " + devPath + " -t auto -o noatime,nodev,nosuid,sync,iocharset=utf8" + newPath
+       c = "dosfsck -a " + devPath
+       starttime = time.time()
+       print("checking the files system before mount with: "+ c)
+       try:
+           res = os.system(c)                          #do a file system check befor the mount.  if it is corrupted we will get a system stop PxUSBm
+           if res ==256:
+               print("failed to do dosfsck -a /dev/" + devPath)
+               c = "ntfsfix -d " + devPath
+               try:
+                   res = os.system(c)
+               except:
+                   print("failed to do ntfsfix -f")
+                   logging.info("Failed to do ntfsfix -d on "+ devPath)
+                   response = 1
+           else: response = 0
+       except:
+           print ("Failed to do dosfsck")
+           logging.info("Failed to do Dosfsck on " + devPath)
+           response = 1
+    if response == 0:
+       response = os.system(b)                              #do the mount
     logging.info("Mount Response: %s", response)
     return(response)
 
 
 #    @staticmethod
-def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0', ext='/content/'):
+def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0', ext='/content/', disp=''):
     '''
     Move files from sourcePath to destPath recursively
     To do this we need to turn off automount temporarily by changing the usb0NoMount flag in brand.txt
@@ -69,54 +100,80 @@ def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0', ext='/content/'
     :return:  True / False
     '''
 
+    handler = logging.handlers.WatchedFileHandler( os.environ.get("LOGFILE", "/var/log/neo-batteryshutdown.log"))
+    formatter = logging.Formatter(logging.BASIC_FORMAT)
+    handler.setFormatter(formatter)
+    logger = logging.getLogger(__name__)
+    logger.setLevel(os.environ.get("LOGLEVEL", "INFO"))
+    logger.addHandler(handler)
+
+    logging.info("entering the copyFiles utility")
+
+
+    comsFileName = "/usr/local/connectbox/creating_menus.txt"
+
     DISPLAY_TIMEOUT_SECS = 120
-    logging.info("Copying from: "+sourcePath+" to: "+destPath)
+    logging.info("Copying from: "+sourcePath+" to: "+destPath+"with ext of: "+ ext)
     y = 0
-    if (os.path.exists(sourcePath+ext)):
-        if os.path.exists(sourcePath) and os.path.exists(destPath):
+    if sourcePath[len(sourcePath)-1] == "/":
+        if len(ext)>0:
+            if ext[0] == "/": ext = ext[1:]
+    elif len(ext)>0:
+        if ext[0] != '/':
+            ext = '/' + ext
+    if os.path.exists(sourcePath) and os.path.exists(destPath):
+        if (os.path.exists(sourcePath+ext)):
+            if len(ext)>0:
+                if ((ext[0] != "/") and (destPath[len(destPath)-1] != "/")):
+                        destPath = destPath + "/"
+                elif ((ext[0] == "/") and (destPath[len(destPath)-1] == "/")):
+                        destPaht = destPath[0:(len(destPaht)-2)]
             files_in_dir = str(sourcePath+ext)
             files_to_dir = str(destPath+ext)
             if files_in_dir[-1] != "/": files_in_dir = files_in_dir + "/"
             if files_to_dir[-1] != "/": files_t0_dir = files_to_dir + "/"
+            errmd = False
+
             try:
-                if os.path.isdir(files_in_dir):
-                    hat.displayPowerOffTime = sys.maxsize
-                    x = logging.info("Copying tree: "+files_in_dir+" to: "+files_to_dir)
-                    shutil.copytree(files_in_dir, files_to_dir, symlinks=False, ignore_dangling_symlinks=True)
-                    logging.info("Used copytree to move files")
-#                    hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
-                else:
-                    hat.displayPowerOffTime = sys.maxsize
-                    logging.info("Copying: "+files_in_dir+" to: "+files_to_dir)
-                    x = shutil.copy2(files_in_dir, files_to_dir)
-                    logging.info("used copy2 to move files")
-#                    hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
-            except OSError as err:
-                logging.info("Copytree Errored out with error of OSError err: "+str(err))
-                y = 1
+                logging.info("starting the for loop on the copy")
+                for path, dirs,files in os.walk(files_in_dir):
+                    shortPath = path.replace((sourcePath+ext),"")
+                    logging.info("shortpath is: "+ str(shortPath))
+                    if len(files)>0:
+                        try:
+                                start_time = time.time()
+                                total_size = 0.0
+                                for file1 in files:
+                                    total_size =+ os.path.getsize(path + "/" + file1)
+                                    shutil.copy2((path + "/" + file1), (files_to_dir+shortPath), follow_symlinks=False)
+                                total_time = time.time()-start_time
+                                copyspeed =  total_size/total_time
+                                logger.info("Completed the copy of: " + shortPath)
+                                print("copyspeed is: "+(str(copyspeed)))
+                                display.showWaitPage(globals.a + chr(10) + "spd:" + copyspeed)
+                        except:
+                                print("Had error generated in file copy loop ",file1, path, dirs, len(files))
+                                logging.info("Had error generated in file copy loop", file1, path, dirs, len(files))
+                                errmd = True
+                                return(1)
+
+            except:
+                print ("We errored out on the file copy loop ",path, dirs, len(files))
+                logging.ingo("We errored out on the file copy loop ", path, dirs, len(files))
+                errmd = True
                 return(1)
-            except BaseException as err:
-                logging.info("Copytree Errored out with BaseException with BaseException:  err: "+str(err))
-                y = 1
-                return(1)
-            logging.info("going to try and copy the  stats over to the target!")
+
             try:
-                shutil.copystat(files_in_dir, files_to_dir, follow_symlinks=False)
-                logging.info("Completed the stat copy!")
-                logging.info("Done copying to: "+sourcePath+" to: "+destPath)
-                return(0)
-            except OSError as err:
-                logging.info("We had an OS error occur"+str(x)+" err: "+str(err))
-                if err.winerror is None:
-                    logging("Not sure what the error is but its winerror: "+str(x)+" err: "+str(err))
-                logging.info("Done copying "+sourcePath+" to: "+destPath+b+" but ERRORED!!!!!!!: "+str(x)+" err: "+str(err))
-                return(1)
+                os.system("rm "+ comsFileName)
+            except:
+                pass
         else:
-            logging.info("We found the destination of the copy but there is no "+ext+" directory or source indicie is out of range")
-            return(1)
+            logging.info("the sourcePath+ext whic is: "+str(sourcePath + ext)+" didn't exsist")
     else:
-        logginf.info("source path doosn't exsists, no copy possible")
+        logging.info("our sourePath or destPath didn't exsist")
         return(1)
+
+    return(0)
 
 
 def checkSpace( sourcePath='/media/usb11', destPath='/media/usb0'):
@@ -144,8 +201,12 @@ def checkSpace( sourcePath='/media/usb11', destPath='/media/usb0'):
     SourceSize = 0
     y = 0
     a = sourcePath
-    if a[-1]=="/":
-        a = sourcePath[-1]
+    if len(a)>2:
+        if a[-1]=="/":
+            a = sourcePath[-1]
+    else:
+        logging.info("source path is not valid: "+ sourcePath)
+        return -1, -1
     b = "/content/"
     logging.info("checking the source of : "+(a+b))
     if (os.path.exists(a+b)):
@@ -244,11 +305,40 @@ def moveMount(curMount='/media/usb0', destMount='/media/usb11'):
         else:
             x = ""
     logging.info("Unmounting file at location %s", x)
-    y = subprocess.call(['umount', x])  # unmount drive
-    if y > 0:
-        logging.info("Error trying to  unmount "+str(curMount)+"  error: "+str(y))
+    if x != "":
+        y = subprocess.call(['umount', x])  # unmount drive
+        if y > 0:
+            logging.info("Error trying to  unmount "+str(curMount)+"  error: "+str(y))
+            return(0)
     else:
-        logging.info("Unmount succeeded")
+        logging.info("Unmount succeeded or wasn't mounted")
+        y = os.system("uname -r")
+    if str(y) >= "5.15.0":
+        b = "mount " + x + " -t auto -o noatime,nodev,nosuid,sync,utf8" + destMount
+    else:
+        b = "mount " + x + " -t auto -o noatime,nodev,nosuid,sync,iocharset=utf8" + destMount
+    c = "dosfsck -a " + x
+    starttime = time.time()
+    print("checking the files system before mount with: "+ c)
+    try:
+        res = os.system(c)                          #do a file system check befor the mount.  if it is corrupted we will get a system stop PxUSBm
+        if res ==256:
+            print("failed to do dosfsck -a /dev/" + x)
+            c = "ntfsfix -d " + x
+            try:
+                res = os.system(c)
+            except:
+                print("failed to do ntfsfix -f")
+                logging.info("Failed to do ntfsfix -d on "+ x)
+                response = 1
+        else: response = 0
+    except:
+        print ("Failed to do dosfsck")
+        logging.info("Failed to do Dosfsck on " + x)
+        response = 1
+    if response == 0:
+       response = os.system(b)                              #do the mount
+    logging.info("Mount Response: %s", response)
     y = subprocess.call(['mount',"-t", "auto", "-o", "utf8", x, destMount])
     if y > 0:
         logging.info("Error trying to  mount "+str(x)+"  error: "+str(y))

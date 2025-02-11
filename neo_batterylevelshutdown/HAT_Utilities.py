@@ -10,7 +10,7 @@
 """
 import logging
 from luma.core import cmdline, error  # pylint: disable=import-error
-from . import globals
+from neo_batterylevelshutdown.globals import *
 
 def GetReleaseVersion():
     """Read the release version"""
@@ -31,7 +31,7 @@ def get_device(actual_args=None):
     device_type = "NEO"  # we start assuming a NEO
     global port
     port = 0       #we start assuming a NEO
-    globals.screen_enable[3] = 0  #assuming neo we only have one battery
+    screen_enable[3] = 0  #assuming neo we only have one battery
     parser = cmdline.create_parser(description='luma.examples arguments')
     with open("/proc/cpuinfo", encoding = 'utf8')as f:
         filx = f.read()
@@ -39,11 +39,11 @@ def get_device(actual_args=None):
             if ("Compute Module" in filx):
                 port = 10
                 device_type = "CM"
-                globals.screen_enable[3]=1  #we assume multi-battery
+                screen_enable[3]=1  #we assume multi-battery
             else:           #all other Raspberry Pi version other than compute modules
                 port = 1
                 device_type = "PI"
-        else: globals.screen_enable[3]=0    #Just make sure that we have only one battery for NEO
+        else: screen_enable[3]=0    #Just make sure that we have only one battery for NEO
     f.close()
     # for NEO we use i2c-port 0. For Pi's other than compute modules we use i2c-port 1 or 10 for CM
     logging.info("get device has determined were on i2c port# "+str(port))

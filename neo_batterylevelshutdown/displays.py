@@ -1,27 +1,31 @@
-# -*- coding: utf-8 -*-
+#! -*- coding: utf-8 -*-
 
 import logging
 import os
 import threading
 import time
 from PIL import Image
-from .HAT_Utilities import get_device
-from . import page_none
-from . import page_main
+
+
+from HAT_Utilities import *
+import page_none
+import page_main
+
+from globals import *
+import hats as hat
+
 #from . import page_mainA
-from . import page_battery
-from . import page_info
-from . import page_stats
-from . import page_memory
-from . import page_battery_low
-from . import page_power_down
-from . import page_display_image
-from . import page_multi_bat
+import neo_batterylevelshutdown.page_battery as page_battery
+import neo_batterylevelshutdown.page_info as page_info
+import neo_batterylevelshutdown.page_stats as page_stats
+import neo_batterylevelshutdown.page_memory as page_memory
+import neo_batterylevelshutdown.page_battery_low as page_battery_low
+import neo_batterylevelshutdown.page_power_down as page_power_down
+import neo_batterylevelshutdown.page_display_image as page_display_image
+import neo_batterylevelshutdown.page_multi_bat as page_multi_bat
 #from . import page_waiting
 
 
-import neo_batterylevelshutdown.hats as hat
-import neo_batterylevelshutdown.globals as globals
 
 
 class DummyDisplay:
@@ -156,15 +160,15 @@ class OLED:
         global sequence
         global sequence_time
         global a
-
+        print ("show wait page value b is: "+str(b)+" sequence is "+str(int(sequence)))
         with self._curPageLock:
-            logging.debug("Showing wait page "+ str(globals.sequence) + " " +str(b) + "time: " + str(time.time() - globals.sequence_time))
-            if (time.time() - globals.sequence_time) >= 1.0:
-                globals.sequence = ((globals.sequence + 1.0) % 7)
-                globals.sequence_time = time.time()
+            logging.debug("Showing wait page "+ str(sequence) + " " +str(b) + "time: " + str(time.time() - sequence_time))
+            if (time.time() - sequence_time) >= 1.0:
+                sequence = ((sequence + 1.0) % 7)
+                sequence_time = time.time()
             self._curPage = page_display_image.PageDisplayImage(self.display_device,
-                                                                ('wait-' + str(int(globals.sequence)) + '.png'),b)
-            globals.a = b
+                                                                ('wait-' + str(int(sequence)) + '.png'),b)
+            a = b
             self._curPage.draw_page()
 
     def showConfirmPage(self):
@@ -182,11 +186,11 @@ class OLED:
                                                                 'success.png')
             self._curPage.draw_page()
 
-    def showErrorPage(self,a):
+    def showErrorPage(self,b=""):
         with self._curPageLock:
             logging.debug("Showing error page")
             self._curPage = page_display_image.PageDisplayImage(self.display_device,
-                                                                'error.png',a)
+                                                                'error.png',b)
 
             self._curPage.draw_page()
 
@@ -203,7 +207,7 @@ class OLED:
         # First check to make sure the admin page stack is allowed...
         #  The last page in the normal stack is the admin page so we can simply
         #  test if the screen_enable[lastPage] is '0' and bail out in that case
-        screenList = globals.screen_enable
+        screenList = screen_enable
         adminPage = len(self.statusPages) - 1       # globals.screen_enable maps statusPages onlu
         if screenList[adminPage] == 0:
             return
@@ -236,7 +240,7 @@ class OLED:
                 #  or if we were showing the low battery page
                 self._curPage = self.pages[self.STARTING_PAGE_INDEX]
 
-            #need to handle both admin and status page stacks!    
+            #need to handle both admin and status page stacks!
             else:
                 # Figure out what the index of the next valid page
 
@@ -244,9 +248,9 @@ class OLED:
                 page_count = len(self.pages)
                 next_page_index = (current_page_index +1) % page_count
                 if self.pages == self.statusPages:      # we are in the status pages stack
-                    screenList = globals.screen_enable          # valid only for status pages... not admi
+                    screenList = screen_enable          # valid only for status pages... not admi
                     while screenList[next_page_index % page_count] == 0:
-                        next_page_index = (next_page_index+1) % page_count   # skip page with value 0  
+                        next_page_index = (next_page_index+1) % page_count   # skip page with value of
                 self._curPage = \
                         self.pages[next_page_index]
 
@@ -265,7 +269,7 @@ class OLED:
             else:
                 # move backwards in the page list
                 # Figure out what the index of the next valid page
-                screenList = globals.screen_enable
+                screenList = screen_enable
                 current_page_index = self.pages.index(self._curPage)
                 page_count = len(self.pages)
                 next_page_index = (current_page_index + page_count -1) % page_count
@@ -312,8 +316,8 @@ class OLED:
         if self._curPage == self.blank_page:
             # nothing to do
             return
-        if self.pageStack == 'wait'or self.pageStack == 'remove_usb' :
-            if self.pageStack == 'wait': showWaitPage(globals.a)  # we do not want to reset if we're on a wait screen
+        if ((self.pageStack == 'wait') or (self.pageStack == 'remove_usb')):
+            if self.pageStack == 'wait': self.showWaitPage(a)  # we do not want to reset if we're on a wait screen
             hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS  # reset
             return  # keep waiting
         if self.pageStack != 'status':  # if we're not on the default status pages
@@ -329,8 +333,8 @@ class OLED:
     # Ideally this should be a page, like the low battery page
     def drawLogo(self):
         dir_path = os.path.dirname(os.path.abspath(__file__))
-        img_path = dir_path + '/assets/' + globals.logo_image
-        print("Logo Image is: " + globals.logo_image)
+        img_path = dir_path + '/assets/' + logo_image
+        print("Logo Image is: " + logo_image)
         logo = Image.open(img_path).convert("RGBA")
         fff = Image.new(logo.mode, logo.size, (255,) * 4)
         background = Image.new("RGBA", self.display_device.size, "black")
@@ -346,7 +350,7 @@ class OLED:
     # refreshing the page during long display times
     def redrawCurrentPage(self):
         with self._curPageLock:
-            if (self.pageStack == 'wait'): showWaitPage(globals.a)
+            if (self.pageStack == 'wait'): self.showWaitPage(a)
             else: self._curPage.draw_page()
 
 

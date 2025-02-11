@@ -12,7 +12,7 @@
 
 import os.path
 from PIL import Image
-from .HAT_Utilities import get_device
+from neo_batterylevelshutdown.HAT_Utilities import get_device
 
 
 class PageBatteryLow:

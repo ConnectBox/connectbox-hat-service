@@ -15,7 +15,7 @@ import os.path
 import subprocess
 import sys
 from PIL import Image, ImageFont, ImageDraw
-from .HAT_Utilities import get_device
+from neo_batterylevelshutdown.HAT_Utilities import get_device
 import neo_batterylevelshutdown.globals as globals
 
 

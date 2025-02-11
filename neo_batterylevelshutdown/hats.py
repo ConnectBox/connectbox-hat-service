@@ -17,39 +17,34 @@ import io
 import sys
 import time
 import subprocess
-
+#from neo_batterylevelshutdown import page_powerdown
 
 
 #JRA - 011322
 #import smbus2
 
-from axp209 import AXP209, AXP209_ADDRESS
-import neo_batterylevelshutdown.globals as globals
-logging.info("...hats.py globals.device_type = %s.", globals.device_type)
-
-comsFileName = "/usr/local/connectbox/creating_menus.txt"
-var_Indexing = False
+from axp209 import *
+from globals import *
 
 
 # globals was initiated by cli, so no need to re initialize here
 # We do the imports here... but function calls inside of the code
-if globals.device_type == "RM3":
+if device_type == "RM3":
     import radxa.CM3    # not required
-    import OPi.GPIO as GPIO  # pylint: disable=import-error
-elif globals.device_type == "NEO":
+    import OPI.GPIO   # pylint: disable=import-error
+elif device_type == "NEO":
+    import RPi.GPIO as  GPIO  # pylint: disable=import-error
+elif device_type == "OZ2":
     import RPi.GPIO as GPIO  # pylint: disable=import-error
-elif globals.device_type == "OZ2":
-    import RPi.GPIO as GPIO  # pylint: disable=import-error
-    import orangepi.zero2
+    import orangepi as zero2
 else:
     import RPi.GPIO as GPIO  # pylint: disable=import-error
 
 
+import usb
+import multiBat_Utilities as mb_utilities
 
-from .buttons import BUTTONS
-import neo_batterylevelshutdown.usb as usb
-import neo_batterylevelshutdown.multiBat_Utilities as mb_utilities
-
+comsFileName = "/usr/local/connectbox/creating_menus.txt"
 
 
 @contextmanager
@@ -71,12 +66,12 @@ def setup_GPIO():
     GPIO.cleanup()              # remove associations
     GPIO.setwarnings(False)
 
-    if globals.device_type == "RM3":
-        GPIO.setmode(radxa.CM3.BOARD)  # not required... already set in cli.py
-    elif globals.device_type == "NEO":
+    if device_type == "RM3":
+        GPIO.setmode(CM3.BOARD)  # not required... already set in cli.py
+    elif device_type == "NEO":
         GPIO.setmode(GPIO.BOARD)
-    elif globals.device_type == "OZ2":
-        GPIO.setmode(orangepi.zero2.BOARD)
+    elif device_type == "OZ2":
+        GPIO.setmode(zero2.BOARD)
     else:
        GPIO.setmode(GPIO.BCM)
 
@@ -90,11 +85,14 @@ class BasePhysicalHAT:
     # This is a standard interface - it's ok not to use
     def __init__(self, displayClass):
 
+#        setup_GPIO() if we do this we void all other settings
+
 #  cli.py wants hats.py to assign GPIO stuff... So we will do that starting here
 # imports are done in header... GPIO functions are done here
             # All HATs should turn on their LED on startup. Doing it in the base
             #  class constructor allows us the main loop to focus on transitions
             #  and not worry about initial state (and thus be simpler)
+
         self.solidLED()
 
 #    @classmethod
@@ -103,8 +101,9 @@ class BasePhysicalHAT:
         # Turn off the LED, as some people associate that with wifi being
         #  active (the HAT can stay powered after shutdown under some
         #  circumstances)
+        logging.info("shutdownDevice entry")
         GPIO.output(self.PIN_LED, GPIO.HIGH)
-        self.display.PoweringOff()
+        self.display.showPoweringOff()
         logging.info("Exiting for Shutdown")
         os.system("shutdown now")
         # Stick here to leave the showPoweringOff() display on to the end
@@ -120,8 +119,8 @@ class BasePhysicalHAT:
         # if interrupt line is high, this was a false trigger... just return
         if GPIO.input(self.PIN_AXP_INTERRUPT_LINE):
             return
-#        print("...  for more than 0.1 sec....   DEBUG... returning") 
-#       return   
+#        print("...  for more than 0.1 sec....   DEBUG... returning")
+#       return
         self.shutdownDevice()
 
     def handleOtgSelect(self, channel):
@@ -143,10 +142,10 @@ class BasePhysicalHAT:
         #   Base address = 0x01c20800 ... PA0 is in bits 2:0 of offset 0x00
         # globals.otg =0 for off;  high to enable OTG and "none" for enabled inverted OTG 
         # and 'both' for always otg regardless of state
-        if globals.otg=='0' or globals.otg == 0:
-            retval = os.popen("grep "+globals.g_device).read()
+        if otg=='0' or otg == 0:
+            retval = os.popen("grep "+ g_device).read()
             if retval != "":
-                retval = os.popen('modprobe -r '+globals.g_device)     #make sure there is no g_device loaded by default.
+                retval = os.popen('modprobe -r '+ g_device)     #make sure there is no g_device loaded by default.
             return
         if (globals.device_type == "NEO"):
             cmd = "devmem2 0x01c20800"      #set up to read the config value for PA0
@@ -156,17 +155,17 @@ class BasePhysicalHAT:
             cmd1 = cmd + " w " + hex(write_val)          # Form the command
             retval = os.popen(cmd1).read()                     # Write the register
 
-            if globals.otg == "none":
+            if otg == "none":
                 otg_xor = 1
             else:
                 otg_xor = 0
 
             # we are now in input mode for the pin...
-            if globals.otg == "both":
+            if otg == "both":
                 otg_mode = True
                 logging.debug("The OTG pin state dosn't matter were enabled in any case")
             else:
-                if (globals.otg ^ otg_xor) == 0:
+                if (otg ^ otg_xor) == 0:
                     logging.debug("The OTG pin is LOW, so leaving OTG mode")
                     otg_mode = False
                 else:
@@ -174,23 +173,23 @@ class BasePhysicalHAT:
                     otg_mode = True
 
             # we are through with using the OTG pin as an input... put the register back as it was
-            if (globals.device_type == "NEO"):
+            if (device_type == "NEO"):
                 cmd2 = cmd + " w " + hex(init_val)      #form command to write the orginal value back
                 retval = os.popen(cmd2).read()          # the stdout of the command
 
             # Now we have determined the OTG request, so do the requested work
             if otg_mode == True:
                 logging.debug("in OTG set")
-                retval = os.popen("grep "+globals.g_device+" /proc/modules").read()
+                retval = os.popen("grep "+g_device+" /proc/modules").read()
                 if retval == "":
                     # module was not loaded we couldn't find it at least.  So lets get to loading
-                    retval = os.popen("modprobe "+globals.g_device+" "+globals.enable_mass_storage).read()
+                    retval = os.popen("modprobe "+g_device+" "+enable_mass_storage).read()
                     if retval.find("FATAL") <= 0:
-                        logging.info("failed to load the driver "+globals.g_device+" "+globals.enable_mass_storage)
+                        logging.info("failed to load the driver "+g_device+" "+enable_mass_storage)
                         return
                     else:
                         retval = os.popen("systemctl daemon-reload").read()
-                        if globals.g_device == 'g_serial':
+                        if g_device == 'g_serial':
                             retval = os.popen("systemctl restart serial-getty@ttyGS0.service").read()
                             if retval != "":
                                 logging.info("load of g_serial serial-getty@ttyGS0.service failed")
@@ -201,7 +200,7 @@ class BasePhysicalHAT:
                     return
                 else:
                     # module was already loaded so wnat do we need to do?
-                    if globals.g_device == 'g_serial':
+                    if g_device == 'g_serial':
                         retval = os.popen("systemctl status service-getty@ttyGS0.service").read()
                         if retval.find("active (running)") <= 0:
                             retval = os.popen("systemctl restart serial-getty@ttyGS0.service").read()
@@ -214,11 +213,11 @@ class BasePhysicalHAT:
                     return
             else:
                 logging.debug("not OTG set")
-                retval = os.popen("grep "+globals.g_device+" /proc/modules").read()
+                retval = os.popen("grep "+g_device+" /proc/modules").read()
                 if retval.find("filename"):
-                    retval = os.popen("modprobe -r "+globals.g_device).read()
+                    retval = os.popen("modprobe -r "+g_device).read()
                     if retval.find("FATAL"):
-                        logging.debug("modprobe operation to remove "+globals.g_device+" failed!")
+                        logging.debug("modprobe operation to remove "+g_device+" failed!")
         return
     # End of the OTG interrupt handler.......
 
@@ -276,10 +275,13 @@ class DummyHAT(BasePhysicalHAT):
     # This is a standard interface - it's ok not to use self for a dummy impl
     def mainLoop(self):
         logging.info("There is no HAT, so there's nothing to do using DummyHat")
-        logging.info("globals.device_type = "+globals.device_type)
+        logging.info("device_type = "+device_type)
         while True:
             if os.path.isfile(comsFileName):
-                 self.display.showWaitPage("Indexing Data")
+                 f = open(comsFileName, "r")
+                 a = f.read()
+                 f.close()
+                 self.display.showWaitPage(a)
                  var_Indexing = True
             elif var_Indexing:
                  self.display.showSuccessPage()
@@ -300,29 +302,31 @@ class q1y2018HAT(BasePhysicalHAT):
         #  period before yanking the power, so if we have a falling edge on
         #  PIN_VOLT_3_0, then we're about to get the power yanked so attempt
         #  a graceful shutdown immediately.
-        
+
         setup_GPIO()
+        super().__init__(displayClass)
+        logging.info("super().__init__(displayClass)")
 
 
-        if globals.device_type == "NEO":
+        if device_type == "NEO":
         # Pin numbers specified in BOARD format
-            self.PIN_LED = 12       # PA6
-            PIN_VOLT_3_0 =  8       # PG6 
+            PIN_LED = 12            # PA6
+            PIN_VOLT_3_0 =  8       # PG6
             PIN_VOLT_3_45 = 10      # PG7
             PIN_VOLT_3_71 = 16      # PG8
             PIN_VOLT_3_84 = 18      # PG9
             logging.info("Found Q1Y2018HAY for neo")
         else:
             # Pin numbers specified in BCM format
-            self.PIN_LED = 6    # GPIO6
-            PIN_VOLT_3_0 =  14      # PG6 
+            self.PIN_LED = 6        # GPIO6
+            PIN_VOLT_3_0 =  14      # PG6
             PIN_VOLT_3_45 = 15      # PG7
             PIN_VOLT_3_71 = 23      # PG8
             PIN_VOLT_3_84 = 24      # PG9
             logging.info("Found Q1Y2018HAY for Pi")
 
 
-        if (globals.device_type == "NEO"):
+        if (device_type == "NEO"):
             logging.info("Initializing Pins")
             GPIO.setup(self.PIN_LED, GPIO.OUT)
             GPIO.setup(self.PIN_VOLT_3_0, GPIO.IN)
@@ -363,14 +367,10 @@ class q1y2018HAT(BasePhysicalHAT):
                     self.display.powerOffDisplay()
 
                 if os.path.isfile(comsFileName):
-                    self.display.showWaitPage("Indexing Data")
-                    var_Indexing = True
-                elif var_Indexing:
-                    self.display.showSuccessPage()
-                    var_Indexing = False
-
-                if os.path.isfile(comsFileName):
-                    self.display.showWaitPage("Indexing Data")
+                    f = open(comsFileName, "r")
+                    a = f.read()
+                    f.close()
+                    self.display.showWaitPage(a)
                     var_Indexing = True
                 elif var_Indexing:
                     self.display.showSuccessPage()
@@ -415,10 +415,13 @@ class Axp209HAT(BasePhysicalHAT):
 
     def __init__(self, displayClass):
 
+        logging.info("...hats.py globals.device_type = %s.", device_type)
+        var_Indexing = False
+        AXP209_ADDRESS = 0x34
         logging.info("Starting AXP209HAT class __init__")
-        self.axp = AXP209(globals.port)         # Pass the port number to get the right device
+        self.axp = AXP209(port)         # Pass the port number to get the right device
         self.display = displayClass(self)
-        self.buttons = BUTTONS(self, self.display)
+
         # Blank the screen 3 seconds after showing the logo - that's long
         #  enough. While displayPowerOffTime is read and written from both
         #  callback threads and the main loop, there's no TOCTOU race
@@ -434,6 +437,9 @@ class Axp209HAT(BasePhysicalHAT):
         # Write the charge control 1 - limit/ current control register
         #  (Vtarget = 4.1 volts, end charging when below 10% of set charge current,
         #   charge current = 1200 mA )
+
+        print ('axp209_address :'+hex(AXP209_ADDRESS))
+
         self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x33, 0xC9)    # V(trgt) = 4.2V (was 0x89... 4.1V)
 
         # Enable AC_IN current and voltage ADCs (also ADCs for Battery voltage, Battery current,
@@ -457,7 +463,7 @@ class Axp209HAT(BasePhysicalHAT):
         self.axp.bus.write_byte_data(AXP209_ADDRESS, 0x32, hexval)
 
         # If processor is CM4, call this to test if ATTiny is still talking
-        if globals.device_type == "CM":
+        if device_type == "CM":
             mb_utilities.init_ATTiny_Talking()      # set ATTiny_Talking (global) to true
             mb_utilities.check_ATTiny()
             # Tell ATTiny to cycle through all batteries so AXP209 can read the voltages
@@ -528,14 +534,17 @@ class Axp209HAT(BasePhysicalHAT):
                     self.display.powerOffDisplay()
 
                 if os.path.isfile(comsFileName):
-                    self.display.showWaitPage("Indexing Data")
+                    f = open(comsFileName, "r")
+                    a = f.read()
+                    f.close()
+                    self.display.showWaitPage(a)
                     var_Indexing = True
                 elif var_Indexing:
                     self.display.showSuccessPage()
                     var_Indexing = False
 
                 # ATTiny battery handling only in CM4 HAT
-                if globals.device_type == "CM":
+                if device_type == "CM":
                     try:
                         batteryVoltage = int(self.axp.battery_voltage)
                     except:
@@ -573,20 +582,19 @@ class Axp209HAT(BasePhysicalHAT):
                 # Give a rough idea of battery capacity based on the LEDs
                 self.updateLEDState()
 
-                # Check to see if anyone changed the brand.txt file if so we need to reload
-                globals.init()
-#                print("at end of axp hat main()")
+                print("at end of axp hat main()")
 
 
 class q3y2018HAT(Axp209HAT):
 
     # HAT 4.6.7 - This is ONLY a NEO HAT
 
-    def __init__(self, displayClass):
+    def __init__(displayClass):
 
         setup_GPIO()
+        logging.info("...hats.py globals.device_type = %s.", device_type)
 
-        if globals.device_type == "NEO":
+        if device_type == "NEO":
             self.PIN_LED =        12    # PA6
             self.PIN_L_BUTTON =   8     # PA1
             self.PIN_R_BUTTON =   10    # PG7
@@ -611,10 +619,10 @@ class q3y2018HAT(Axp209HAT):
 
         super().__init__(displayClass)
         GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
-                              callback=self.buttons.handleButtonPress,
+                              callback=BUTTONS.handleButtonPress,
                               bouncetime=125)
         GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
-                              callback=self.buttons.handleButtonPress,
+                              callback=BUTTONS.handleButtonPress,
                               bouncetime=125)
 
     def powerOffDisplay(self, channel):
@@ -637,8 +645,13 @@ class q4y2018HAT(Axp209HAT):
 
 #        print("            begin q4y2018HAT __init__")
         setup_GPIO()
+        logging.info("...hats.py globals.device_type = %s.", device_type)
+        comsFileName = "/usr/local/connectbox/creating_menus.txt"
+        var_Indexing = False
+        AXP209_ADDRESS = 0x34
 
-        if (globals.device_type == "RM3"):
+
+        if (device_type == "RM3"):
             self.PIN_LED = 31       # GPIO6
             self.PIN_L_BUTTON = 5              # GPIO3
             self.PIN_R_BUTTON = 7              # GPIO4
@@ -646,7 +659,7 @@ class q4y2018HAT(Axp209HAT):
             self.PIN_OTG_SENSE = 11               #GPIO_17  (dummy)
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q4y2018HAT for neo")
-        elif (globals.device_type == "NEO"):
+        elif (device_type == "NEO"):
             self.PIN_LED =      12              # PA6
             self.PIN_L_BUTTON = 8               # PG6
             self.PIN_R_BUTTON = 10              # PG7
@@ -654,7 +667,7 @@ class q4y2018HAT(Axp209HAT):
             self.PIN_OTG_SENSE = 11             # PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q4y2018HAT for neo")
-        elif (globals.device_type =="CM"):
+        elif (device_type =="CM"):
             self.PIN_LED = 6    # GPIO6
             self.PIN_L_BUTTON = 3               # GPIO3/56
             self.PIN_R_BUTTON = 4               # GPIO4/54
@@ -690,12 +703,12 @@ class q4y2018HAT(Axp209HAT):
 
 # Status: these calls setup successfully... we can gett to the handleButtonPress, but
 #  the cancel of the event detect throws an error
-        if globals.device_type == "RM3":
+        if device_type == "RM3":
             GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
-                              callback= lambda x:self.buttons.handleButtonPress(self.PIN_L_BUTTON),
+                              callback= lambda x: BUTTONS.handleButtonPress(self.PIN_L_BUTTON),
                               bouncetime=125)
             GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
-                              callback=lambda x: self.buttons.handleButtonPress(self.PIN_R_BUTTON),
+                              callback=lambda x: BUTTONS.handleButtonPress(self.PIN_R_BUTTON),
                               bouncetime=125)
             GPIO.add_event_detect(self.PIN_OTG_SENSE, GPIO.BOTH,
                                callback=lambda x:self.handleOtgSelect(),
@@ -706,10 +719,10 @@ class q4y2018HAT(Axp209HAT):
 
         else:
             GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
-                              callback=self.buttons.handleButtonPress,
+                              callback=BUTTONS.handleButtonPress,
                               bouncetime=125)
             GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
-                              callback=self.buttons.handleButtonPress,
+                              callback=BUTTONS.handleButtonPress,
                               bouncetime=125)
             GPIO.add_event_detect(self.PIN_OTG_SENSE, GPIO.BOTH,
                                callback=self.handleOtgSelect,
@@ -723,10 +736,10 @@ class q4y2018HAT(Axp209HAT):
         #  detect the interrupt.
         # (Note... this is NOT the AXP209 IRQ line... it is the AXP209 power down signal)
 
-    # The PIN_AXP_INTERRUPT_LINE interrupt handler services a powerdown signal from the RC 
+    # The PIN_AXP_INTERRUPT_LINE interrupt handler services a powerdown signal from the RC
     #  modified AXP209 EXTEN (pin 20)line.
     #  That line goes low on reaching the Voff (Reg 0x31[0:2]) voltage of 3.0V (see line #347)
-    #  or upon detection of the PB1 being held longer than 8 sec.   
+    #  or upon detection of the PB1 being held longer than 8 sec.
 
         self.handleOtgSelect(self.PIN_OTG_SENSE)
 
@@ -738,9 +751,15 @@ class q3y2021HAT(Axp209HAT):
 
     def __init__(self, displayClass):
 
-        setup_GPIO()
+        from buttons import BUTTONS
 
-        if globals.device_type == "NEO":
+        setup_GPIO()
+        logging.info("...hats.py globals.device_type = %s.", device_type)
+        var_Indexing = False
+        AXP209_ADDRESS = 0x34
+        button = BUTTONS
+
+        if device_type == "NEO":
             self.PIN_LED =      12                # PA6
             self.PIN_L_BUTTON = 8                 # PG6
             self.PIN_R_BUTTON = 10                # PG7
@@ -748,6 +767,7 @@ class q3y2021HAT(Axp209HAT):
             self.PIN_OTG_SENSE = 11               # PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q3y2021HAT for neo")
+            print ("found q3y2021HAT for neo")
         else:
             self.PIN_LED = 6    # GPIO6
             self.PIN_L_BUTTON = 14                #PG6
@@ -756,6 +776,7 @@ class q3y2021HAT(Axp209HAT):
             self.PIN_OTG_SENSE = 17               #PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q3y2021HAT for Pi")
+            print("found q3y2021HAT for Pi")
 
         GPIO.setup(self.PIN_LED, GPIO.OUT)
         GPIO.setup(self.PIN_L_BUTTON, GPIO.IN)
@@ -767,16 +788,16 @@ class q3y2021HAT(Axp209HAT):
         #  in parent constructors
         super().__init__(displayClass)
         GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
-                              callback=self.buttons.handleButtonPress,
+                              callback=BUTTONS.handleButtonPress(self.USABLE_BUTTONS[0]),
                               bouncetime=125)
         GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
-                              callback=self.buttons.handleButtonPress,
+                              callback=BUTTONS.handleButtonPress(self.USABLE_BUTTONS[1]),
                               bouncetime=125)
         GPIO.add_event_detect(self.PIN_OTG_SENSE, GPIO.BOTH,
                                callback=self.handleOtgSelect,
                                bouncetime=125)
 
- 
+
     # This interrupt handler responds to the EXTEN signal of the AXP209. It gives us
     #  a heads up that power is going down either because the IPS OUT voltage is below Voff (0x31[2:0])
     #  or because the user has pushed PB1 longer than 8 seconds

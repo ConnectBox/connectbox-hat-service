@@ -16,8 +16,8 @@ from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
 import axp209
-from . import globals
-from .HAT_Utilities import get_device
+import neo_batterylevelshutdown.globals
+from neo_batterylevelshutdown.HAT_Utilities import get_device
 import neo_batterylevelshutdown.multiBat_Utilities as mb_utilities
 
 

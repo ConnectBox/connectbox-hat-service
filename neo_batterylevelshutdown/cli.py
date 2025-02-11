@@ -15,36 +15,37 @@ import os
 # We import globals here so we can run globals.init() (establishing the processor type)
 #  so we can choose the correct GPIO library
 
-import neo_batterylevelshutdown.globals as globals
-globals.init()
-globals.sequence = 0
+from globals import *
 
+startup()
+print (" did startup of globals")
 
-if globals.device_type == "RM3":
-    import radxa.CM3
-    import OPi.GPIO as GPIO  # pylint: disable=import-error
-elif globals.device_type == "NEO":
-    import RPi.GPIO as GPIO  # pylint: disable=import-error
-elif globals.device_type == "OZ2":
-    import RPi.GPIO as GPIO  # pylint: disable=import-error
-    import orangepi.zero2
-else:
-    import RPi.GPIO as GPIO  # pylint: disable=import-error
+sequence = 0
 
+time.sleep(2)
 
 # Having imported globals and run globals.init() (above) importing hats (and hats importing
 #  buttons) means both of those have access to globals variables (specifically, globals.device_type)
 #  at the top of the module... so they can make similar decisions as to which GPIO to import
-import neo_batterylevelshutdown.hats as hats
-import neo_batterylevelshutdown.displays as displays
-import neo_batterylevelshutdown.HAT_Utilities as utilities
+from  hats import *
 
-# Use BCM pin numbering scheme for compatibility with CM4 and use Board compatability for NEO
+from displays import *
+
+import HAT_Utilities as utilities
 
 
-# Global definitions for this module
-hatClass = 0
-progress_file = "/usr/local/connectbox/expand_progress.txt"
+
+if device_type == "RM3":
+    import CM3
+    import OPi.GPIO as GPIO  # pylint: disable=import-error
+elif device_type == "NEO":
+    import RPi.GPIO as GPIO  # pylint: disable=import-error
+elif device_type == "OZ2":
+    import RPi.GPIO as GPIO  # pylint: disable=import-error
+    import zero2
+else:
+    import RPi.GPIO as GPIO   # pylint: disable=import-error
+
 
 
 def getHATClass():
@@ -71,33 +72,39 @@ def getHATClass():
 #    (but PA0 not tested here... so we don't need to define here...)
 
 # While we do pin assignments here we don't use PA0 and PA1 in this module (they are for ref)
-    if globals.device_type == "RM3":
+    if device_type == "RM3":
         PA6  = 31   # GPIO6 - Amber LED ... perhaps consider renaming (globally) PA6 -> AMBER ??
         PA1  = 22   # GPIO25 - unconnected
         PG11 = 7    # GPIO4  - PB2
 #        PA0  = 11   # GPIO17 - unconnected
-    if globals.device_type == "NEO":
+    elif device_type == "NEO":
         PA6 = 12    #PA6    Amber LED pin #
         PA1 = 22    #PA1    Test for HAT 4.6.7 (all other HATs have this pin unconnected) pin #
         PG11 = 7    #PG11   Test of HAT 7 pin #
 #        PA0 = 11    #PA0    OTG sense (HAT7), not used on others pin #
-    if globals.device_type == "CM":    # running as BCM (not BOARD)
+    elif device_type == "CM":    # running as BCM (not BOARD)
         PA6 = 6     #GPIO6/30 - Amber LED
         PA1 = 25    #GPIO25/41 - unconnected
         PG11 = 4    #GPIO4/54   Actually GPIO4 is PB2 which will be HIGH on CM4 HAT
 #        PA0 = 17    #GPIO17/50 - unconnected
-    if globals.device_type == "PI":
+    elif device_type == "PI":
         PA6 = 18    #device is Pi GPIO18
         PA1 = 23    #GPIO25
         PG11 = 4    #GPIO4
 #        PA0 = 17    #GPIO17
+    else:
+        logging.info("the device_type was not set appropriatley : "+str(device_type))
+        PA6 = 12    #PA6    Amber LED pin #
+        PA1 = 22    #PA1    Test for HAT 4.6.7 (all other HATs have this pin unconnected) pin #
+        PG11 = 7    #PG11   Test of HAT 7 pin #
+#        PA0 = 11    #PA0    OTG sense (HAT7), not used on others pin #
 
     logging.info("passed GPIO no hat test looking for AXP209")
 
     # Test axp first... if we have an AXP then no need to test PA6
     # RETHINK THIS LOGIC TO AVOID TESTING GPIO PINS IF POSSIBLE
     try:
-        axp = axp209.AXP209(globals.port)
+        axp = axp209.AXP209(port)
     # moved the battexists = axp.battery_exists test to the individual battery display pages
         axp.close()
         # AXP209 found... we have HAT from Q3Y2018 or later
@@ -111,10 +118,10 @@ def getHATClass():
     # if device_type is CM4 or RM3, and we have AXP209 (ie not bare board) then this 
     #  is a q4y2018 hat class... we will assign that without GPIO tests of PA6 to avoid
     #  issues with possible false detection of PA6 state 
-        if globals.device_type == 'RM3' or globals.device_type == 'CM4':
-            return hats.q4y2018HAT  
+        if device_type == 'RM3' or device_type == 'CM4':
+            return q4y2018HAT
 
-
+        logging.info("GPIO setting PA6, PG11, PA1 :"+str(PA6)+" , "+str(PG11)+" , "+str(PA1))
         GPIO.setup(PA6,GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.setup(PG11,GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.setup(PA1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -123,7 +130,7 @@ def getHATClass():
         # all HATs have PA6 (Amber LED) connected HIGH, so if this is low, we have no HAT
         if GPIO.input(PA6) == GPIO.LOW:
             logging.info("NEO HAT not detected")
-            return hats.DummyHAT
+            return DummyHAT
 
 
         if GPIO.input(PA1) == GPIO.LOW:
@@ -131,39 +138,39 @@ def getHATClass():
             # This would include CM4 HAT as "PG11" is assigned to GPIO4
             #  and that is wired to PB2 (normally HIGH)
                 logging.info(" Q4Y2018 HAT Detected")
-                return hats.q4y2018HAT
+                return q4y2018HAT
             else:
                 logging.info("Q3Y2021 HAT Detected")
-                return hats.q3y2021HAT
+                return q3y2021HAT
         else:
         # PA1 is HIGH, so this is HAT 4.6.7
             logging.info("Q3Y2018 HAT Detected")
-            return hats.q3y2018HAT
+            return q3y2018HAT
 
     except OSError:
         # There is no AXP209 on the Q12018 HAT
         #  so this is either a real Q1Y2018 HAT or we have a bare processor
 
         logging.info("Q1Y2018 HAT Detected")
-        return hats.q1y2018HAT
+        return q1y2018HAT
     except KeyboardInterrupt:
         pass
 
-    return hats.DummyHAT
+    return DummyHAT
 
 def call_battery():
-    page_battery.PageBattery(self.display_device, self.axp)
+    displays.page_battery.PageBattery(getDisplayClass(hatClass), axp209)
     return
 
 # the OLED is already set from the hat class test.  No need to retest.
 
 def getDisplayClass(hatClass):
     logging.info("Entering get Display Class")
-    if hatClass != hats.DummyHAT and hatClass !=0:
-        return displays.OLED
+    if hatClass != DummyHAT and hatClass !=0:
+        return OLED
     else:
         logging.info("No OLED detected")
-        return displays.DummyDisplay
+        return DummyDisplay
 
 
 
@@ -174,30 +181,36 @@ def getDisplayClass(hatClass):
 
 def main(verbose):
 
+# Use BCM pin numbering scheme for compatibility with CM4 and use Board compatability for NEO
+
     global hatClass
     global progress_file
+
+# Global definitions for this module
+    hatClass = 0
+    progress_file = "/usr/local/connectbox/expand_progress.txt"
 
     if verbose:
         logging.basicConfig(level=logging.INFO)
     else:
          logging.basicConfig(level=logging.DEBUG)
 
-    logging.info("********* cli.py at main") 
+    logging.info("********* cli.py at main")
 
-# Here we do the GPIO setmode based on board type  
+# Here we do the GPIO setmode based on board type
     GPIO.cleanup()              # remove associations
     GPIO.setwarnings(False)
+    GPIO.setmode(GPIO.BOARD)	#Default setting may be changed
 
-    if globals.device_type == "RM3":
+
+    if device_type == "RM3":
         GPIO.setmode(radxa.CM3.BOARD)
-    elif globals.device_type == "NEO":
+    elif device_type == "NEO":
         GPIO.setmode(GPIO.BOARD)
-    elif globals.device_type == "OZ2":
+    elif device_type == "OZ2":
         GPIO.setmode(orangepi.zero2.BOARD)
     else:
         GPIO.setmode(GPIO.BCM)
-    
-    
 
     if not os.path.exists("/usr/local/connectbox/wificonf.txt"):
         f = open("/usr/local/connectbox/wificonf.txt", "w")

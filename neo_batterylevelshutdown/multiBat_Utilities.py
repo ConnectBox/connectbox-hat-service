@@ -1,7 +1,7 @@
 
 import logging
 import smbus2
-from . import globals
+import neo_batterylevelshutdown.globals
 import time
 
 

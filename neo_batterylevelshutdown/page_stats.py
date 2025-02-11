@@ -16,8 +16,8 @@ import os.path
 import logging
 import subprocess
 from PIL import Image, ImageFont, ImageDraw
-from .HAT_Utilities import get_device
-import neo_batterylevelshutdown.globals as globals
+from neo_batterylevelshutdown.HAT_Utilities import get_device
+import neo_batterylevelshutdown.globals
 
 
 class PageStats:

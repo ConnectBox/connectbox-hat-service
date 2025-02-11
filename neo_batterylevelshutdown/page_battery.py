@@ -14,9 +14,8 @@ import os.path
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
-import axp209
-from . import globals
-from .HAT_Utilities import get_device
+from neo_batterylevelshutdown.globals import *
+from neo_batterylevelshutdown.HAT_Utilities import get_device
 import neo_batterylevelshutdown.multiBat_Utilities as mb_utilities
 from axp209 import AXP209, AXP209_ADDRESS
 
@@ -67,8 +66,8 @@ class PageBattery:
 
             #  calculate fuel based on battery voltage
             #  Fuel = (Vbatt - 3.275)/0.00767
-            # simplifies to: (Vbatt(mv) - 3275) / 7.67 
-            if globals.device_type != "CM":
+            # simplifies to: (Vbatt(mv) - 3275) / 7.67
+            if device_type != "CM":
                 battery_voltage = self.axp.battery_voltage
                 battgauge =  (battery_voltage - 3275) / 7.67
             else:
@@ -91,7 +90,7 @@ class PageBattery:
             if battexists:
                 d.text((3, 44), "%.0f" %
                        int(battery_voltage), font=font20, fill="black")
-        else:    
+        else:
             d.text((5, 44), "%s" %
                     "x", font=font20, fill="black")
             d.text((52, 44), "%s" %
@@ -140,7 +139,7 @@ class PageBattery:
                        self.axp.battery_discharge_current,
                        font=font20, fill="black")
 
-                # multiple batteries - DERPICATE: multi bat page should be sufficient    
+                # multiple batteries - DERPICATE: multi bat page should be sufficien
             #    if globals.device_type == "CM":
             #        logging.info("Bus Battery: "+str(mb_utilities.bat_number()))
             #        d.text((99,2), "#%.0f" %
@@ -165,8 +164,8 @@ class PageBattery:
                        "x", font=font20, fill="black")
 
         # we are running on ac
-        if not battexists and acin_present:  
-            logging.debug("    -b +a")  
+        if not battexists and acin_present:
+            logging.debug("    -b +a")
             # cross out the battery
             d.line((20, 5, 38, 12), fill="black", width=2)
             d.line((20, 12, 38, 5), fill="black", width=2)
@@ -185,7 +184,7 @@ class PageBattery:
                 hexval += self.axp.bus.read_byte_data(AXP209_ADDRESS, 0x57)
                 ac_voltage = hexval * 1.7     # per AXP209 section 9.7, lsb = 1.7 mV
                 d.text((3, 44), "%.0f" %
-                    ac_voltage, font=font20, fill="black")                
+                    ac_voltage, font=font20, fill="black")
 
                 # show the AC current
                 hexval = self.axp.bus.read_byte_data(AXP209_ADDRESS, 0x58)
@@ -196,7 +195,7 @@ class PageBattery:
 #                logging.debug("  ac_current: " + str(ac_current))
                 d.text((92, 44), "%.0f" %
                        ac_current, font=font20, fill="black")
- 
+
         out = Image.alpha_composite(img, txt)
         self.device.display(out.convert(self.device.mode))
         self.device.show()

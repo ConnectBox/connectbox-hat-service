@@ -15,7 +15,7 @@ import time
 # need to initialize the variables outside of the init() function
 # Then the init() will fill in the correct values
 
-device_type = "PH_type"
+device_type = "NEO"
 brand_name = "PH_name"
 logo_image = "PH_image"
 splash_x = 7
@@ -38,18 +38,20 @@ clientIF = ""
 sequence_time = 0.0
 sequence = 0.0
 a = ""
+USABLE_BUTTONS = [8,10]
 
 
 
-from . import page_battery
-from .HAT_Utilities import get_device
+import page_battery
+from HAT_Utilities import get_device
 
 
 
-def init():
+def startup():
+
   # by defining as global, the following variables can be modified
   #  by the init() function
-
+    print ("running startup")
     global device_type
     global brand_name
     global logo_image
@@ -67,8 +69,8 @@ def init():
     global sequence                 #Used for rotation of waiting symbol
     global sequence_time
     global a                        #Display value on screen
+    global USABLE_BUTTONS
 
- 
 
     logging.debug("Initializing Globals")
 
@@ -174,3 +176,5 @@ def init():
     dat = f.read()
     f.close()
     clientIF = dat.split("\n")[0].partition("AccessPointIF=")[2]
+
+    print ("Fiinished Startup")

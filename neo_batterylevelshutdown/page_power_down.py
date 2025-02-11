@@ -12,7 +12,7 @@
 
 import os.path
 from PIL import Image
-from .HAT_Utilities import get_device
+from neo_batterylevelshutdown.HAT_Utilities import get_device
 
 
 class PagePowerDown:
@@ -35,6 +35,6 @@ class PagePowerDown:
 
 if __name__ == "__main__":
     try:
-        Page_power_down(get_device()).draw_page()
+        Page_Power_Down(get_device()).draw_page()
     except KeyboardInterrupt:
         pass

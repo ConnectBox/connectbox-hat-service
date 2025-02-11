@@ -9,15 +9,15 @@
   Clayton Bradley - Feb 2019
 ===========================================
 """
-
+import sys
 import os.path
 import logging
 from PIL import Image, ImageFont, ImageDraw
-from .HAT_Utilities import get_device
+from neo_batterylevelshutdown.HAT_Utilities import get_device
 
 
 try:
-    import psutil
+    from psutil import *
 except ImportError:
     print("The psutil library was not found. "
           "Run 'sudo -H pip install psutil' to install it.")
