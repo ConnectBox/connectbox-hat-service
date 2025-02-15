@@ -346,8 +346,7 @@ class OLED:
     # refreshing the page during long display times
     def redrawCurrentPage(self):
         with self._curPageLock:
-            if (self.pageStack == 'wait'): showWaitPage(globals.a)
-            else: self._curPage.draw_page()
+            self._curPage.draw_page()
 
 
 
