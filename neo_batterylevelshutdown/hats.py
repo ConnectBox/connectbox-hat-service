@@ -4,7 +4,7 @@
 # Modified 10/17/19 by JRA to add new class q4y2019HAT (HAT 5.0.9 board with OLED but no battery) ie, the NoBatt version
 #  11/30/21 JRA - Q4Y2019 Hat class removed - no battery instance handled in battery pages
 
-# 08/05/23  JRA - Configured for RM3 module 
+# 08/05/23  JRA - Configured for RM3 module
 #  Note that GPIO setups are done in the init function of each class... specifically, the init
 #   of the called class is done first, then (by super __init()__) the init of that class's parent,
 #   then the init of the grandparent class.
@@ -27,7 +27,7 @@ from axp209 import AXP209, AXP209_ADDRESS
 import neo_batterylevelshutdown.globals as globals
 logging.info("...hats.py globals.device_type = %s.", globals.device_type)
 
-comsFileName = "/usr/local/connectbox/creating_menus.txt"
+comsFileName = "/tmp/creating_menus.txt"
 var_Indexing = False
 
 
@@ -120,8 +120,8 @@ class BasePhysicalHAT:
         # if interrupt line is high, this was a false trigger... just return
         if GPIO.input(self.PIN_AXP_INTERRUPT_LINE):
             return
-#        print("...  for more than 0.1 sec....   DEBUG... returning") 
-#       return   
+#        print("...  for more than 0.1 sec....   DEBUG... returning")
+#       return
         self.shutdownDevice()
 
     def handleOtgSelect(self, channel):
@@ -131,17 +131,17 @@ class BasePhysicalHAT:
         # and needs the proper module loaded either on the dtoverlay line, etc. but does not call this
         # interrupt handler.
 
-        # On the Neo we have a signal to detect changes in OTG_ID signal. 
+        # On the Neo we have a signal to detect changes in OTG_ID signal.
         # disable interrupt for a bit to find if the level on channel is HIGH or LOW
         #  and based on that, choose whether to enable or disable OTG service
-        # Note that this is a specific case of OTG sense being on PA0... 
+        # Note that this is a specific case of OTG sense being on PA0...
         #  If another implementation is made for NEO, this will need updating.
         #
         #  FUTURE: make this a general case handler for ANY channel on the NEO
         #
         # Register calculation from Allwinner_H3_Datasheet_v1.1.pdf page 316 ff
         #   Base address = 0x01c20800 ... PA0 is in bits 2:0 of offset 0x00
-        # globals.otg =0 for off;  high to enable OTG and "none" for enabled inverted OTG 
+        # globals.otg =0 for off;  high to enable OTG and "none" for enabled inverted OTG
         # and 'both' for always otg regardless of state
         if globals.otg=='0' or globals.otg == 0:
             retval = os.popen("grep "+globals.g_device).read()
@@ -234,7 +234,7 @@ class BasePhysicalHAT:
             return (0)
         wlanx = "wlan"+str(AP)
         cmd = "iwconfig"
-        rv = subprocess.check_output(cmd)
+        rv = subprocess.check_output(cmd, stderr=None, shell=False)
         rvs = rv.decode("utf-8").split(wlanx)
 
         if (len(rvs) >= 2):       # rvs is an array split on wlanx
@@ -279,7 +279,10 @@ class DummyHAT(BasePhysicalHAT):
         logging.info("globals.device_type = "+globals.device_type)
         while True:
             if os.path.isfile(comsFileName):
-                 self.display.showWaitPage("Indexing Data")
+                 f = open(comsFileName, 'r', encoding='utf-8')
+                 globals.a = f.read()
+                 f.close()
+                 self.display.showWaitPage(globals.a)
                  var_Indexing = True
             elif var_Indexing:
                  self.display.showSuccessPage()
@@ -290,7 +293,7 @@ class DummyHAT(BasePhysicalHAT):
 class q1y2018HAT(BasePhysicalHAT):
     # The circuitry on the Q1Y2018 HAT had voltage comparators to determine
     # battery voltage. All later HATs use the AXP209 for finding voltages
-    # This HAT was ONLY made for NEO 
+    # This HAT was ONLY made for NEO
 
 
     def __init__(self, displayClass):
@@ -300,14 +303,14 @@ class q1y2018HAT(BasePhysicalHAT):
         #  period before yanking the power, so if we have a falling edge on
         #  PIN_VOLT_3_0, then we're about to get the power yanked so attempt
         #  a graceful shutdown immediately.
-        
+
         setup_GPIO()
 
 
         if globals.device_type == "NEO":
         # Pin numbers specified in BOARD format
             self.PIN_LED = 12       # PA6
-            PIN_VOLT_3_0 =  8       # PG6 
+            PIN_VOLT_3_0 =  8       # PG6
             PIN_VOLT_3_45 = 10      # PG7
             PIN_VOLT_3_71 = 16      # PG8
             PIN_VOLT_3_84 = 18      # PG9
@@ -315,7 +318,7 @@ class q1y2018HAT(BasePhysicalHAT):
         else:
             # Pin numbers specified in BCM format
             self.PIN_LED = 6    # GPIO6
-            PIN_VOLT_3_0 =  14      # PG6 
+            PIN_VOLT_3_0 =  14      # PG6
             PIN_VOLT_3_45 = 15      # PG7
             PIN_VOLT_3_71 = 23      # PG8
             PIN_VOLT_3_84 = 24      # PG9
@@ -363,14 +366,10 @@ class q1y2018HAT(BasePhysicalHAT):
                     self.display.powerOffDisplay()
 
                 if os.path.isfile(comsFileName):
-                    self.display.showWaitPage("Indexing Data")
-                    var_Indexing = True
-                elif var_Indexing:
-                    self.display.showSuccessPage()
-                    var_Indexing = False
-
-                if os.path.isfile(comsFileName):
-                    self.display.showWaitPage("Indexing Data")
+                    f = open(comsFileName, 'r', encoding='utf-8')
+                    globals.a = f.read()
+                    f.close()
+                    self.display.showWaitPage(globals.a)
                     var_Indexing = True
                 elif var_Indexing:
                     self.display.showSuccessPage()
@@ -528,7 +527,10 @@ class Axp209HAT(BasePhysicalHAT):
                     self.display.powerOffDisplay()
 
                 if os.path.isfile(comsFileName):
-                    self.display.showWaitPage("Indexing Data")
+                    f = open(comsFileName, 'r', encoding='utf-8')
+                    globals.a = f.read()
+                    f.close()
+                    self.display.showWaitPage(globals.a)
                     var_Indexing = True
                 elif var_Indexing:
                     self.display.showSuccessPage()
@@ -547,7 +549,7 @@ class Axp209HAT(BasePhysicalHAT):
 
                 # Here we add a call to update the current page so info is regularly updated
                 self.display.redrawCurrentPage()
-# DEPRICATED - Voltage monitoring for power down purposes is depricated. 
+# DEPRICATED - Voltage monitoring for power down purposes is depricated.
 #   We will let AXP209 (exclusively) handle the shutdown via the Voff facility (Reg 0x31 - set to 3.0V).
 #     The AXP209 i2C communication becomes unreliable at IPS voltages below 3.1V.
 #  Also note... We do NOT have a connection between the AXP209 IRQ line (pin 48) and the NEO so
@@ -723,10 +725,10 @@ class q4y2018HAT(Axp209HAT):
         #  detect the interrupt.
         # (Note... this is NOT the AXP209 IRQ line... it is the AXP209 power down signal)
 
-    # The PIN_AXP_INTERRUPT_LINE interrupt handler services a powerdown signal from the RC 
+    # The PIN_AXP_INTERRUPT_LINE interrupt handler services a powerdown signal from the RC
     #  modified AXP209 EXTEN (pin 20)line.
     #  That line goes low on reaching the Voff (Reg 0x31[0:2]) voltage of 3.0V (see line #347)
-    #  or upon detection of the PB1 being held longer than 8 sec.   
+    #  or upon detection of the PB1 being held longer than 8 sec.
 
         self.handleOtgSelect(self.PIN_OTG_SENSE)
 
@@ -776,7 +778,7 @@ class q3y2021HAT(Axp209HAT):
                                callback=self.handleOtgSelect,
                                bouncetime=125)
 
- 
+
     # This interrupt handler responds to the EXTEN signal of the AXP209. It gives us
     #  a heads up that power is going down either because the IPS OUT voltage is below Voff (0x31[2:0])
     #  or because the user has pushed PB1 longer than 8 seconds

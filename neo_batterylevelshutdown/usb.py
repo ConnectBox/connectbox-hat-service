@@ -82,15 +82,15 @@ def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0', ext='/content/'
                 if os.path.isdir(files_in_dir):
                     hat.displayPowerOffTime = sys.maxsize
                     x = logging.info("Copying tree: "+files_in_dir+" to: "+files_to_dir)
-                    shutil.copytree(files_in_dir, files_to_dir, symlinks=False, ignore_dangling_symlinks=True)
+                    shutil.copytree(files_in_dir, files_to_dir, symlinks=True, ignore_dangling_symlinks=True)
                     logging.info("Used copytree to move files")
-#                    hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
+#                   hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
                 else:
                     hat.displayPowerOffTime = sys.maxsize
                     logging.info("Copying: "+files_in_dir+" to: "+files_to_dir)
                     x = shutil.copy2(files_in_dir, files_to_dir)
                     logging.info("used copy2 to move files")
-#                    hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
+#                   hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
             except OSError as err:
                 logging.info("Copytree Errored out with error of OSError err: "+str(err))
                 y = 1
@@ -100,17 +100,6 @@ def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0', ext='/content/'
                 y = 1
                 return(1)
             logging.info("going to try and copy the  stats over to the target!")
-            try:
-                shutil.copystat(files_in_dir, files_to_dir, follow_symlinks=False)
-                logging.info("Completed the stat copy!")
-                logging.info("Done copying to: "+sourcePath+" to: "+destPath)
-                return(0)
-            except OSError as err:
-                logging.info("We had an OS error occur"+str(x)+" err: "+str(err))
-                if err.winerror is None:
-                    logging("Not sure what the error is but its winerror: "+str(x)+" err: "+str(err))
-                logging.info("Done copying "+sourcePath+" to: "+destPath+b+" but ERRORED!!!!!!!: "+str(x)+" err: "+str(err))
-                return(1)
         else:
             logging.info("We found the destination of the copy but there is no "+ext+" directory or source indicie is out of range")
             return(1)
@@ -249,7 +238,33 @@ def moveMount(curMount='/media/usb0', destMount='/media/usb11'):
         logging.info("Error trying to  unmount "+str(curMount)+"  error: "+str(y))
     else:
         logging.info("Unmount succeeded")
-    y = subprocess.call(['mount',"-t", "auto", "-o", "utf8", x, destMount])
+    b = destMount
+    print("trying to do mount: " + b)
+    try: # general fat mount
+        res = os.system(b)				#do the mount
+        print("Result of mount was: "+str(res))
+        logger.info("Completed mount " + b + " result " + str(res) + " time is " + time.asctime())
+    except:
+        print("mount" + b + " failed result was: "+str(res))
+        logger.info("mount" + b + " failed result was: "+str(res) + " time is " + time.asctime())
+        if res != 0:
+####################### we didn't mount fat drive try NTFS drive #######################
+            try:   #try explicit ntfs mount
+                if (res > 0):		#if we have res > 0 then we have an error
+                    if y>= "5.15.0":
+                        b = "mount /dev/" + e.group() + "-t ntfs -0 noatime, nodev, nosuid, sync, utf8" + " /media/usb" + chr(a)
+                    else:
+                        b = "mount /dev/" + e.group() + "-t ntfs -o noatime, nodev, nosuid, sync, iocharset=utf8" + " /media/usb" + char(a)
+                    res = os.system(b)
+                    print("tried new NTFS mount of: "+b + "result was: " + str(res))
+                    logger.info("Retried NTFS mount of "+b+" with result of "+str(res) + " time is " + time.asctime())
+            except:
+                logger.info("on NTFS  mount of USB key errored")
+                print("on NTFS mount of USB key errored,  res =" + str(res))
+                res = -1
+            if DEBUG > 2: print("completed mount /dev/",e.group)
+        if res > 0: y = 1
+        else: y = 0
     if y > 0:
         logging.info("Error trying to  mount "+str(x)+"  error: "+str(y))
     else:
@@ -283,12 +298,13 @@ def getMount(curDev):
     This is a method of getting the mount point for the dev (ex: returns /media/usb0 for curDev /dev/sda1)
     '''
 	# take the file mount outuput and separate it into lines
+    print("getMount looking for "+str(curDev))
     mounts = str(subprocess.check_output(['df']))
     logging.info("mounts are: "+str(mounts))
     mounts = mounts.split("\\n")
     # take the lines and check for the mount.
     for line in mounts:
-        if (curDev in line):
+        if (str(curDev) in line):
             logging.info("Found line in mounts for : "+line)
             x = line.split("%", 1)
             x = x[1].rstrip(" ")
@@ -298,7 +314,31 @@ def getMount(curDev):
         else:
             x = ""
     logging.info("output of getMount is : "+x)
+    print("output of getMount is "+x)
     return(x)
 
 
-
+def getUSB(whatUSB):
+    '''
+    This is a methood of getting the x'th USB position based on what is passed
+    as a number, 0=all  key, 1=first key, 2=second key, etc. if not found it returns empty string.
+    '''
+    mounts = str(subprocess.check_output(['ls','/dev/']))
+    mounts = mounts.split("\\n")
+    print ("len of mounts is: "+str(len(mounts)))
+    x = 0
+    y = 0
+    c = ""
+    for line in mounts:
+        if ('sd' in line):
+            print("line is: "+ line)
+            logging.info("Found a device sd : ")
+            x = line.find("sd")
+            if ((x >= 0) and (len(line)> (x+3))):    # we look for 8 so we can return the mount not just the device
+                a = line[(x+2)]
+                b = line[(x+3)]
+                c = c + "sd" + a + b + " "
+                if ((a.isalpha()) and (b.isnumeric()) and (y == whatUSB) and (whatUSB > 0)): return(c)
+            elif ((x >=0) and (len(line)>= x+3)): y +=1
+    if (whatUSB == 0): return(c)
+    return("")

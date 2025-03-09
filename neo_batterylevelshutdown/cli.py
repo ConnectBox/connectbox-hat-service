@@ -108,11 +108,11 @@ def getHATClass():
         #    HIGH => Q4Y2018 == HAT 5.0.0; 5.1.1 (with or w/o battery); HAT 6; CM4
         #    LOW  => Q3Y2021 == HAT 7
 
-    # if device_type is CM4 or RM3, and we have AXP209 (ie not bare board) then this 
+    # if device_type is CM4 or RM3, and we have AXP209 (ie not bare board) then this
     #  is a q4y2018 hat class... we will assign that without GPIO tests of PA6 to avoid
-    #  issues with possible false detection of PA6 state 
+    #  issues with possible false detection of PA6 state
         if globals.device_type == 'RM3' or globals.device_type == 'CM4':
-            return hats.q4y2018HAT  
+            return hats.q4y2018HAT
 
 
         GPIO.setup(PA6,GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -182,9 +182,9 @@ def main(verbose):
     else:
          logging.basicConfig(level=logging.DEBUG)
 
-    logging.info("********* cli.py at main") 
+    logging.info("********* cli.py at main")
 
-# Here we do the GPIO setmode based on board type  
+# Here we do the GPIO setmode based on board type
     GPIO.cleanup()              # remove associations
     GPIO.setwarnings(False)
 
@@ -196,8 +196,6 @@ def main(verbose):
         GPIO.setmode(orangepi.zero2.BOARD)
     else:
         GPIO.setmode(GPIO.BCM)
-    
-    
 
     if not os.path.exists("/usr/local/connectbox/wificonf.txt"):
         f = open("/usr/local/connectbox/wificonf.txt", "w")
@@ -207,12 +205,18 @@ def main(verbose):
         f.close()
         logging.info("wrote temp wificonf.txt file out")
 
+
+    try:
+        os.system("rm /tmp/creating_menus.txt")
+    except:
+        pass
+
 #Initialize the Global Variables
 
     while not ( os.path.exists( progress_file )):
       logging.info("waiting")
       time.sleep(5)	#we wait till we have a progress file
-    time.sleep(2)	#make sure its filled 
+    time.sleep(2)	#make sure its filled
     f = open(progress_file, "r")
     a = f.read()
     while  (a == "fdisk_done" or a =='resize_done'):
@@ -224,7 +228,7 @@ def main(verbose):
     f.close()
 #    print("into global inits")
 
-# in getHATClass we do GPIO pin assignments 
+# in getHATClass we do GPIO pin assignments
     hatClass = getHATClass()
     print("hatClass is: " + str(hatClass))
     displayClass =getDisplayClass(hatClass)
