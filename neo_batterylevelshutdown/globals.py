@@ -74,7 +74,7 @@ def init():
 
   # Using a dictionary and json to store Branding stuff
   # Read the dictionary
-    f = open('/usr/local/connectbox/brand.txt', "r")
+    f = open('/usr/local/connectbox/brand.j2', "r")
     data = f.read()
     f.close()
     js = json.loads(data)
