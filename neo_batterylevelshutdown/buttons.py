@@ -36,7 +36,7 @@ class BUTTONS:
     BUTTON_PRESS_BUSY = False  # Prevent dual usage of the handleButtonPress function
     BUTTON_PRESS_TIMEOUT_SEC = 0.25  # Prevent bouncing of the handleButtonPress function
     BUTTON_PRESS_CLEARED_TIME = time.time()  # When was the handleButtonPress was last cleared
-    CHECK_PRESS_THRESHOLD_SEC = 3  # Threshold for what qualifies as a long press
+    CHECK_PRESS_THRESHOLD_SEC = 4  # Threshold for what qualifies as a long press and limit to the length of time in the interrupt routine
     DISPLAY_TIMEOUT_SECS = 120     #screen on time before auto off
 
     def __init__(self, hat_class, display_class):
@@ -479,6 +479,11 @@ class BUTTONS:
             os.system("rm "+comsFileName)
             return 0
 
+###########################################################################################################
+# Button Presses go here from the interrupt handler
+##########################################################################################################
+
+
     def handleButtonPress(self, channel):
         '''
         The method was created to handle the button press event.  It will get the time buttons
@@ -521,8 +526,8 @@ class BUTTONS:
 
         channelTime, dualTime = self.checkPressTime(channel)
 
-        logging.debug("time stamp for channel Time line 137: %s", channelTime)
-        logging.debug("time stamp for dualTime line 138: %s", dualTime)
+        logging.debug("time stamp for channel Time line 524: %s", channelTime)
+        logging.debug("time stamp for dualTime line 525: %s", dualTime)
 
         # clear the CHECK_PRESS_BUSY flag
         self.BUTTON_PRESS_BUSY = False
@@ -540,9 +545,9 @@ class BUTTONS:
             pass
 
         # if either button is below the press threshold, treat as normal
-        elif channelTime < self.CHECK_PRESS_THRESHOLD_SEC or \
-                dualTime < self.CHECK_PRESS_THRESHOLD_SEC:
-            logging.info("hit self.check_press_threshold_sec line 158")
+        elif channelTime < (self.CHECK_PRESS_THRESHOLD_SEC ) or \
+                dualTime < (self.CHECK_PRESS_THRESHOLD_SEC ):
+            logging.info("hit self.check_press_threshold_sec line 545")
             if channel == self.USABLE_BUTTONS[0]:                                           # this is the left button
                 logging.info("Left button: pageStack ="+str(pageStack))
                 if pageStack in ['success']:                # return to 1st page of admin stack
@@ -565,9 +570,12 @@ class BUTTONS:
                     self.chooseEnter(pageStack)
 
         # if we have a long press (both are equal or greater than threshold) call switch pages
-        elif channelTime >= self.CHECK_PRESS_THRESHOLD_SEC: # dual long push
-            logging.info("hit dual button press time, move forward")
+        elif channelTime >= self.CHECK_PRESS_THRESHOLD_SEC or \
+                dualTime >= self.CHECK_PRESS_THRESHOLD_SEC :
+            logging.info("hats 576 hit dual button press time, move forward admin")
+            print("hats 576 hit dual button press time, move forward admin",channelTime,dualTime)
             self.switchPages()
+
 
     def checkPressTime(self, channel):
         print("top of checkPressTime")
@@ -623,7 +631,7 @@ class BUTTONS:
                     dualTimeRecorded = dualButtonTime
             if GPIO.input(otherChannel) == 1:                                                   # move start time up if not pressing other button
                 dualStartTime = time.time()                                                     # reset start time to now
-            if (time.time() - startTime) > 4:                                                   # don't stick in this interrupt service forever
+            if (time.time() - startTime) > (self.CHECK_PRESS_THRESHOLD_SEC + 1):                # don't stick in this interrupt service forever
                 break                                                                           # (note: CHECK_PRESS_THRESHOLD_SEC == 3)
 
         buttonTime = time.time() - startTime                                                    # How long was the original button down?
@@ -637,7 +645,16 @@ class BUTTONS:
             os.popen(cmd).read()
             print("after NEO re-establish interrupts")
 
-        return buttonTime, dualTimeRecorded
+        if (dualTimeRecorded  >= self.CHECK_PRESS_THRESHOLD_SEC): 
+            return buttonTime, dualTimeRecorded
+    
+        elif (buttonTime <  self.CHECK_PRESS_THRESHOLD_SEC):
+            return buttonTime, dualTimeRecorded
+
+	# if we fall through then we have a single long button press so we shutdown
+        print("we fell through the return from the button interrupt",buttonTime, dualTimeRecorded)
+        self.hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
+        self.hat.shutdownDevice()
 
 
     def chooseCancel(self):

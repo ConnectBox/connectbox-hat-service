@@ -89,12 +89,14 @@ class OLED:
         self.adminPages = [
             page_display_image.PageDisplayImage(self.display_device, 'copy_from_usb.png'),
             page_display_image.PageDisplayImage(self.display_device, 'erase_folder.png'),
+            page_display_image.PageDisplayImage(self.display_device, 'remove_usb.png'),
             page_display_image.PageDisplayImage(self.display_device, 'copy_to_usb.png'),
             page_display_image.PageDisplayImage(self.display_device, 'exit.png')             #must be last
         ]
         self.adminPageNames = [
             'copy_from_usb',
             'erase_folder',
+            'remove_usb',
             'copy_to_usb',
             'exit'
         ]
@@ -205,7 +207,7 @@ class OLED:
         #  test if the screen_enable[lastPage] is '0' and bail out in that case
         screenList = globals.screen_enable
         adminPage = len(self.statusPages) - 1       # globals.screen_enable maps statusPages onlu
-        if screenList[adminPage] == 0:
+        if (screenList[adminPage] == 0) or not(self.checkIfLastPage()):
             return
 
         with self._curPageLock:
@@ -219,7 +221,7 @@ class OLED:
             #  underneath us
             self._curPage.draw_page()
             logging.debug("Transitioned to page %s", self._curPage)
-
+            print("Transitioned to page %S", self._curPage)
 
     def moveToStartPage(self):
         with self._curPageLock:
@@ -254,6 +256,7 @@ class OLED:
             #  underneath us
             self._curPage.draw_page()
             logging.debug("Transitioned to page %s", self._curPage)
+            print("Transitgioned to page %s", self._curPage)
 
     def moveBackward(self):
         with self._curPageLock:

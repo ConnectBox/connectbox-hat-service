@@ -17,11 +17,7 @@ import io
 import sys
 import time
 import subprocess
-
-
-
-#JRA - 011322
-#import smbus2
+import smbus2
 
 from axp209 import AXP209, AXP209_ADDRESS
 import neo_batterylevelshutdown.globals as globals
@@ -104,9 +100,10 @@ class BasePhysicalHAT:
         #  active (the HAT can stay powered after shutdown under some
         #  circumstances)
         GPIO.output(self.PIN_LED, GPIO.HIGH)
-        self.display.PoweringOff()
+        self.display.showPoweringOff()
         logging.info("Exiting for Shutdown")
-        os.system("shutdown now")
+        os.system("/usr/local/bin/poweroff/poweroff")
+        time.sleep(5)
         # Stick here to leave the showPoweringOff() display on to the end
         while True:
             pass
@@ -119,10 +116,10 @@ class BasePhysicalHAT:
         time.sleep(0.1)
         # if interrupt line is high, this was a false trigger... just return
         if GPIO.input(self.PIN_AXP_INTERRUPT_LINE):
+            print("...  for more than 0.1 sec....   DEBUG... returning")
             return
-#        print("...  for more than 0.1 sec....   DEBUG... returning")
-#       return
         self.shutdownDevice()
+        return
 
     def handleOtgSelect(self, channel):
         logging.debug("OTG edge detected ")
@@ -413,6 +410,22 @@ class Axp209HAT(BasePhysicalHAT):
 
 
     def __init__(self, displayClass):
+
+        try:
+            bus = smbus2.SMBus(0)
+            a = int(bus.read_byte_data(0x34, 0x36))
+            print("AXP209 PEK register is: "+str(a))
+            bus.write_byte_data(0x34, 0x36, 0x5F)
+            print("Wrote PEK register to extend the timeout")
+            a = int(bus.read_byte_data(0x34, 0x36))
+            print("AXP209 PEK register is now : "+str(a))
+#            bus.write_byte_data(0x34,0x32, 0xC3)			#Test power shutdown
+#            print("shutdown the AXP209 we think")
+            bus.close()
+        except Exception as inst:
+            print("Error reading/writing the PEK register of the AXP209 : ",type(inst), inst.args, inst)
+            bus.close()
+
 
         logging.info("Starting AXP209HAT class __init__")
         self.axp = AXP209(globals.port)         # Pass the port number to get the right device

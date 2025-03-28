@@ -11,6 +11,8 @@ import axp209
 import time
 import click
 import os
+import smbus2
+
 
 # We import globals here so we can run globals.init() (establishing the processor type)
 #  so we can choose the correct GPIO library
@@ -61,6 +63,7 @@ def getHATClass():
         # No OLED. Treat it as a DummyHAT
         logging.info("No OLED detected, We are retuning a Dummy HAT")
         return hats.DummyHAT
+
 
 # Express all pin numbers in BCM nomenclature for compatibility with CM4
 #  (which requires BCM)
