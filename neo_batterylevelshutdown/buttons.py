@@ -216,7 +216,7 @@ class BUTTONS:
                 logging.info("There is enough space so we will go forward with the copy")
                 logging.info("starting to do the copy with device " + mnt + ext)
                 globals.sequence = 0
-                globals.a = ("Copying Files\nSize:" + str(int(s / 1000)) + "MB")
+                globals.a = ("Copying Files\nSize:" + str(int(s / 100000)) + "MB")
                 f = open(comsFileName, "w", encoding="utf-8")
                 f.write(globals.a)
                 f.close()
@@ -424,7 +424,7 @@ class BUTTONS:
                 logging.info("There is enough space so we will go forward with the copy")
                 logging.info("starting to do the copy with device " + mnt + ext)
                 globals.sequence = 0
-                globals.a = ("Copying Files\nSize:" + str(int(s / 1000)) + "MB")
+                globals.a = ("Copying Files\nSize:" + str(int(s / 1000000)) + "MB")
                 f = open(comsFileName, "w", encoding="utf-8")
                 f.write(globals.a)
                 f.close()
