@@ -243,10 +243,10 @@ def moveMount(curMount='/media/usb0', destMount='/media/usb11'):
     try: # general fat mount
         res = os.system(b)				#do the mount
         print("Result of mount was: "+str(res))
-        logger.info("Completed mount " + b + " result " + str(res) + " time is " + time.asctime())
+        logging.info("Completed mount " + b + " result " + str(res) + " time is " + time.asctime())
     except:
         print("mount" + b + " failed result was: "+str(res))
-        logger.info("mount" + b + " failed result was: "+str(res) + " time is " + time.asctime())
+        logging.info("mount" + b + " failed result was: "+str(res) + " time is " + time.asctime())
         if res != 0:
 ####################### we didn't mount fat drive try NTFS drive #######################
             try:   #try explicit ntfs mount
@@ -257,9 +257,9 @@ def moveMount(curMount='/media/usb0', destMount='/media/usb11'):
                         b = "mount /dev/" + e.group() + "-t ntfs -o noatime, nodev, nosuid, sync, iocharset=utf8" + " /media/usb" + char(a)
                     res = os.system(b)
                     print("tried new NTFS mount of: "+b + "result was: " + str(res))
-                    logger.info("Retried NTFS mount of "+b+" with result of "+str(res) + " time is " + time.asctime())
+                    logging.info("Retried NTFS mount of "+b+" with result of "+str(res) + " time is " + time.asctime())
             except:
-                logger.info("on NTFS  mount of USB key errored")
+                logging.info("on NTFS  mount of USB key errored")
                 print("on NTFS mount of USB key errored,  res =" + str(res))
                 res = -1
             if DEBUG > 2: print("completed mount /dev/",e.group)
