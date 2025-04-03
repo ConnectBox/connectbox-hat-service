@@ -117,6 +117,10 @@ class OLED:
         time.sleep(3)       # display logo screen for 3 seconds
 
     def getAdminPageName(self):
+        if self._curPage not in self.pages:
+        # Always start with the starting page if the screen went off
+        #  or if we were showing the low battery page
+            self._curPage = self.pages[self.STARTING_PAGE_INDEX]
         return self.adminPageNames[self.adminPages.index(self._curPage)]
 
     def checkIfLastPage(self):
@@ -317,7 +321,7 @@ class OLED:
             return
         if (self.pageStack == 'wait') or (self.pageStack == 'remove_usb'):
             if (self.pageStack == 'wait'):
-                showWaitPage(globals.a)  # we do not want to reset if we're on a wait screen
+                self.showWaitPage(globals.a)  # we do not want to reset if we're on a wait screen
                 hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS  # reset
                 return   #keep waiting
         if self.pageStack != 'status':  # if we're not on the default status pages

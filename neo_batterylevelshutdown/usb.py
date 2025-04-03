@@ -4,7 +4,13 @@ import time
 import subprocess
 import shutil
 import sys
+from subprocess import Popen, PIPE
 import neo_batterylevelshutdown.hats as hat
+
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 #    @staticmethod
 def isUsbPresent(devPath='/dev/sda1'):
@@ -12,19 +18,19 @@ def isUsbPresent(devPath='/dev/sda1'):
 
     Returns if there is a USB plugged into specified devPath
     (does not depend on stick being mounted)
-    :return: True / False
+    :return: First key location or  if none then ""
     '''
     y = 0
-    x = devPath[-2]
-    logging.info("is USB Present x is: "+x)
-    while (x < "k"):                                              #scan for usb keys  a - j
-        z = (os.path.exists("/dev/sd"+x+"1"))
-        logging.info("at position "+x+" key is "+str(z))
+    x = ord(devPath[-2])-ord('a')
+    print("is USB Present x is: "+ str(x))
+    while (x < (ord('k')-ord('a'))):                                              #scan for usb keys  a - j
+        z = (os.path.exists("/dev/sd"+chr(ord('a')+ x)+"1"))
+        print("at position "+str(x)+" key is "+str(z))
         if ((z != False) and (y == 0)):
-            logging.info("found  usb key at: "+x)
-            return('/dev/sd'+x+"1")
-        x = chr(ord(x)+1)
-    return(False)                                                           #return the first USB key or 0 for none
+            print("found  usb key at: "+str(x))
+            return('/dev/sd'+chr(ord('a') + x)+"1")
+        x += 1
+    return("")                                                                    #return the first USB key or 0 for none
 
 
 #    @staticmethod
@@ -37,24 +43,129 @@ def unmount(curPath='/media/usb0'):
     response = subprocess.call(['umount', curPath])  # unmount drive
     return(response)
 
+#  Mount Command based on gemini
+#  returns True on success or False on Failure
 
-#    @staticmethod
-def mount(devPath='/dev/sda1', newPath='/media/usb11'):
+def mount(dev_path='/dev/sda1', new_path='/media/usb11'):
     '''
-    Mount the USB drive at the devPath to the specified newPath location
-     :return: True / False
+    Mount the USB drive at the dev_path to the specified new_path location
+    :return: True on success, False on failure
     '''
-    x = ord(devPath[-2])
-#   Find the first USB key in the system
-    while not os.path.exists(devPath) and (x < ord('k')):
-        x = ord(devPath[-2]) + 1
-        devPath = "/dev/sd"+chr(x)+"1"
-    logging.info("Mounting USB at %s to %s", devPath, newPath)
-    if not os.path.exists(newPath):  # see if desired mounting directory exists
-        os.makedirs(newPath)  # create directory and all of the intermediary directories
-    response = subprocess.call(['mount',"-t", "auto", "-o", "utf8", devPath, newPath])
-    logging.info("Mount Response: %s", response)
-    return(response)
+    apath = isUsbPresent(dev_path)
+    if apath == "":
+        logging.error(f"Device {dev_path} is not present.")
+        return False
+    else: dev_path = apath
+
+    logging.info(f"Starting mount of {dev_path} to {new_path}")
+
+    try:
+        df_output = subprocess.check_output(['df']).decode('utf-8').splitlines()
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to get disk information: {e}")
+        return False
+
+    existing_mount_point = _get_existing_mount_point(df_output, apath, new_path)
+    if existing_mount_point:
+        return existing_mount_point
+
+    if not os.path.exists(new_path):
+        try:
+            os.makedirs(new_path)  # Use makedirs for creating nested directories
+            logging.info(f"Created directory: {new_path}")
+        except OSError as e:
+            logging.error(f"Failed to create directory {new_path}: {e}")
+            return False
+
+    fsck_result = _check_file_system(apath)
+    if fsck_result is False:
+        return False  # check_file_system already logs
+
+    mount_command = _get_mount_command(apath, new_path)
+
+    try:
+        subprocess.check_call(mount_command, shell=True)
+        logging.info(f"Successfully mounted {dev_path} to {new_path}")
+        return True
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to mount {dev_path} to {new_path}: {e}")
+        return False
+    except Exception as e:
+        logging.exception(f"An unexpected error occurred during mount: {e}")
+        return False
+
+def _get_existing_mount_point(df_output, dev_path, new_path):
+    """
+    Checks if the device is already mounted, or if the new mount point is in use.
+    Returns the existing mount point if found, False otherwise.
+    """
+    for line in df_output:
+        if dev_path in line:
+            parts = line.split()
+            if len(parts) > 5:
+                existing_mount_point = parts[5]
+                print("Device (dev_path) is already mounted at (existing_mount_point)",dev_path, exsisting_mount_point)
+                logging.info(f"Device {dev_path} is already mounted at {existing_mount_point}",dev_path,existing_mount_point)
+                if new_path in existing_mount_point:
+                    return True
+                else:
+                    return False
+            else:
+                logging.warning(f"Unexpected df output format for {dev_path}: {line}",dev_path, line) #handle edge case
+                return False
+
+        elif new_path in line:
+            print("Mount point (new_path) is already in use")
+            logging.warning(f"Mount point {new_path} is already in use.")
+            return False
+    return False
+
+def _check_file_system(dev_path):
+    """
+    Checks the file system of the device using dosfsck or ntfsfix.
+    Returns True on success, False on failure.
+    """
+    start_time = time.time()
+    fsck_command = "dosfsck -a " + dev_path
+    logging.info(f"Checking file system with: {fsck_command}")
+    try:
+        res = os.system(fsck_command)
+        print("result of fschk is: ",res)
+        if res == 256:  # dosfsck failure
+            print("dosfsck failed on (dev_path), attempting ntfsfix")
+            logging.warning(f"dosfsck failed on {dev_path}, attempting ntfsfix")
+            ntfsfix_command = "ntfsfix -d " + dev_path
+            res = os.system(ntfsfix_command)
+            if res != 0:
+                print("ntfsfix failed on (dev_path)")
+                logging.error(f"ntfsfix failed on {dev_path}")
+                return False
+    except Exception as e:
+        print("Failed to check file system on (dev_path): (e)")
+        logging.error(f"Failed to check file system on {dev_path}: {e}")
+        return False
+    finally:
+        end_time = time.time()
+        delta_time = end_time - start_time
+        print("File system check on (dev_path) completed in (delta_time:.2f) seconds")
+        logging.info(f"File system check on {dev_path} completed in {delta_time:.2f} seconds")
+    return True
+
+def _get_mount_command(dev_path, mount_point):
+    """
+    Constructs the appropriate mount command based on the kernel version.
+
+    Returns the mount command string.
+    """
+    uname_result = Popen(["uname", "-r"], stdout=PIPE)
+    kernel_version = uname_result.communicate()[0].decode('utf-8').strip()
+
+    device_name = os.path.basename(dev_path)  # Extract "sda1" from "/dev/sda1"
+    if kernel_version >= "5.15.0":
+        mount_command = f"mount /dev/{device_name} -t auto -o noatime,nodev,nosuid,sync,utf8 {mount_point}"
+    else:
+        mount_command = f"mount /dev/{device_name} -t auto -o noatime,nodev,nosuid,sync,iocharset=utf8 {mount_point}"
+    return mount_command
 
 
 #    @staticmethod
@@ -70,38 +181,44 @@ def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0', ext='/content/'
     '''
 
     DISPLAY_TIMEOUT_SECS = 120
-    logging.info("Copying from: "+sourcePath+" to: "+destPath)
+    print("Copying from: "+sourcePath+" to: "+destPath)
     y = 0
     if (os.path.exists(sourcePath+ext)):
         if os.path.exists(sourcePath) and os.path.exists(destPath):
             files_in_dir = str(sourcePath+ext)
             files_to_dir = str(destPath+ext)
             if files_in_dir[-1] != "/": files_in_dir = files_in_dir + "/"
-            if files_to_dir[-1] != "/": files_t0_dir = files_to_dir + "/"
+            if files_to_dir[-1] != "/": files_to_dir = files_to_dir + "/"
+            if (not(os.path.isdir(files_to_dir)) and os.path.isdir(destPath)):
+                 try:
+                     os.mkdir(files_to_dir)
+                 except:
+                     print(" we had a direcrectory create on the USB key that failed.")
             try:
                 if os.path.isdir(files_in_dir):
                     hat.displayPowerOffTime = sys.maxsize
-                    x = logging.info("Copying tree: "+files_in_dir+" to: "+files_to_dir)
-                    shutil.copytree(files_in_dir, files_to_dir, symlinks=True, ignore_dangling_symlinks=True)
-                    logging.info("Used copytree to move files")
-#                   hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
+                    x = print("Copying tree: "+files_in_dir+" to: "+files_to_dir)
+                    shutil.copytree(files_in_dir, files_to_dir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True)
+                    print("Used copytree to move files")
+#                    hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
+                    return(0)
                 else:
                     hat.displayPowerOffTime = sys.maxsize
-                    logging.info("Copying: "+files_in_dir+" to: "+files_to_dir)
-                    x = shutil.copy2(files_in_dir, files_to_dir)
-                    logging.info("used copy2 to move files")
-#                   hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
+                    print("Copying: "+files_in_dir+" to: "+files_to_dir)
+                    x = shutil.copy2(files_in_dir, files_to_dir, follow_symlinks = True)
+                    print("used copy2 to move files")
+#                    hat.displayPowerOffTime = time.time() + DISPLAY_TIMEOUT_SECS
+                    return(0)
             except OSError as err:
-                logging.info("Copytree Errored out with error of OSError err: "+str(err))
+                print("Copytree Errored out with error of OSError err: "+str(err))
                 y = 1
                 return(1)
             except BaseException as err:
-                logging.info("Copytree Errored out with BaseException with BaseException:  err: "+str(err))
+                print("Copytree Errored out with BaseException with BaseException:  err: "+str(err))
                 y = 1
                 return(1)
-            logging.info("going to try and copy the  stats over to the target!")
         else:
-            logging.info("We found the destination of the copy but there is no "+ext+" directory or source indicie is out of range")
+            print("We found the destination of the copy but there is no "+ext+" directory or source indicie is out of range")
             return(1)
     else:
         logginf.info("source path doosn't exsists, no copy possible")
@@ -110,35 +227,37 @@ def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0', ext='/content/'
 
 def checkSpace( sourcePath='/media/usb11', destPath='/media/usb0'):
     '''
+
     Function to make sure there is space on destination for source materials
     :param sourcePath: path to the source material
     :param destPath:  path to the destination
     :param sourdest : indicates that we are copying source to destination if 1 otherwise were copying destination to source
     :return: True / False
     '''
-    logging.info("Starting the Space Check "+sourcePath+" to "+destPath)
+
+    print("Starting the Space Check "+sourcePath+" to "+destPath)
     freeSpaceCushion = 1073741824  # 1 GiB
     try:
         stat = os.statvfs(destPath)
+        free = stat.f_bfree * stat.f_bsize
+        adjustedFree = free - freeSpaceCushion
     except:
-        stat.f_bfree = 0
-        stat.stat.f_bsize=0
-    logging.info("Completed the os.statvfs of: "+destPath)
-    free = stat.f_bfree * stat.f_bsize
-    adjustedFree = free - freeSpaceCushion
+        free = 0
+        adjustedFree = free - freeSpaceCushion
+    print("Completed the os.statvfs of: "+destPath)
     if adjustedFree< 0 : adjustedFree = 0
-    logging.info("Returning free space of : "+str(adjustedFree))
+    print("Returning free space of : "+str(adjustedFree))
     destSize = adjustedFree
-    logging.info("got Destination size of :"+str(destSize))
+    print("got Destination size of :"+str(destSize))
     SourceSize = 0
     y = 0
     a = sourcePath
     if a[-1]=="/":
         a = sourcePath[-1]
     b = "/content/"
-    logging.info("checking the source of : "+(a+b))
+    print("checking the source of : "+(a+b))
     if (os.path.exists(a+b)):
-        logging.info("The source "+(a+b)+" Exsists moving on")
+        print("The source "+(a+b)+" Exsists moving on")
         total_size = 0
         total_count = 0
         for (dirpath, dirnames, filenames) in os.walk((a+b), topdown = True, onerror=None, followlinks = True):
@@ -146,17 +265,17 @@ def checkSpace( sourcePath='/media/usb11', destPath='/media/usb0'):
                 fp = os.path.join(dirpath, f)
                 try:
                     total_size += os.path.getsize(fp)
-#                    logging.info("total size is now "+str(total_size))
+#                    print("total size is now "+str(total_size))
                 except:
                     pass
                 total_count += 1
-#            logging.info("Source Files completed of directory ")
+#            print("Source Files completed of directory ")
         SourceSize = total_size
-        logging.info("got source size as : "+str(SourceSize)+" Path is: "+(a+b))
+        print("got source size as : "+str(SourceSize)+" Path is: "+(a+b))
     else:
-        logging.info("source path "+a+b+" dosn't exsist so there is no length for source")
+        print("source path "+a+b+" dosn't exsist so there is no length for source")
         SourceSize = 0
-    logging.info("total source size:"+str(SourceSize)+"  bytes, total destination size "+str(destSize))
+    print("total source size:"+str(SourceSize)+"  bytes, total destination size "+str(destSize))
     return(destSize, SourceSize)
 
     # pylint: disable=unused-variable
@@ -170,7 +289,7 @@ def getSize( startPath='/media/usb11/content'):
      :param startPath: which folder structure
     :return: size in bytes of the folder structure
     '''
-    logging.info("Getting Size of: "+startPath)
+    print("Getting Size of: "+startPath)
     total_size = 0
     total_count = 0
     for (dirpath, dirnames, filenames) in os.walk(startPath, topdown = True, onerror=None, followlinks = True):
@@ -181,8 +300,8 @@ def getSize( startPath='/media/usb11/content'):
             except:
                 pass
             total_count += 1
-        logging.info("File completed of directory ")
-    logging.info("Total size is: "+str(total_size)+" total count of file was: "+str(total_count))
+        print("File completed of directory ")
+    print("Total size is: "+str(total_size)+" total count of file was: "+str(total_count))
     return(total_size)
 #     @staticmethod
 
@@ -193,14 +312,14 @@ def getFreeSpace( path='/media/usb0'):
     :return:  size in bytes of free space
     '''
      # this is the cushion of space we want to leave free on our internal card
-    logging.info("getting free space of : "+path)
+    print("getting free space of : "+path)
     freeSpaceCushion = 1073741824  # 1 GiB
     stat = os.statvfs(path)
-    logging.info("Completed the os.statvfs(path)")
+    print("Completed the os.statvfs(path)")
     free = stat.f_bfree * stat.f_bsize
     adjustedFree = free - freeSpaceCushion
     if adjustedFree< 0 : adjustedFree = 0
-    logging.info("Returning free space of : "+str(adjustedFree))
+    print("Returning free space of : "+str(adjustedFree))
     return(adjustedFree)
 
 
@@ -210,10 +329,14 @@ def moveMount(curMount='/media/usb0', destMount='/media/usb11'):
     we could use mount --move  if the mount points are not within a mount point that is
     marked as shared, but we need to consider the implications of non-shared mounts before
     doing it
+
+    Returns "" on error else
+    returns destMount on success
     '''
 
+    DEBUG = 2
 #   Find the first USB key by device
-    logging.info("Entered Move Mount with move: "+curMount+" to : "+destMount)
+    print("Entered Move Mount with move: "+curMount+" to : "+destMount)
 
 #    This is a method of getting the device for the mount point
 
@@ -224,52 +347,97 @@ def moveMount(curMount='/media/usb0', destMount='/media/usb11'):
     #take the lines and check for the mount.
     for line in mounts:
         if (curMount in line):
-            logging.info("Found current mount as : "+str(line))
+            print("Found current mount as : "+str(line))
             x = line.split(" ", 1)
             x = x[0].rstrip(" ")
             x = ''.join(x)
-            logging.info("mount is : "+x)
+            print("mount is : "+x)
             break
         else:
             x = ""
-    logging.info("Unmounting file at location %s", x)
+    print("Unmounting file at location %s", x)
     y = subprocess.call(['umount', x])  # unmount drive
     if y > 0:
-        logging.info("Error trying to  unmount "+str(curMount)+"  error: "+str(y))
+        print("Error trying to  unmount "+str(curMount)+"  error: "+str(y))
+        return(-1)
     else:
-        logging.info("Unmount succeeded")
-    b = destMount
+        pass
+    print("trying to do mount: " + destMount, x)
+    a = str(destMount)[len(destMount)-2:]
+    if not(a.isnumeric()):
+        a = str(destMount)[-1]
+        if not(a.isnumeric()): 
+            pirnt("we couldn't find the number on the mount")
+            return(-1)
+    a = int(a)
+    # a is now the numeric character of the desired mount.
+# Now we know we need to do a mount and have found the lowest mount point to use in (a)
+    if not (os.path.exists(destMount)):  #if the /mount/usbx isn't there create it
+        res = os.system("mkdir "+ destMount)
+        if DEBUG > 2: print("created new direcotry ",destMount)
+    z = Popen(["uname", "-r"], stdout=PIPE)
+    y = str(z.communicate()[0])
+    z.stdout.close()
+    if y>="5.15.0":
+        b = "mount " + x + " -t auto -o noatime,nodev,nosuid,sync,utf8 " + destMount
+    else:
+        b = "mount " + x + " -t auto -o noatime,nodev,nosuid,sync,iocharset=utf8 " + destMount
+    c = "dosfsck -a " + x
+    starttime = time.time()
+    print("checking the files system before mount with: "+ c)
+    print("Looking to mount "+c+" but checking file system, time is "+time.asctime())
+    try:
+        res = os.system(c) 				#do a file system check befor the mount.  if it is corrupted we will get a system stop PxUSBm
+        if res == 256:
+            print("failed to do dosfsck -a " + x)
+            c = "ntfsfix -d " +x 
+            try:
+                res = os.system(c)
+            except:
+                print("failed to do ntfsfix -d")
+                print("Failed to do4 ntfsfix -d on "+ x + " time is " + time.asctime())
+    except:
+        print("Failed to do dosfsck")
+        print("Failed to do Dosfsck on " + x + " time is " + time.asctime())
+        print("Did "+c+"  result is: "+str(res))
+    endtime = time.time()
+    deltatime = endtime - starttime
+    print('total time was: ' + str(deltatime) + ' seconds' )
+    print("Completed "+c+" in "+str(deltatime)+ "seconds")
+
+###################### OK try a FAT mount now on the key ############################################
     print("trying to do mount: " + b)
     try: # general fat mount
         res = os.system(b)				#do the mount
         print("Result of mount was: "+str(res))
-        logging.info("Completed mount " + b + " result " + str(res) + " time is " + time.asctime())
+        print("Completed mount " + b + " result " + str(res) + " time is " + time.asctime())
+        return(0)
     except:
         print("mount" + b + " failed result was: "+str(res))
-        logging.info("mount" + b + " failed result was: "+str(res) + " time is " + time.asctime())
-        if res != 0:
-####################### we didn't mount fat drive try NTFS drive #######################
-            try:   #try explicit ntfs mount
-                if (res > 0):		#if we have res > 0 then we have an error
-                    if y>= "5.15.0":
-                        b = "mount /dev/" + e.group() + "-t ntfs -0 noatime, nodev, nosuid, sync, utf8" + " /media/usb" + chr(a)
-                    else:
-                        b = "mount /dev/" + e.group() + "-t ntfs -o noatime, nodev, nosuid, sync, iocharset=utf8" + " /media/usb" + char(a)
-                    res = os.system(b)
-                    print("tried new NTFS mount of: "+b + "result was: " + str(res))
-                    logging.info("Retried NTFS mount of "+b+" with result of "+str(res) + " time is " + time.asctime())
-            except:
-                logging.info("on NTFS  mount of USB key errored")
-                print("on NTFS mount of USB key errored,  res =" + str(res))
-                res = -1
-            if DEBUG > 2: print("completed mount /dev/",e.group)
-        if res > 0: y = 1
-        else: y = 0
-    if y > 0:
-        logging.info("Error trying to  mount "+str(x)+"  error: "+str(y))
+        print("mount" + b + " failed result was: "+str(res) + " time is " + time.asctime())
+        return(-1)
+    if res != 0:
+####################### we didn't mount fat, try NTFS mount #######################
+        try:   #try explicit ntfs mount
+            if y>= "5.15.0":
+                b = "mount " + x + "-t ntfs -0 noatime, nodev, nosuid, sync, utf8 " + destMount
+            else:
+                b = "mount " + x + "-t ntfs -o noatime, nodev, nosuid, sync, iocharset=utf8 " + destMount
+            res = os.system(b)
+            print("tried new NTFS mount of: "+b + "result was: " + str(res))
+            print("Retried NTFS mount of "+b+" with result of "+str(res) + " time is " + time.asctime())
+        except:
+            print("on NTFS  mount of USB key errored")
+            print("on NTFS mount of USB key errored,  res =" + str(res))
+            res = -1
+            return(-1)
+        if DEBUG > 2: print("completed mount ",x)
+    if res != 0:
+        print("Error trying to  mount "+str(x)+"  error: "+str(y))
+        return(-1)
     else:
-        logging.info("Mount succeeded")
-    return(y)
+        print("Mount succeeded")
+    return(0)
 
 
 def getDev(curMount):
@@ -297,15 +465,14 @@ def getMount(curDev):
     '''
     This is a method of getting the mount point for the dev (ex: returns /media/usb0 for curDev /dev/sda1)
     '''
-	# take the file mount outuput and separate it into lines
+    # take the file mount outuput and separate it into lines
     print("getMount looking for "+str(curDev))
     mounts = str(subprocess.check_output(['df']))
-    logging.info("mounts are: "+str(mounts))
     mounts = mounts.split("\\n")
     # take the lines and check for the mount.
     for line in mounts:
         if (str(curDev) in line):
-            logging.info("Found line in mounts for : "+line)
+            print("Found line in mounts for : "+line)
             x = line.split("%", 1)
             x = x[1].rstrip(" ")
             x = x.lstrip(" ")
@@ -313,8 +480,7 @@ def getMount(curDev):
             break
         else:
             x = ""
-    logging.info("output of getMount is : "+x)
-    print("output of getMount is "+x)
+    print("output of getMount is : "+x)
     return(x)
 
 
@@ -325,20 +491,21 @@ def getUSB(whatUSB):
     '''
     mounts = str(subprocess.check_output(['ls','/dev/']))
     mounts = mounts.split("\\n")
-    print ("len of mounts is: "+str(len(mounts)))
     x = 0
     y = 0
     c = ""
+    print("Looking for a line with sdx1")
     for line in mounts:
         if ('sd' in line):
             print("line is: "+ line)
-            logging.info("Found a device sd : ")
             x = line.find("sd")
             if ((x >= 0) and (len(line)> (x+3))):    # we look for 8 so we can return the mount not just the device
                 a = line[(x+2)]
                 b = line[(x+3)]
                 c = c + "sd" + a + b + " "
-                if ((a.isalpha()) and (b.isnumeric()) and (y == whatUSB) and (whatUSB > 0)): return(c)
+                if ((a.isalpha()) and (b.isnumeric()) and (y == whatUSB) and (whatUSB > 0)):
+                   print("found a USB drive "+c)
+                   return(c)
             elif ((x >=0) and (len(line)>= x+3)): y +=1
     if (whatUSB == 0): return(c)
     return("")

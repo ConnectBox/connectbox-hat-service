@@ -436,7 +436,7 @@ class Axp209HAT(BasePhysicalHAT):
         #  callback threads and the main loop, there's no TOCTOU race
         #  condition because we're only ever setting an absolute value rather
         #  than incrementing i.e. we're not referencing the old value
-        self.displayPowerOffTime = time.time() + 3
+        self.displayPowerOffTime = time.time() + 120
         # establish self.nextBatteryChecktime so that if
         #  we have a battery, perform a level check at our first chance
         #  (removed assumption that battery will not be added or removed in
