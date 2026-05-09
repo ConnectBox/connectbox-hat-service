@@ -64,6 +64,12 @@ def min_execution_time(min_time_secs):
     time.sleep(period)
 
 def setup_GPIO():
+    """Reset GPIO state and configure the pin-numbering mode for the current SBC.
+
+    Each HAT subclass __init__ calls this first so GPIO is in a clean state before
+    pin assignments and event-detect registrations are made.  The mode must match
+    the pin constants defined in each class (BOARD for NEO/RM3/OZ2, BCM for CM4/Pi).
+    """
     GPIO.cleanup()              # remove associations
     GPIO.setwarnings(False)
 
@@ -79,13 +85,22 @@ def setup_GPIO():
 
 
 class BasePhysicalHAT:
+    """Abstract base class for all ConnectBox HAT hardware variants.
+
+    Provides the LED control helpers (solidLED, blinkLED), the AXP209/GPIO
+    shutdown callback, the OTG sense interrupt handler, and the AP-status check
+    that governs whether the LED should be on at all.
+
+    Subclasses must call super().__init__(displayClass) after completing their
+    own GPIO setup so that solidLED() fires with all pins already configured.
+    """
 
     LED_CYCLE_TIME_SECS = 4
 
     # pylint: disable=unused-argument
     # This is a standard interface - it's ok not to use
     def __init__(self, displayClass):
-
+        """Turn on the LED to signal readiness.  Subclasses set up GPIO before calling this."""
 #  cli.py wants hats.py to assign GPIO stuff... So we will do that starting here
 # imports are done in header... GPIO functions are done here
             # All HATs should turn on their LED on startup. Doing it in the base
@@ -93,9 +108,14 @@ class BasePhysicalHAT:
             #  and not worry about initial state (and thus be simpler)
         self.solidLED()
 
-#    @classmethod
-# Called when AXP209 signals NEO that power is about to go down
     def shutdownDevice(self):
+        """Initiate a graceful hardware shutdown.
+
+        Turns off the LED (so users don't think WiFi is still active), shows the
+        powering-off screen, then calls the system poweroff script which triggers
+        the AXP209 to cut power after its configured delay.  The infinite loop at
+        the end keeps the powering-off image on screen until the power is actually cut.
+        """
         # Turn off the LED, as some people associate that with wifi being
         #  active (the HAT can stay powered after shutdown under some
         #  circumstances)
@@ -109,6 +129,17 @@ class BasePhysicalHAT:
             pass
 
     def shutdownDeviceCallback(self, channel):
+        """GPIO edge-detect callback fired when the AXP209 EXTEN line goes low.
+
+        The EXTEN line goes low when IPS_OUT drops below Voff (3.0 V) or when
+        the user holds PB1 for more than 8 seconds.  A 100 ms debounce re-reads
+        the pin; if it has gone high again the signal was a glitch and we return
+        without shutting down.
+
+        Parameters
+        ----------
+        channel : int — GPIO pin number that triggered the interrupt.
+        """
         logging.info("Triggering device shutdown based on edge detection "
                       "of GPIO %s.", channel)
         print("... IRQ Triggered")
@@ -221,6 +252,12 @@ class BasePhysicalHAT:
 
 
     def check_AP_up(self):
+        """Return 1 if the WiFi access point interface is in Master mode, 0 otherwise.
+
+        Reads the configured AP interface name from wificonf.txt, then checks iwconfig
+        output for that interface being in 'Mode:Master'.  The LED is only lit when the
+        AP is up — a dark LED signals to users that WiFi is not broadcasting.
+        """
         f = open("/usr/local/connectbox/wificonf.txt", "r")
         wifi = f.read()
         f.close()
@@ -245,6 +282,16 @@ class BasePhysicalHAT:
 
 
     def blinkLED(self, times, flashDelay=0.3):
+        """Blink the amber LED 'times' times to indicate battery level.
+
+        Only blinks if the AP is up — keeps LED off (HIGH = off for active-low)
+        when WiFi is not broadcasting so users know the device is not ready.
+
+        Parameters
+        ----------
+        times      : int   — number of blink cycles
+        flashDelay : float — seconds between on/off transitions
+        """
         if self.check_AP_up() == 1:
             for _ in range(0, times):
                 GPIO.output(self.PIN_LED, GPIO.HIGH)
@@ -254,8 +301,12 @@ class BasePhysicalHAT:
         else:
              GPIO.output(self.PIN_LED, GPIO.HIGH)
 
-
     def solidLED(self):
+        """Turn the amber LED on solid (AP up) or off (AP down).
+
+        Called when battery is above the highest blink threshold (>63 %).
+        The LED pin is active-low: LOW = LED on, HIGH = LED off.
+        """
         if self.check_AP_up() == 1:
             GPIO.output(self.PIN_LED, GPIO.LOW)
         else:
@@ -263,8 +314,15 @@ class BasePhysicalHAT:
 
 
 class DummyHAT(BasePhysicalHAT):
+    """HAT placeholder used when no OLED or HAT hardware is detected.
+
+    Provides a minimal mainLoop so the service stays alive and can still show
+    wait/success pages via the comsFileName IPC file (used by mmiLoader.py to
+    signal indexing progress).
+    """
 
     def __init__(self, displayClass):
+        """Initialise GPIO and call base class to turn on the LED."""
         setup_GPIO()
         super().__init__(displayClass)
         pass
@@ -272,6 +330,13 @@ class DummyHAT(BasePhysicalHAT):
     # pylint: disable=no-self-use
     # This is a standard interface - it's ok not to use self for a dummy impl
     def mainLoop(self):
+        """Poll the comsFileName IPC file and display wait/success pages accordingly.
+
+        comsFileName (/tmp/creating_menus.txt) is written by mmiLoader.py when
+        USB indexing is in progress.  When the file appears the display shows a
+        wait animation; when it is removed the display shows a success page.
+        No battery checks or LED updates are needed without a real HAT.
+        """
         logging.info("There is no HAT, so there's nothing to do using DummyHat")
         logging.info("globals.device_type = "+globals.device_type)
         while True:
@@ -482,7 +547,17 @@ class Axp209HAT(BasePhysicalHAT):
 
 
     def batteryLevelAbovePercent(self, level):
-        # Battery guage of -1 means that the battery is not attached.
+        """Return True if the battery charge percentage is above 'level' (or no battery).
+
+        A gauge reading of -1 from the AXP209 means no battery is attached (running
+        on AC), which is treated as "always above threshold" so we never show a
+        spurious low-battery warning when running on mains power.
+
+        Parameters
+        ----------
+        level : int — percentage threshold (0-100)
+        """
+        # Battery gauge of -1 means that the battery is not attached.
         # Given that amounts to infinite power because a charger is
         #  attached, or the device has found a mysterious alternative
         #  power source, let's say that the level is always above if
@@ -496,7 +571,18 @@ class Axp209HAT(BasePhysicalHAT):
         return gaugelevel < 0 or \
             gaugelevel > level
 
-    def batteryLevelAboveVoltage(self, level):      # level in mV
+    def batteryLevelAboveVoltage(self, level):
+        """Return True if the battery voltage is above 'level' mV (or no battery present).
+
+        Voltages below 1000 mV indicate no battery is attached (AXP209 returns a
+        near-zero reading on the battery ADC when the cell is absent), so those are
+        also treated as "above threshold" to suppress low-battery warnings on AC-only
+        deployments.
+
+        Parameters
+        ----------
+        level : int — voltage threshold in mV
+        """
         try:
             voltagelevel = self.axp.battery_voltage  # returns mV
         except OSError:
@@ -506,8 +592,13 @@ class Axp209HAT(BasePhysicalHAT):
         return voltagelevel < 1000 or \
             voltagelevel > level             # if <1000 we have no battery so return TRUE so we don't see the low bat warning
 
-
     def updateLEDState(self):
+        """Set the LED blink pattern based on the current battery percentage.
+
+        Three blinks = critical (<3 %), two blinks = low (3-33 %), one blink = medium
+        (33-63 %), solid = good (>63 %).  Mirrors the voltage thresholds of the
+        original Q1Y2018 hardware comparators so behaviour is consistent across HATs.
+        """
         if self.batteryLevelAbovePercent(
                 self.MIN_BATTERY_THRESHOLD_PERC_SOLID):
             self.solidLED()
@@ -529,6 +620,18 @@ class Axp209HAT(BasePhysicalHAT):
 
 
     def mainLoop(self):
+        """Run the HAT service main loop — polls battery, updates LED and display.
+
+        Executes at most once per LED_CYCLE_TIME_SECS (4 s) via min_execution_time.
+        Each iteration:
+          1. Auto-blanks the display if displayPowerOffTime has elapsed.
+          2. Checks the comsFileName IPC file for mmiLoader progress messages.
+          3. On CM4, updates the multi-battery voltage array via ATTiny.
+          4. Redraws the current page so elapsed-time data stays fresh.
+          5. Shows/hides the low-battery warning based on BATTERY_WARNING_VOLTAGE.
+          6. Schedules the next battery check and updates the LED blink pattern.
+          7. Re-reads brand.j2 in case the admin console changed settings.
+        """
 #        print("at entry axp209 hat main")
         var_Indexing = False
         while True:

@@ -25,40 +25,76 @@ import neo_batterylevelshutdown.globals as globals
 
 
 class DummyDisplay:
+    """No-op display implementation for devices without an OLED screen.
+
+    Used when HAT detection falls back to DummyHAT (no OLED found).  All methods
+    are stubs so the rest of the codebase can call display methods unconditionally
+    without checking whether a real display is present.
+    """
 
     # pylint: disable=unused-argument
     # This is a standard interface - it's ok not to use the argument
     def __init__(self, hat_class):
+        """Initialise with a fixed display_type so callers can branch on it."""
         self.display_type = 'DummyDisplay'
 
     def moveForward(self):
+        """No-op: advance display page (no display present)."""
         pass
 
     def moveBackward(self):
+        """No-op: go back a display page (no display present)."""
         pass
 
     def powerOffDisplay(self):
+        """No-op: blank the display (no display present)."""
         pass
 
     def showLowBatteryWarning(self):
+        """No-op: show low-battery warning (no display present)."""
         pass
 
     def hideLowBatteryWarning(self):
+        """No-op: hide low-battery warning (no display present)."""
         pass
 
     def drawLogo(self):
-        # should this be exposed publicly, or should it be private and
-        #  simply called in the constructor or via some standard interface?
+        """No-op: draw startup logo (no display present)."""
         pass
 
 
 # pylint: disable=too-many-instance-attributes
 class OLED:
+    """Driver for the SSD1306/SH1106 OLED display fitted to ConnectBox HATs.
+
+    Maintains two page stacks — 'status' (informational display pages) and
+    'admin' (USB copy/erase operations) — and a current-page pointer protected
+    by a threading.Lock so the main loop and GPIO button callbacks can both
+    update the display safely.
+
+    Page navigation:
+        moveForward / moveBackward  — cycle through the active stack, skipping
+            pages whose screen_enable flag is 0 in brand.j2.
+        switchPages                 — toggle between the status and admin stacks;
+            only reachable from the last page of the status stack (the admin icon).
+        moveToStartPage             — jump to page 0 of the current stack.
+
+    Special pages (not in either stack):
+        blank_page        — shown when the display auto-powers off after inactivity.
+        low_battery_page  — shown when battery voltage drops below warning threshold.
+        power_down_page   — shown when a shutdown is in progress.
+    """
 
     # What to show after startup and blank screen
     STARTING_PAGE_INDEX = 0  # the main page
 
     def __init__(self, hat_class):
+        """Set up all page objects and draw the startup logo.
+
+        Parameters
+        ----------
+        hat_class : BasePhysicalHAT subclass instance — provides axp (AXP209) handle.
+        """
         logging.info("In __init__ of OLED")
         self.hat = hat_class
         # rename this.... perhaps it doesn't even need to be stored
@@ -117,6 +153,11 @@ class OLED:
         time.sleep(3)       # display logo screen for 3 seconds
 
     def getAdminPageName(self):
+        """Return the command string for the currently displayed admin page.
+
+        If the current page is not in the active page list (e.g. display blanked),
+        reset to the starting page first so we always return a valid command name.
+        """
         if self._curPage not in self.pages:
         # Always start with the starting page if the screen went off
         #  or if we were showing the low battery page
@@ -124,6 +165,11 @@ class OLED:
         return self.adminPageNames[self.adminPages.index(self._curPage)]
 
     def checkIfLastPage(self):
+        """Return True if the current page is the last page in the active stack.
+
+        Used to detect when the user has scrolled to the admin icon (last status page)
+        so that a dual long-press can open the admin stack via switchPages().
+        """
         return self._curPage == self.pages[-1]
 
     def showRemoveUsbPage(self,a=''):

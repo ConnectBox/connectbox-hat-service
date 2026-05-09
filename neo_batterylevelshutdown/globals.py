@@ -47,6 +47,17 @@ from .HAT_Utilities import get_device
 
 
 def init():
+    """Read brand.j2 and /proc/cpuinfo to set all global device/display configuration.
+
+    Called once at startup (from cli.py) and then periodically from the Axp209HAT main
+    loop to detect hostname changes.  All of the module-level variables above are
+    refreshed on each call so the display stays consistent with the current config
+    without requiring a service restart.
+
+    Side-effects:
+        - Writes brand.j2 back to disk if the hostname has drifted from Brand.
+        - Sets device_type, port, and clientIF by re-reading /proc/cpuinfo and wificonf.txt.
+    """
   # by defining as global, the following variables can be modified
   #  by the init() function
 
@@ -78,7 +89,7 @@ def init():
     data = f.read()
     f.close()
     js = json.loads(data)
-    timestamp = os.path.getmtime('/usr/local/connectbox/brand.txt')
+    timestamp = os.path.getmtime('/usr/local/connectbox/brand.j2')
     if (sequence >7) or (sequence < 0): sequence = 0
     sequence_time = time.time()
 
@@ -145,7 +156,7 @@ def init():
     if (bname.lower() != brand_name.lower()):
         brand_name = bname
         js["Brand"] = bname
-        f = open("/usr/local/connectbox/brand.txt", 'w')
+        f = open("/usr/local/connectbox/brand.j2", 'w')
         f.write(json.dumps(js))
         f.close()
 

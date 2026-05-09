@@ -31,7 +31,25 @@ comsFileName = "/tmp/creating_menus.txt"
 DEBUG = True
 
 class BUTTONS:
-    # This class is for dealing with button presses on the connectbox
+    """Handles physical button input for ConnectBox HATs.
+
+    Translates raw GPIO edge interrupts into display navigation commands.
+    Two buttons are supported: left (index 0 of USABLE_BUTTONS) and right
+    (index 1).  Press semantics:
+
+      Short single press  — left: move forward through status pages;
+                            right: enter/confirm in admin stack.
+      Short dual press    — both buttons simultaneously for < threshold seconds:
+                            treated as a single short press on the first button.
+      Long press          — single button held >= CHECK_PRESS_THRESHOLD_SEC:
+                            initiates device shutdown.
+      Long dual press     — both buttons held >= CHECK_PRESS_THRESHOLD_SEC:
+                            switchPages() (toggles status ↔ admin stack).
+
+    BUTTON_PRESS_BUSY and BUTTON_PRESS_CLEARED_TIME together implement a
+    software debounce and re-entrancy guard so rapid or simultaneous presses
+    only produce one response.
+    """
 
     BUTTON_PRESS_BUSY = False  # Prevent dual usage of the handleButtonPress function
     BUTTON_PRESS_TIMEOUT_SEC = 0.25  # Prevent bouncing of the handleButtonPress function
@@ -40,7 +58,13 @@ class BUTTONS:
     DISPLAY_TIMEOUT_SECS = 120     #screen on time before auto off
 
     def __init__(self, hat_class, display_class):
+        """Bind the BUTTONS instance to its HAT and display objects.
 
+        Parameters
+        ----------
+        hat_class     : Axp209HAT subclass instance
+        display_class : OLED instance — used to push pages to the screen
+        """
         self.display = display_class
         self.hat = hat_class
         self.display_type = display_class.display_type
@@ -50,6 +74,20 @@ class BUTTONS:
         NoMountOrig = 0
 
     def checkReturn(self, val):
+        """Write val to usb0NoMount in brand.j2, then sleep 4 s so PxUSBm can catch up.
+
+        Used by USB copy/erase commands to temporarily disable auto-mount while
+        files are being copied.  Returns the original usb0NoMount value so the
+        caller can restore it when the operation completes.
+
+        Parameters
+        ----------
+        val : str or int — new value to write to usb0NoMount ('0' or '1')
+
+        Returns
+        -------
+        original usb0NoMount value read from brand.j2 before the write.
+        """
         fp = open('/usr/local/connectbox/brand.j2', "r", encoding='utf-8')
         brand = json.load(fp)
         fp.close()
@@ -59,14 +97,10 @@ class BUTTONS:
         json.dump(brand, fp, indent = 4, sort_keys = False)
         try:
             fp.close()
-
-##################################################################################
-# were counting on  PxUSBm loop to update brand.j2 since we only updated brand.txt
-##################################################################################
         except:
             print("Couldn't write brand.j2 out")
             print("Error couldn't write brand.j2 out")
-        time.sleep(4)		#sleep to allow PxUSBm to catch up
+        time.sleep(4)       #sleep to allow PxUSBm to catch up
         return(NoMountOrig)
 
 
@@ -804,7 +838,13 @@ class BUTTONS:
         # reset the display power off time
         self.hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
 
-    def moveToStartPage(self,channel):
+    def moveToStartPage(self, channel):
+        """Jump to the first page of the current page stack and reset the display timeout.
+
+        Parameters
+        ----------
+        channel : int — GPIO pin that triggered the press (passed through but not used here)
+        """
         self.display.moveToStartPage()
         # reset the display power off time
         self.hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS

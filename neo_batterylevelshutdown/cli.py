@@ -50,6 +50,22 @@ progress_file = "/usr/local/connectbox/expand_progress.txt"
 
 
 def getHATClass():
+    """Detect which HAT hardware is fitted and return the matching HAT class.
+
+    Detection sequence:
+      1. Try to open the OLED via luma — if it fails, no display/HAT is present
+         and DummyHAT is returned.
+      2. Try to open the AXP209 over i2c:
+         - Failure → Q1Y2018 HAT (no AXP209) or bare board.
+         - Success → test GPIO pins PA1 and PG11 to distinguish between
+           HAT 4.6.7 (Q3Y2018), HAT 5/6/CM4 (Q4Y2018), and HAT 7 (Q3Y2021).
+      3. CM4 and RM3 devices always get Q4Y2018 regardless of GPIO state
+         because their GPIO assignments would cause false pin reads.
+
+    Returns
+    -------
+    class — one of DummyHAT, q1y2018HAT, q3y2018HAT, q4y2018HAT, q3y2021HAT.
+    """
     logging.info("Entering get Hat Class")
     # We assume the HAT is not present if we're unable to setup the pin
     #  or read from it. That's the safe option and means that we won't
@@ -155,12 +171,26 @@ def getHATClass():
     return hats.DummyHAT
 
 def call_battery():
+    """Stub — not currently wired up (missing self context)."""
     page_battery.PageBattery(self.display_device, self.axp)
     return
 
 # the OLED is already set from the hat class test.  No need to retest.
 
 def getDisplayClass(hatClass):
+    """Return the display class appropriate for the detected HAT.
+
+    DummyHAT means no OLED was found, so DummyDisplay is used (no-op stubs).
+    Any real HAT class gets the full OLED display driver.
+
+    Parameters
+    ----------
+    hatClass : class — as returned by getHATClass()
+
+    Returns
+    -------
+    class — displays.OLED or displays.DummyDisplay
+    """
     logging.info("Entering get Display Class")
     if hatClass != hats.DummyHAT and hatClass !=0:
         return displays.OLED
@@ -176,7 +206,20 @@ def getDisplayClass(hatClass):
 @click.option('-v', '--verbose', is_flag=True, default=True)
 
 def main(verbose):
+    """Entry point for the neo_batterylevelshutdown service.
 
+    Sequence:
+      1. Initialise globals (device type, brand config) via globals.init().
+      2. Set GPIO mode appropriate for the detected SBC type.
+      3. Wait for the SD-card expand_progress.txt to signal that disk resize is done
+         before accessing the filesystem — important at first boot.
+      4. Detect the HAT and display class, then hand off to hatClass.mainLoop()
+         which never returns under normal operation.
+
+    Parameters
+    ----------
+    verbose : bool — True logs at INFO level, False at DEBUG level.
+    """
     global hatClass
     global progress_file
 
