@@ -52,7 +52,11 @@ class PageDisplayImage:
         #device that is offending
         if self.devicename != "":
             if 'wait' in self.imageName:
-                d.text((5, 15), "{:<}".format(self.devicename), font=font14, fill="black")
+                # Center each line horizontally; support \n for two-line messages
+                for i, line in enumerate(self.devicename.split('\n')):
+                    line_width = font14.getlength(line)
+                    x = max(0, int((128 - line_width) // 2))
+                    d.text((x, 15 + i * 16), line, font=font14, fill="black")
             elif self.imageName== 'error.png':
                 d.text((5, 20), "{:<}".format(self.devicename), font=font14, fill="black")
             else:
