@@ -308,28 +308,11 @@ class BUTTONS:
                     os.system("rm "+comsFileName)
                 time.sleep(2)
 
-                z = ord('a')
-                curDev = '/dev/sda1'
-
                 hat.displayPowerOffTime = sys.maxsize
-                self.display.pageStack = 'remove_usb'  # show we removed the usb key
-                self.display.showRemoveUsbPage()  # show the remove usb page
-
-                while z < ord("k"):
-                    if usb.isUsbPresent(curDev) != "":
-                        z -= 1    # lets make sure we keep looking at this one
-                        if usb.getMount(curDev) != "":
-                            try:
-                                usb.unmount(usb.getMount(curDev))
-                                usb.unmount(curDev)
-                            except:
-                                pass
-                    z += 1  # lets look at the next one
-                    curDev = '/dev/sd'+chr(z)+"1"
+                self.display.pageStack = 'remove_usb'
+                self.display.showRemoveUsbPage()
 
             time.sleep(2)
-
-            # We finished the umounts
             self.display.pageStack = 'success'
             self.display.showSuccessPage()
             hat.displayPowerOffTime = time.time() + self.DISPLAY_TIMEOUT_SECS
@@ -590,23 +573,8 @@ class BUTTONS:
                     os.system("rm "+comsFileName)
                 time.sleep(2)
                 hat.displayPowerOffTime = sys.maxsize
-                self.display.pageStack = 'remove_usb'  # show we removed the usb key
-                self.display.showRemoveUsbPage()  # show the remove usb page
-                z = ord('a')
-                curDev = '/dev/sda1'
-                while z < ord("k"):
-                    if usb.isUsbPresent(curDev) != "":
-                        z -= 1       # make sure we stay on this key
-                        if usb.getMount(curDev) != "":
-                            try:
-                                usb.unmount(usb.getMount(curDev))
-                                usb.unmount(curDev)
-                            except:
-                                pass
-                    z += 1  # lets look at the next one
-                    curDev = '/dev/sd' + chr(z) + '1'  # create the next curdev
-
-            # We finished the umounts
+                self.display.pageStack = 'remove_usb'
+                self.display.showRemoveUsbPage()
             time.sleep(2)
             self.display.pageStack = 'success'
             self.display.showSuccessPage()
