@@ -11,6 +11,7 @@
 """
 
 import os.path
+import sys
 import logging
 from PIL import Image, ImageFont, ImageDraw
 from .HAT_Utilities import get_device

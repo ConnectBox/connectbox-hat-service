@@ -339,6 +339,7 @@ class DummyHAT(BasePhysicalHAT):
         """
         logging.info("There is no HAT, so there's nothing to do using DummyHat")
         logging.info("globals.device_type = "+globals.device_type)
+        var_Indexing = False
         while True:
             if os.path.isfile(comsFileName):
                  f = open(comsFileName, 'r', encoding='utf-8')
@@ -421,6 +422,7 @@ class q1y2018HAT(BasePhysicalHAT):
         monitors battery voltage and shuts down the device when levels are low
         """
         logging.info("Starting Monitoring")
+        var_Indexing = False
         while True:
             with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
 
@@ -787,7 +789,7 @@ class q4y2018HAT(Axp209HAT):
             self.PIN_LED = 6    # GPIO6
             self.PIN_L_BUTTON = 3               # GPIO3
             self.PIN_R_BUTTON = 4               # GPIO4
-            self.PIN_AXP_INTERRUPT_LIINE = 15   # GPIO15
+            self.PIN_AXP_INTERRUPT_LINE = 15   # GPIO15
             self.PIN_OTG_SENSE = 17               #PA0
             self.USABLE_BUTTONS = [self.PIN_L_BUTTON, self.PIN_R_BUTTON]  # Used in the checkPressTime method
             logging.info("found q4y2018HAT for Pi")

@@ -35,6 +35,6 @@ class PagePowerDown:
 
 if __name__ == "__main__":
     try:
-        Page_power_down(get_device()).draw_page()
+        PagePowerDown(get_device()).draw_page()
     except KeyboardInterrupt:
         pass

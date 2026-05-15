@@ -70,7 +70,7 @@ class PageBattery:
             # simplifies to: (Vbatt(mv) - 3275) / 7.67 
             if globals.device_type != "CM":
                 battery_voltage = self.axp.battery_voltage
-                battgauge =  (battery_voltage - 3275) / 7.67
+                battgauge = min((battery_voltage - 3275) / 7.67, 99)
             else:
                 battery_voltage = mb_utilities.averageBat()
                 battgauge = mb_utilities.averageFuel()
@@ -106,12 +106,6 @@ class PageBattery:
             d.text((63, 2), "%.0f%%" %
                    battgauge, font=font20, fill="black")
 
-            # multiple batteries - DERPICATE: multi bat page should be sufficient
-        #    if globals.device_type == "CM":
-        #        logging.info("Bus Battery: "+str(mb_utilities.bat_number()))
-        #        d.text((99,2), "#%.0f" %
-        #           float(mb_utilities.bat_number()), font=font20, fill="black")		#Display the battery number
-
             # charge current
             d.text((92, 44), "%.0f" %
                    self.axp.battery_charge_current, font=font20, fill="black")
@@ -139,12 +133,6 @@ class PageBattery:
                 d.text((92, 44), "%.0f" %
                        self.axp.battery_discharge_current,
                        font=font20, fill="black")
-
-                # multiple batteries - DERPICATE: multi bat page should be sufficient    
-            #    if globals.device_type == "CM":
-            #        logging.info("Bus Battery: "+str(mb_utilities.bat_number()))
-            #        d.text((99,2), "#%.0f" %
-            #            float(mb_utilities.bat_number()), font=font20, fill="black")		#Display the battery number
 
                 # get the percent filled and draw a rectangle
                 # percent = self.axp.battery_gauge

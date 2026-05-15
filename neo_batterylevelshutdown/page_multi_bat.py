@@ -147,6 +147,6 @@ class PageMulti_Bat:
 
 if __name__ == "__main__":
     try:
-        PageMultiBat(get_device(), axp209.AXP209()).draw_page()
+        PageMulti_Bat(get_device(), axp209.AXP209()).draw_page()
     except KeyboardInterrupt:
         pass

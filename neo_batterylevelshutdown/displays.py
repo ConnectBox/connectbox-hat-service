@@ -97,7 +97,6 @@ class OLED:
         """
         logging.info("In __init__ of OLED")
         self.hat = hat_class
-        # rename this.... perhaps it doesn't even need to be stored
         self.axp = self.hat.axp   # powerManagementDevice
         self.display_type = 'OLED'
         self.display_device = get_device()
@@ -271,12 +270,10 @@ class OLED:
             #  underneath us
             self._curPage.draw_page()
             logging.debug("Transitioned to page %s", self._curPage)
-            print("Transitioned to page %S", self._curPage)
 
     def moveToStartPage(self):
         with self._curPageLock:
             self._curPage = self.pages[self.STARTING_PAGE_INDEX]
-            self.pageStack = 'admin'
             self._curPage.draw_page()
 
 
@@ -306,7 +303,6 @@ class OLED:
             #  underneath us
             self._curPage.draw_page()
             logging.debug("Transitioned to page %s", self._curPage)
-            print("Transitgioned to page %s", self._curPage)
 
     def moveBackward(self):
         with self._curPageLock:
@@ -322,8 +318,9 @@ class OLED:
                 current_page_index = self.pages.index(self._curPage)
                 page_count = len(self.pages)
                 next_page_index = (current_page_index + page_count -1) % page_count
-                while screenList[next_page_index % page_count] == 0:
-                    next_page_index = (next_page_index + page_count -1) % page_count   # skip page with value 0
+                if self.pages == self.statusPages:
+                    while screenList[next_page_index % page_count] == 0:
+                        next_page_index = (next_page_index + page_count -1) % page_count   # skip page with value 0
                 self._curPage = \
                         self.pages[next_page_index]
 

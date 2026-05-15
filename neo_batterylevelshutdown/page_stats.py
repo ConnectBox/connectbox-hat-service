@@ -162,6 +162,8 @@ class PageStats:
                            (str(p['count']), media),
                            font=font10, fill="black")
                     y += 12
+                    if count == 10:
+                        break
 
         out = Image.alpha_composite(img, txt)
         self.device.display(out.convert(self.device.mode))
