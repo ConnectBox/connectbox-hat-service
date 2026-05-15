@@ -10,7 +10,6 @@ import sys, getopt
 import argparse
 import os, shutil
 import logging
-import shutil
 
 
 def main():
@@ -30,8 +29,8 @@ def main():
                 print('USBCopyUtil.py -i <inputdir> missing')
                 return()
         elif len(arguments.o) <=4:
-                print("USBCopyUtil.py -o <outputdir> missing")                                                # we have a valid output directory
-                outputdir = val[1]
+                print("USBCopyUtil.py -o <outputdir> missing")
+                return()
         if  arguments.i == arguments.o:
                 print("cannot copy from the same source to same destination")
                 print("Closed USBCopyUtil.py due to lack of valid variabales")
@@ -51,10 +50,9 @@ def main():
                 logging.info("USBcopyUtil copy: "+arguments.i+" to: "+arguments.o)
                 shutil.copy2(arguments.i, arguments.o)
         except (OSError):
-                errors.append((arguments.i, arguments.o, str(OSError), str(shutil.Error))                            # We encountered an error so we stop.
+                error.append((arguments.i, arguments.o, str(OSError), str(shutil.Error)))   # We encountered an error so we stop.
         except shutil.Error:
-#            errors.append((arguments.i, arguments.o, str(OSError), str(shutil.Error))                            # We encountered an error so we stop.
-       s.exit()                                                                                                #No error so we just exit clean
+            sys.exit()                                                                       # shutil error — exit clean
         return()
 
 

@@ -325,7 +325,7 @@ class BUTTONS:
                             except:
                                 pass
                     z += 1  # lets look at the next one
-                    curDev = '/dev/sd/'+chr(z)+"1"
+                    curDev = '/dev/sd'+chr(z)+"1"
 
             time.sleep(2)
 
@@ -357,7 +357,7 @@ class BUTTONS:
                 self.display.pageStack = 'remove_usb'                #show we removed the usb key
                 self.command_to_reference = 'remove_usb'
                 dev = usb.getUSB(1)
-                if (dev != ""): subprocess.Popen('umount '+dev, shell=False)
+                if (dev != ""): usb.unmount(dev)
                 while (usb.isUsbPresent() != ""):
                     time.sleep(3)                                       #Wait for the key to be removed
                 self.display.pageStack= "success"
@@ -384,7 +384,7 @@ class BUTTONS:
 
         elif command == 'copy_to_usb':
             logging.debug("got to copy to usb code")
-            #get the value of usb0NoMount and save it and set it
+            NoMountOrig = 0  # safe default if brand.j2 is missing or unreadable
             try:
                if os.path.exists('/usr/local/connectbox/brand.j2'):
                    with open('/usr/local/connectbox/brand.j2', "r+") as fp:
@@ -571,7 +571,7 @@ class BUTTONS:
                     time.sleep(self.DISPLAY_TIMEOUT_SECS)
                     self.display.showRemoveUsbPage()
                     self.display.pageStack = 'remove_usb'
-                    while usb.getMount(dev) != False:
+                    while usb.getMount(dev) != "":
                         time.sleep(2)
                     print("we don't know the state of the mount so we just leave it")
                     self.checkReturn( NoMountOrig)

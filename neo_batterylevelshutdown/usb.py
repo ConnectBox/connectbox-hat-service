@@ -104,7 +104,7 @@ def _get_existing_mount_point(df_output, dev_path, new_path):
             parts = line.split()
             if len(parts) > 5:
                 existing_mount_point = parts[5]
-                print("Device (dev_path) is already mounted at (existing_mount_point)",dev_path, exsisting_mount_point)
+                print("Device (dev_path) is already mounted at (existing_mount_point)",dev_path, existing_mount_point)
                 logging.info(f"Device {dev_path} is already mounted at {existing_mount_point}",dev_path,existing_mount_point)
                 if new_path in existing_mount_point:
                     return True
@@ -221,7 +221,7 @@ def copyFiles(sourcePath='/media/usb11', destPath='/media/usb0', ext='/content/'
             print("We found the destination of the copy but there is no "+ext+" directory or source indicie is out of range")
             return(1)
     else:
-        logginf.info("source path doosn't exsists, no copy possible")
+        logging.info("source path doesn't exist, no copy possible")
         return(1)
 
 
@@ -367,7 +367,7 @@ def moveMount(curMount='/media/usb0', destMount='/media/usb11'):
     if not(a.isnumeric()):
         a = str(destMount)[-1]
         if not(a.isnumeric()): 
-            pirnt("we couldn't find the number on the mount")
+            print("we couldn't find the number on the mount")
             return(-1)
     a = int(a)
     # a is now the numeric character of the desired mount.
