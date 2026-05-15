@@ -242,7 +242,7 @@ class BUTTONS:
 
             print("Preparing to check space of source " + mnt)
 
-            self.pageStack = 'checkSpace'  # Don't allow the display to turn off
+            self.display.pageStack = 'checkSpace'  # Don't allow the display to turn off
             globals.sequence = 0
             self.display.pageStack = 'wait'
             globals.a = "Checking Space"
@@ -320,8 +320,8 @@ class BUTTONS:
                         z -= 1    # lets make sure we keep looking at this one
                         if usb.getMount(curDev) != "":
                             try:
-                                usb.umount(usb.getMount(curDev))
-                                usb.umount(curDev)
+                                usb.unmount(usb.getMount(curDev))
+                                usb.unmount(curDev)
                             except:
                                 pass
                     z += 1  # lets look at the next one
@@ -393,21 +393,21 @@ class BUTTONS:
                           fp.close()
                           NoMountOrig = m.get("usb0NoMount", 0) # get the original value, default to 0 if not present
                       except json.JSONDecodeError:
-                          print(f"Error: Invalid JSON in {filepath}")
+                          print("Error: Invalid JSON in /usr/local/connectbox/brand.j2")
                           m = {}
                    if m.get("usb0NoMount") != 0:
                        m["usb0NoMount"] = 0
-                       with open("/usr/local/connectbox.brand.j2","w") as fp:
+                       with open("/usr/local/connectbox/brand.j2","w") as fp:
                             fp.seek(0)
                             json.dump(m, fp)
                             fp.truncate()
                             fp.close()
                else:
-                   print("Error: File not found at {filepath}")
+                   print("Error: File not found at /usr/local/connectbox/brand.j2")
                    self.checkReturn( NoMountOrig)
                    return(1)
             except Exception as e:
-                 print("An unexpected error occurred: {e}")
+                 print(f"An unexpected error occurred: {e}")
                  # Consider logging the error or taking other appropriate action
                  self.checkReturn( NoMountOrig)
                  return(1)
@@ -494,7 +494,7 @@ class BUTTONS:
                             return(1)
                     else:
  
-                        if getDev("/media/usb11") == "":
+                        if usb.getDev("/media/usb11") == "":
                             self.display.showErrorPage("USB not mounted")               # if not generate error page and exit
                             self.display.pageStack = 'error'
                             self.checkReturn( NoMountOrig)
@@ -599,8 +599,8 @@ class BUTTONS:
                         z -= 1       # make sure we stay on this key
                         if usb.getMount(curDev) != "":
                             try:
-                                usb.umount(usb.getMount(curDev))
-                                usb.umount(curDev)
+                                usb.unmount(usb.getMount(curDev))
+                                usb.unmount(curDev)
                             except:
                                 pass
                     z += 1  # lets look at the next one
