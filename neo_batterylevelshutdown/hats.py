@@ -627,7 +627,8 @@ class Axp209HAT(BasePhysicalHAT):
         Executes at most once per LED_CYCLE_TIME_SECS (4 s) via min_execution_time.
         Each iteration:
           1. Auto-blanks the display if displayPowerOffTime has elapsed.
-          2. Checks the comsFileName IPC file for mmiLoader progress messages.
+          2. Checks the comsFileName IPC file for mmiLoader progress messages
+             (skipped while an admin command from buttons.py is running).
           3. On CM4, updates the multi-battery voltage array via ATTiny.
           4. Redraws the current page so elapsed-time data stays fresh.
           5. Shows/hides the low-battery warning based on BATTERY_WARNING_VOLTAGE.
@@ -640,11 +641,20 @@ class Axp209HAT(BasePhysicalHAT):
             # The following ensures that the while loop only executes once every
             #  LED_CYCLE_TIME_SECS...
             with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
+                # An admin command (copy / erase, see buttons.py) draws its own
+                #  pages: don't blank the display or put our pages over its
+                #  error / success page.  Just keep its wait page animated.
+                adminBusy = getattr(getattr(self, 'buttons', None), 'admin_busy', False)
+
                 # Perhaps power off the display
-                if (time.time() > self.displayPowerOffTime) and (not var_Indexing):
+                if (time.time() > self.displayPowerOffTime) and (not var_Indexing) and (not adminBusy):
                     self.display.powerOffDisplay()
 
-                if os.path.isfile(comsFileName):
+                if adminBusy:
+                    var_Indexing = False
+                    if self.display.pageStack == 'wait':
+                        self.display.showWaitPage(globals.a)
+                elif os.path.isfile(comsFileName):
                     f = open(comsFileName, 'r', encoding='utf-8')
                     globals.a = f.read()
                     f.close()

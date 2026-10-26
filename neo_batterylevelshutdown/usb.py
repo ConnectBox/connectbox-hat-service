@@ -13,24 +13,48 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 #    @staticmethod
+# File systems that store Unix permissions (Linux formats).  They reject the
+# FAT-only utf8 mount option and are not checked with dosfsck/ntfsfix.
+# (Same list and rules as PxUSBm.py.)
+POSIX_FILESYSTEMS = ('ext2', 'ext3', 'ext4', 'xfs', 'btrfs', 'f2fs')
+
+
+def fsType(dev_path):
+    """File system type of a device (e.g. 'vfat', 'ext4'), or '' if none / unknown."""
+    try:
+        out = subprocess.run(['lsblk', '-dno', 'FSTYPE', dev_path],
+                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                             universal_newlines=True, timeout=10).stdout
+        return out.strip()
+    except Exception:
+        return ''
+
+
+def _hasPartitions(letter):
+    """True if /dev/sd<letter> has any numbered partition (/dev/sdb1, /dev/sdb2 ...)."""
+    return any(os.path.exists('/dev/sd' + letter + str(n)) for n in range(1, 10))
+
+
 def isUsbPresent(devPath='/dev/sda1'):
     '''
-
-    Returns if there is a USB plugged into specified devPath
-    (does not depend on stick being mounted)
-    :return: First key location or  if none then ""
+    Find a USB key, starting at the drive letter of devPath (/dev/sdb1 or
+    /dev/sdb -> 'b') and looking up to /dev/sdj.  A key is its first
+    partition (/dev/sdX1, the usual case) or, for a stick formatted with no
+    partition table (mkfs.ext4 /dev/sdX), the whole disk /dev/sdX when that
+    has a file system.  Does not depend on the key being mounted.
+    :return: the key's device path, or "" if none
     '''
-    y = 0
-    x = ord(devPath[-2])-ord('a')
-    print("is USB Present x is: "+ str(x))
-    while (x < (ord('k')-ord('a'))):                                              #scan for usb keys  a - j
-        z = (os.path.exists("/dev/sd"+chr(ord('a')+ x)+"1"))
-        print("at position "+str(x)+" key is "+str(z))
-        if ((z != False) and (y == 0)):
-            print("found  usb key at: "+str(x))
-            return('/dev/sd'+chr(ord('a') + x)+"1")
-        x += 1
-    return("")                                                                    #return the first USB key or 0 for none
+    import re
+    m = re.search(r'sd([a-z])', devPath or '')
+    start = ord(m.group(1)) if m else ord('a')
+    for x in range(start, ord('k')):
+        letter = chr(x)
+        if os.path.exists('/dev/sd' + letter + '1'):
+            return '/dev/sd' + letter + '1'
+        whole = '/dev/sd' + letter
+        if os.path.exists(whole) and not _hasPartitions(letter) and fsType(whole) != '':
+            return whole
+    return ""
 
 
 #    @staticmethod
@@ -125,6 +149,9 @@ def _check_file_system(dev_path):
     Checks the file system of the device using dosfsck or ntfsfix.
     Returns True on success, False on failure.
     """
+    if fsType(dev_path) in POSIX_FILESYSTEMS:
+        logging.info(f"{dev_path} is a Linux file system: no dosfsck/ntfsfix needed")
+        return True
     start_time = time.time()
     fsck_command = "dosfsck -a " + dev_path
     logging.info(f"Checking file system with: {fsck_command}")
@@ -153,6 +180,8 @@ def _check_file_system(dev_path):
 
 def _get_mount_command(dev_path, mount_point):
     """
+    (No "sync" option: it makes large copies to a key very slow.  The admin
+    commands flush with os.sync() and unmount before asking for the key.)
     Constructs the appropriate mount command based on the kernel version.
 
     Returns the mount command string.
@@ -161,10 +190,13 @@ def _get_mount_command(dev_path, mount_point):
     kernel_version = uname_result.communicate()[0].decode('utf-8').strip()
 
     device_name = os.path.basename(dev_path)  # Extract "sda1" from "/dev/sda1"
+    fstype = fsType(dev_path)
+    if fstype in POSIX_FILESYSTEMS:          # Linux file systems: own type, no utf8 option
+        return f"mount /dev/{device_name} -t {fstype} -o noatime,nodev,nosuid {mount_point}"
     if kernel_version >= "5.15.0":
-        mount_command = f"mount /dev/{device_name} -t auto -o noatime,nodev,nosuid,sync,utf8 {mount_point}"
+        mount_command = f"mount /dev/{device_name} -t auto -o noatime,nodev,nosuid,utf8 {mount_point}"
     else:
-        mount_command = f"mount /dev/{device_name} -t auto -o noatime,nodev,nosuid,sync,iocharset=utf8 {mount_point}"
+        mount_command = f"mount /dev/{device_name} -t auto -o noatime,nodev,nosuid,iocharset=utf8 {mount_point}"
     return mount_command
 
 
@@ -253,7 +285,7 @@ def checkSpace( sourcePath='/media/usb11', destPath='/media/usb0'):
     y = 0
     a = sourcePath
     if a[-1]=="/":
-        a = sourcePath[-1]
+        a = sourcePath[:-1]
     b = "/content/"
     print("checking the source of : "+(a+b))
     if (os.path.exists(a+b)):
@@ -378,11 +410,14 @@ def moveMount(curMount='/media/usb0', destMount='/media/usb11'):
     z = Popen(["uname", "-r"], stdout=PIPE)
     y = str(z.communicate()[0])
     z.stdout.close()
-    if y>="5.15.0":
-        b = "mount " + x + " -t auto -o noatime,nodev,nosuid,sync,utf8 " + destMount
+    fstype = fsType(x)
+    if fstype in POSIX_FILESYSTEMS:          # Linux file systems: own type, no utf8 option
+        b = "mount " + x + " -t " + fstype + " -o noatime,nodev,nosuid " + destMount
+    elif y>="5.15.0":
+        b = "mount " + x + " -t auto -o noatime,nodev,nosuid,utf8 " + destMount
     else:
-        b = "mount " + x + " -t auto -o noatime,nodev,nosuid,sync,iocharset=utf8 " + destMount
-    c = "dosfsck -a " + x
+        b = "mount " + x + " -t auto -o noatime,nodev,nosuid,iocharset=utf8 " + destMount
+    c = "true" if fstype in POSIX_FILESYSTEMS else "dosfsck -a " + x   # dosfsck/ntfsfix are FAT/NTFS only
     starttime = time.time()
     print("checking the files system before mount with: "+ c)
     print("Looking to mount "+c+" but checking file system, time is "+time.asctime())
@@ -411,27 +446,25 @@ def moveMount(curMount='/media/usb0', destMount='/media/usb11'):
         res = os.system(b)				#do the mount
         print("Result of mount was: "+str(res))
         print("Completed mount " + b + " result " + str(res) + " time is " + time.asctime())
+    except Exception:
+        print("mount" + b + " failed time is " + time.asctime())
+        res = -1
+    if res == 0:
         return(0)
-    except:
-        print("mount" + b + " failed result was: "+str(res))
-        print("mount" + b + " failed result was: "+str(res) + " time is " + time.asctime())
+    if fstype in POSIX_FILESYSTEMS:
+        print("Error trying to mount " + x + " (" + fstype + ")")
         return(-1)
-    if res != 0:
 ####################### we didn't mount fat, try NTFS mount #######################
-        try:   #try explicit ntfs mount
-            if y>= "5.15.0":
-                b = "mount " + x + "-t ntfs -0 noatime, nodev, nosuid, sync, utf8 " + destMount
-            else:
-                b = "mount " + x + "-t ntfs -o noatime, nodev, nosuid, sync, iocharset=utf8 " + destMount
-            res = os.system(b)
-            print("tried new NTFS mount of: "+b + "result was: " + str(res))
-            print("Retried NTFS mount of "+b+" with result of "+str(res) + " time is " + time.asctime())
-        except:
-            print("on NTFS  mount of USB key errored")
-            print("on NTFS mount of USB key errored,  res =" + str(res))
-            res = -1
-            return(-1)
-        if DEBUG > 2: print("completed mount ",x)
+    try:   #try explicit ntfs mount
+        if y>= "5.15.0":
+            b = "mount " + x + " -t ntfs -o noatime,nodev,nosuid,utf8 " + destMount
+        else:
+            b = "mount " + x + " -t ntfs -o noatime,nodev,nosuid,iocharset=utf8 " + destMount
+        res = os.system(b)
+        print("Retried NTFS mount of "+b+" with result of "+str(res) + " time is " + time.asctime())
+    except Exception:
+        print("on NTFS mount of USB key errored")
+        res = -1
     if res != 0:
         print("Error trying to  mount "+str(x)+"  error: "+str(y))
         return(-1)
