@@ -6,6 +6,7 @@ import shutil
 import os
 from . import page_display_image
 import time
+import threading
 import neo_batterylevelshutdown.usb as usb
 import neo_batterylevelshutdown.hats as hat
 import json
@@ -90,18 +91,10 @@ class BUTTONS:
         -------
         original usb0NoMount value read from brand.j2 before the write.
         """
-        fp = open('/usr/local/connectbox/brand.j2', "r", encoding='utf-8')
-        brand = json.load(fp)
-        fp.close()
+        brand = globals.read_brand()
         NoMountOrig = (brand['usb0NoMount'])
         brand['usb0NoMount'] = val
-        fp = open('/usr/local/connectbox/brand.j2', "w", encoding='utf-8')
-        json.dump(brand, fp, indent = 4, sort_keys = False)
-        try:
-            fp.close()
-        except:
-            print("Couldn't write brand.j2 out")
-            print("Error couldn't write brand.j2 out")
+        globals.write_brand(brand)      # whole file, renamed into place
         time.sleep(4)       #sleep to allow PxUSBm to catch up
         return(NoMountOrig)
 
@@ -207,10 +200,17 @@ class BUTTONS:
             self._kiwixStopped = True
 
     def _restoreServices(self):
-        """Start kiwix-serve again if _releaseKey() stopped it."""
-        if getattr(self, "_kiwixStopped", False):
+        """
+        Make sure kiwix-serve runs after an admin command: started again if
+        _releaseKey() stopped it, and also if an earlier command stopped it
+        and the service was restarted before it could (seen on a test box:
+        a crash left kiwix-serve stopped and the next copy did not start it).
+        Only if it is enabled at boot, i.e. Kiwix is set up on this box.
+        """
+        self._kiwixStopped = False
+        if self._service("is-enabled --quiet kiwix-serve.service") == 0 and \
+                self._service("is-active --quiet kiwix-serve.service") != 0:
             self._service("start kiwix-serve.service")
-            self._kiwixStopped = False
 
     def _mountKey(self, dev):
         """
@@ -274,7 +274,104 @@ class BUTTONS:
             end = time.time() + self.PXUSBM_CLEANUP_SECS
             while os.path.exists(self.USB0_INDEXED) and time.time() < end:
                 time.sleep(1)
+            if self._hasContent(self.INTERNAL + self.CONTENT):
+                # PxUSBm indexes the box's own content whenever no key is at
+                # /media/usb0 (check_internal_content), once per marker.
+                # Clear the marker and let it, so the loader starts once
+                # (both starting it stopped the first run).  If it has not
+                # started within PXUSBM_INDEX_SECS (an older PxUSBm), start it.
+                started = time.monotonic()
+                try:
+                    os.remove(self.INTERNAL_INDEXED)
+                except OSError:
+                    pass
+                end = time.time() + self.PXUSBM_INDEX_SECS
+                while True:
+                    if self._loaderStartedSince(started):
+                        return
+                    if time.time() >= end:
+                        break
+                    time.sleep(max(0.1, min(1, end - time.time())))
+                logging.warning("PxUSBm did not start the content loader; starting it")
         self._startContentLoader()
+
+    INTERNAL_INDEXED = '/tmp/.internal_indexed'   # PxUSBm: box's own content indexed
+    PXUSBM_INDEX_SECS = 30
+
+    @staticmethod
+    def _hasContent(path):
+        try:
+            return any(not name.startswith('.') for name in os.listdir(path))
+        except OSError:
+            return False
+
+    @staticmethod
+    def _loaderStartedSince(t0):
+        """True if connectbox-loader was started after time.monotonic() t0."""
+        try:
+            out = subprocess.run(['systemctl', 'show', '-p', 'ExecMainStartTimestampMonotonic', '--value',
+                                  'connectbox-loader.service'], stdout=subprocess.PIPE,
+                                 universal_newlines=True, timeout=10).stdout.strip()
+            return int(out or 0) / 1e6 > t0
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return False
+
+    def _indexingHandover(self):
+        """
+        After a command that re-indexes: show a wait page now and let the HAT
+        main loop show the loader's progress and ONE success page when the
+        menus are ready (before, the command showed success and the main loop
+        showed a second one).  pageStack 'success': a press goes back to the
+        admin menu as after any success page (never re-runs the command).
+        """
+        self._wait("Indexing")
+        self.display.pageStack = 'success'
+        self._resetDisplayTimer()
+
+    COPY_PROGRESS_SECS = 3         # how often the copy's percentage is updated
+
+    @staticmethod
+    def _copyText(percent, needed):
+        """Wait page text during a copy, e.g. "Copying 45%\nSize:22431MB"."""
+        return "Copying %d%%\nSize:%dMB" % (percent, int(needed / 1000000))
+
+    @staticmethod
+    def _freeBytes(path):
+        st = os.statvfs(path)
+        return st.f_bavail * st.f_frsize
+
+    def _copyWithProgress(self, src, dest, needed):
+        """
+        usb.copyFiles(src, dest) with the percentage done on the wait page.
+        shutil.copytree reports nothing while it runs, so a watcher thread
+        measures how much free space the destination has lost since the copy
+        started (this also moves during one very large file, e.g. a ZIM) and
+        puts it in globals.a, which the HAT main loop redraws.  Never shows
+        100% before the copy has returned.  Returns copyFiles' result.
+        """
+        stop = threading.Event()
+        try:
+            free0 = self._freeBytes(dest)
+        except OSError:
+            free0 = None
+
+        def watch():
+            while not stop.wait(self.COPY_PROGRESS_SECS):
+                if free0 is None or not needed:
+                    continue
+                try:
+                    done = free0 - self._freeBytes(dest)
+                except OSError:
+                    continue
+                globals.a = self._copyText(max(0, min(99, int(100 * done / needed))), needed)
+
+        watcher = threading.Thread(target=watch, daemon=True)
+        watcher.start()
+        try:
+            return usb.copyFiles(src, dest, self.CONTENT)
+        finally:
+            stop.set()
+            watcher.join(5)
 
     @staticmethod
     def _folderSize(path):
@@ -307,16 +404,17 @@ class BUTTONS:
                 return self._error("Nothing to copy")
             if free + self._folderSize(self.INTERNAL + self.CONTENT) < needed:
                 return self._error("Not enough room")
-            self._wait("Copying Files\nSize:" + str(int(needed / 1000000)) + "MB")
+            self._wait(self._copyText(0, needed))
             self._removeFolder(self.INTERNAL + self.CONTENT)
-            if usb.copyFiles(mnt, self.INTERNAL, self.CONTENT) > 0:
+            if self._copyWithProgress(mnt, self.INTERNAL, needed) > 0:
                 return self._error("Failed Copy")
             os.sync()
             usb.unmount(mnt)
             self._waitForRemoval(dev)
-            self._success()
+            self._indexingHandover()
             self._restoreAndReindex(orig)
             orig = None                 # already put back
+            self.hat.indexPending = True
             return True
         finally:
             if dev != "" and usb.getMount(dev) == self.ADMIN_MOUNT:
@@ -344,22 +442,25 @@ class BUTTONS:
                 return self._error("Nothing to copy")
             if free + self._folderSize(mnt + self.CONTENT) < needed:
                 return self._error("Not enough room")
-            self._wait("Copying Files\nSize:" + str(int(needed / 1000000)) + "MB")
+            self._wait(self._copyText(0, needed))
             try:
                 self._removeFolder(mnt + self.CONTENT)
             except OSError as e:
                 logging.error("Could not clear %s: %s", mnt + self.CONTENT, e)
                 return self._error("Failed deletion")
-            if usb.copyFiles(self.INTERNAL, mnt, self.CONTENT) > 0:
+            if self._copyWithProgress(self.INTERNAL, mnt, needed) > 0:
                 return self._error("Failed Copy")
             os.sync()
             usb.unmount(mnt)
             self._waitForRemoval(dev)
-            self._success()
             if self.movedFromUsb0:
                 # The box was serving this key: it now serves its own content again
+                self._indexingHandover()
                 self._restoreAndReindex(orig)
                 orig = None
+                self.hat.indexPending = True
+            else:
+                self._success()
             return True
         finally:
             if dev != "" and usb.getMount(dev) == self.ADMIN_MOUNT:
@@ -401,9 +502,10 @@ class BUTTONS:
                 else:
                     os.unlink(path)
         logging.debug("Content folder erased")
-        self._success()
+        self._indexingHandover()
         self._eraseOrig = None
         self._restoreAndReindex(orig)
+        self.hat.indexPending = True
         return True
 
     def removeUsb(self):
@@ -503,6 +605,10 @@ class BUTTONS:
 
         pageStack = self.display.pageStack  # shortcut
         print ("PAGESTACK: %s", pageStack)
+        if pageStack == 'wait':
+            # A command is running: a press here used to reach chooseEnter,
+            # which runs the last command (e.g. the copy) again
+            return
         print ("COMMAND: %s", self.command_to_reference)
 
         # this is where we decide what to do with the button press.  ChanelTime is the first

@@ -144,11 +144,30 @@ def _get_existing_mount_point(df_output, dev_path, new_path):
             return False
     return False
 
+def mountedAt(dev_path):
+    """Mount points of a device from /proc/mounts (empty list if not mounted)."""
+    try:
+        real = os.path.realpath(dev_path)
+        with open('/proc/mounts', encoding='utf-8') as f:
+            return [line.split()[1].replace('\\040', ' ') for line in f
+                    if line.split() and os.path.realpath(line.split()[0]) == real]
+    except OSError:
+        return []
+
+
 def _check_file_system(dev_path):
     """
     Checks the file system of the device using dosfsck or ntfsfix.
     Returns True on success, False on failure.
+
+    Never on a mounted device: Linux marks a mounted FAT key "dirty", so
+    dosfsck -a "repairs" it while it is in use (seen on a test box, with
+    ntfsfix then refusing and the mount reported as failed).
     """
+    where = mountedAt(dev_path)
+    if where:
+        logging.warning("%s is mounted at %s: file system check skipped", dev_path, ", ".join(where))
+        return True
     if fsType(dev_path) in POSIX_FILESYSTEMS:
         logging.info(f"{dev_path} is a Linux file system: no dosfsck/ntfsfix needed")
         return True
@@ -418,6 +437,8 @@ def moveMount(curMount='/media/usb0', destMount='/media/usb11'):
     else:
         b = "mount " + x + " -t auto -o noatime,nodev,nosuid,iocharset=utf8 " + destMount
     c = "true" if fstype in POSIX_FILESYSTEMS else "dosfsck -a " + x   # dosfsck/ntfsfix are FAT/NTFS only
+    if mountedAt(x):
+        c = "true"          # still mounted somewhere: never check a mounted file system
     starttime = time.time()
     print("checking the files system before mount with: "+ c)
     print("Looking to mount "+c+" but checking file system, time is "+time.asctime())

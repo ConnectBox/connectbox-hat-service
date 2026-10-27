@@ -99,6 +99,89 @@ class BasePhysicalHAT:
 
     # pylint: disable=unused-argument
     # This is a standard interface - it's ok not to use
+    # Set by an admin command (buttons.py) once it has started re-indexing:
+    # the main loop then shows the loader's progress and one success page.
+    indexPending = False
+
+    @staticmethod
+    def loaderRunning():
+        """True while the content loader (connectbox-loader) is running."""
+        try:
+            out = subprocess.run(['systemctl', 'show', '-p', 'SubState', '--value',
+                                  'connectbox-loader.service'], stdout=subprocess.PIPE,
+                                 universal_newlines=True, timeout=10).stdout.strip()
+            return out == 'running'
+        except (OSError, subprocess.SubprocessError):
+            return False
+
+    # The status file counts as stale when it has not changed for
+    # STATUS_STALE_SECS and no mmiLoader.py is running (checked at most every
+    # STATUS_CHECK_SECS: it reads /proc).
+    STATUS_STALE_SECS = 15
+    STATUS_CHECK_SECS = 10
+    _statusCheckedAt = 0.0
+
+    @staticmethod
+    def mmiLoaderRunning():
+        """True if any mmiLoader.py process is running (indexing or --clear)."""
+        try:
+            pids = os.listdir('/proc')
+        except OSError:
+            return True                     # cannot tell: assume yes
+        for pid in pids:
+            if not pid.isdigit():
+                continue
+            try:
+                with open('/proc/' + pid + '/cmdline', 'rb') as f:
+                    args = f.read().decode('utf-8', 'replace').split('\0')
+            except OSError:
+                continue
+            if any(os.path.basename(a) == 'mmiLoader.py' for a in args[1:]):
+                return True
+        return False
+
+    def statusFileStale(self):
+        now = time.time()
+        if now - self._statusCheckedAt < self.STATUS_CHECK_SECS:
+            return False
+        self._statusCheckedAt = now
+        try:
+            age = now - os.path.getmtime(comsFileName)
+        except OSError:
+            return False
+        return age > self.STATUS_STALE_SECS and not self.mmiLoaderRunning()
+
+    def indexingStep(self, var_Indexing):
+        """
+        One pass of the indexing display: a wait page with mmiLoader's status
+        (comsFileName) while it runs, then one success page when the loader
+        has finished.  Returns the new var_Indexing.
+        """
+        if self.indexPending:
+            self.indexPending = False
+            var_Indexing = True
+        if os.path.isfile(comsFileName) and self.statusFileStale():
+            # Left by a content loader that is no longer running (stopped
+            # before it could remove it): without this the panel showed
+            # "Indexing USB" until the next reboot.
+            logging.info("Removing stale %s: no mmiLoader running", comsFileName)
+            try:
+                os.remove(comsFileName)
+            except OSError:
+                pass
+        if os.path.isfile(comsFileName):
+            try:
+                with open(comsFileName, 'r', encoding='utf-8') as f:
+                    globals.a = f.read()
+            except OSError:
+                pass
+            self.display.showWaitPage(globals.a)
+            return True
+        if var_Indexing and not self.loaderRunning():
+            self.display.showSuccessPage()
+            return False
+        return var_Indexing
+
     def __init__(self, displayClass):
         """Turn on the LED to signal readiness.  Subclasses set up GPIO before calling this."""
 #  cli.py wants hats.py to assign GPIO stuff... So we will do that starting here
@@ -341,15 +424,7 @@ class DummyHAT(BasePhysicalHAT):
         logging.info("globals.device_type = "+globals.device_type)
         var_Indexing = False
         while True:
-            if os.path.isfile(comsFileName):
-                 f = open(comsFileName, 'r', encoding='utf-8')
-                 globals.a = f.read()
-                 f.close()
-                 self.display.showWaitPage(globals.a)
-                 var_Indexing = True
-            elif var_Indexing:
-                 self.display.showSuccessPage()
-                 var_Indexing = False
+            var_Indexing = self.indexingStep(var_Indexing)
             time.sleep(3)
 
 
@@ -429,15 +504,7 @@ class q1y2018HAT(BasePhysicalHAT):
                 if (time.time() > self.displayPowerOffTime) and (not var_Indexing):
                     self.display.powerOffDisplay()
 
-                if os.path.isfile(comsFileName):
-                    f = open(comsFileName, 'r', encoding='utf-8')
-                    globals.a = f.read()
-                    f.close()
-                    self.display.showWaitPage(globals.a)
-                    var_Indexing = True
-                elif var_Indexing:
-                    self.display.showSuccessPage()
-                    var_Indexing = False
+                var_Indexing = self.indexingStep(var_Indexing)
 
                 if GPIO.input(self.PIN_VOLT_3_84):
                     logging.debug("Battery voltage > 3.84V i.e. > ~63%")
@@ -654,15 +721,8 @@ class Axp209HAT(BasePhysicalHAT):
                     var_Indexing = False
                     if self.display.pageStack == 'wait':
                         self.display.showWaitPage(globals.a)
-                elif os.path.isfile(comsFileName):
-                    f = open(comsFileName, 'r', encoding='utf-8')
-                    globals.a = f.read()
-                    f.close()
-                    self.display.showWaitPage(globals.a)
-                    var_Indexing = True
-                elif var_Indexing:
-                    self.display.showSuccessPage()
-                    var_Indexing = False
+                else:
+                    var_Indexing = self.indexingStep(var_Indexing)
 
                 # ATTiny battery handling only in CM4 HAT
                 if globals.device_type == "CM":

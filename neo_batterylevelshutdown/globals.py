@@ -44,6 +44,47 @@ a = ""
 from . import page_battery
 from .HAT_Utilities import get_device
 
+BRAND_FILE = '/usr/local/connectbox/brand.j2'
+_brand_loaded = False
+
+
+def read_brand(path=None, tries=10, delay=0.2):
+    '''
+    Read brand.j2.  Several programs rewrite it (this service, PxUSBm,
+    connectbox-manage), so it can be caught half written: retry for up to
+    tries * delay seconds before giving up (the last error is raised).
+    '''
+    path = path or BRAND_FILE
+    last = None
+    for _ in range(tries):
+        try:
+            with open(path, "r", encoding='utf-8') as f:
+                return json.load(f)
+        except (OSError, ValueError) as e:
+            last = e
+            time.sleep(delay)
+    raise last
+
+
+def write_brand(brand, path=None):
+    '''
+    Write brand.j2 whole and then rename it into place, so a reader never
+    sees a half-written (empty) file.  Keeps the file's owner and mode.
+    '''
+    path = path or BRAND_FILE
+    tmp = path + ".tmp." + str(os.getpid())
+    with open(tmp, "w", encoding='utf-8') as f:
+        json.dump(brand, f, indent=4, sort_keys=False)
+        f.flush()
+        os.fsync(f.fileno())
+    try:
+        st = os.stat(path)
+        os.chmod(tmp, st.st_mode & 0o7777)
+        os.chown(tmp, st.st_uid, st.st_gid)
+    except OSError:
+        pass
+    os.replace(tmp, path)
+
 
 
 def init():
@@ -85,11 +126,19 @@ def init():
 
   # Using a dictionary and json to store Branding stuff
   # Read the dictionary
-    f = open('/usr/local/connectbox/brand.j2', "r")
-    data = f.read()
-    f.close()
-    js = json.loads(data)
-    timestamp = os.path.getmtime('/usr/local/connectbox/brand.j2')
+    global _brand_loaded
+    try:
+        js = read_brand()
+    except (OSError, ValueError) as e:
+        # brand.j2 unreadable even after retrying: keep the settings already
+        # loaded rather than stopping the service (it crashed here when
+        # brand.j2 was read while another program was rewriting it)
+        if _brand_loaded:
+            logging.warning("brand.j2 unreadable, keeping current settings: %s", e)
+            return
+        raise
+    _brand_loaded = True
+    timestamp = os.path.getmtime(BRAND_FILE)
     if (sequence >7) or (sequence < 0): sequence = 0
     sequence_time = time.time()
 
@@ -156,9 +205,7 @@ def init():
     if (bname.lower() != brand_name.lower()):
         brand_name = bname
         js["Brand"] = bname
-        f = open("/usr/local/connectbox/brand.j2", 'w')
-        f.write(json.dumps(js))
-        f.close()
+        write_brand(js)
 
 
   #find and set device_type global
