@@ -75,6 +75,10 @@ class BUTTONS:
         # True while an admin command (copy / erase) runs: the HAT main loop then
         # leaves the screen to the command and does not blank it
         self.admin_busy = False
+        # A key held unmounted after a failed copy (see _holdKey)
+        self._heldDev = ""
+        self._heldOrig = None
+        self._recoverNoMount()
 
     def checkReturn(self, val):
         """Write val to usb0NoMount in brand.j2, then sleep 4 s so PxUSBm can catch up.
@@ -130,12 +134,16 @@ class BUTTONS:
         self.display.showWaitPage(text)
 
     def _error(self, text):
-        """Show an error page that stays until a button is pressed; returns False."""
+        """
+        Show an error page that stays, with the display on, until a button is
+        pressed; returns False.  (It used to blank after DISPLAY_TIMEOUT_SECS
+        like any page, so an error was easily missed.)
+        """
         logging.info("Admin command failed: %s", text)
         print("Admin command failed: " + text)
         self.display.pageStack = 'error'
         self.display.showErrorPage(text)
-        self._resetDisplayTimer()
+        self._keepDisplayOn()
         return False
 
     def _success(self):
@@ -144,13 +152,28 @@ class BUTTONS:
         self._resetDisplayTimer()
         return True
 
+    # usb0NoMount value from before an admin command, kept on disk while the
+    # command (or a held key) has PxUSBm's mounting switched off, so that a
+    # restart or reboot in the middle never leaves the box refusing every key.
+    NOMOUNT_MARKER = '/usr/local/connectbox/.panel_usb0NoMount'
+
     def _setNoMount(self, val):
         """Set usb0NoMount in brand.j2; return the previous value (None if it could not be read)."""
+        held = self._takeOverHold()
         try:
-            return self.checkReturn(val)
+            orig = self.checkReturn(val)
         except Exception as e:     # missing or damaged brand.j2
             logging.error("Could not set usb0NoMount: %s", e)
             return None
+        if held is not None:
+            orig = held                 # a held key had it switched off: the value from before that
+        if not os.path.exists(self.NOMOUNT_MARKER):
+            try:
+                with open(self.NOMOUNT_MARKER, 'w') as f:
+                    f.write(json.dumps(orig))
+            except OSError as e:
+                logging.error("Could not write %s: %s", self.NOMOUNT_MARKER, e)
+        return orig
 
     def _restoreNoMount(self, orig):
         if orig is not None:
@@ -158,6 +181,77 @@ class BUTTONS:
                 self.checkReturn(orig)
             except Exception as e:
                 logging.error("Could not restore usb0NoMount: %s", e)
+                return
+        try:
+            os.remove(self.NOMOUNT_MARKER)
+        except OSError:
+            pass
+
+    def _recoverNoMount(self):
+        """
+        At start-up: if an admin command was interrupted (service restarted,
+        crash, power cut) while it had mounting switched off, put usb0NoMount
+        back to the value it had before.
+        """
+        try:
+            with open(self.NOMOUNT_MARKER) as f:
+                orig = json.loads(f.read())
+        except (OSError, ValueError):
+            return
+        logging.warning("An admin command was interrupted: usb0NoMount put back to %s", orig)
+        try:
+            brand = globals.read_brand()
+            brand['usb0NoMount'] = orig
+            globals.write_brand(brand)
+            os.remove(self.NOMOUNT_MARKER)
+        except Exception as e:
+            logging.error("Could not put usb0NoMount back: %s", e)
+
+    def _holdKey(self, dev, orig):
+        """
+        After a failed copy with a key that the box was not serving: keep
+        PxUSBm from mounting (and indexing) that key, so visitors keep the
+        box's own content, until it is pulled out; then put usb0NoMount back.
+        (Before, PxUSBm mounted the key at /media/usb0 as soon as the error
+        showed and the menus switched to it.)  A new admin command takes the
+        hold over (_takeOverHold).
+        """
+        logging.info("Copy failed: %s stays unmounted until it is removed", dev)
+        self._heldDev, self._heldOrig = dev, orig
+
+        def watch():
+            while self._heldDev == dev and usb.isUsbPresent(dev) == dev:
+                time.sleep(2)
+            if self._heldDev == dev:        # removed, and no new command took over
+                self._heldDev, held = "", self._heldOrig
+                self._heldOrig = None
+                logging.info("%s removed: USB mounting back on", dev)
+                self._restoreNoMount(held)
+        threading.Thread(target=watch, daemon=True).start()
+
+    def _takeOverHold(self):
+        """End a key hold for a new command; returns the usb0NoMount value from before it (None if none)."""
+        if not self._heldDev:
+            return None
+        held = self._heldOrig
+        self._heldDev, self._heldOrig = "", None
+        return held
+
+    def _endCopy(self, ok, dev, orig):
+        """
+        Common end of the copy commands: unmount the key from ADMIN_MOUNT, then
+        put usb0NoMount back - except after a failure with a key the box was
+        not serving that is still plugged in, which is held (_holdKey).
+        """
+        if dev != "" and usb.getMount(dev) == self.ADMIN_MOUNT:
+            os.sync()
+            usb.unmount(self.ADMIN_MOUNT)
+        if orig is None:
+            return
+        if not ok and dev != "" and not self.movedFromUsb0 and usb.isUsbPresent(dev) == dev:
+            self._holdKey(dev, orig)
+        else:
+            self._restoreNoMount(orig)
 
     def _waitForUsb(self):
         """Return the first USB key's device (/dev/sdX1), asking for one if none is in.  "" if none came."""
@@ -377,6 +471,26 @@ class BUTTONS:
     def _folderSize(path):
         return usb.getSize(path) if os.path.isdir(path) else 0
 
+    # FAT keys cannot hold a file of 4 GiB or more
+    FAT_TYPES = ('vfat', 'msdos', 'fat', 'fat12', 'fat16', 'fat32')
+    FAT_MAX_FILE = 4 * 1024 ** 3 - 1
+
+    @staticmethod
+    def _largestFile(path):
+        """(size, path) of the largest regular file under path (symlinks not followed)."""
+        biggest = (0, "")
+        for root, dirs, files in os.walk(path):
+            for name in files:
+                full = os.path.join(root, name)
+                try:
+                    if not os.path.islink(full):
+                        size = os.path.getsize(full)
+                        if size > biggest[0]:
+                            biggest = (size, full)
+                except OSError:
+                    pass
+        return biggest
+
     def _removeFolder(self, path):
         if os.path.isdir(path):
             shutil.rmtree(path)
@@ -385,6 +499,7 @@ class BUTTONS:
         """Replace the box's content with the USB key's /content/ folder."""
         orig = self._setNoMount(1)
         dev = ""
+        ok = False
         try:
             dev = self._waitForUsb()
             if dev == "":
@@ -415,17 +530,16 @@ class BUTTONS:
             self._restoreAndReindex(orig)
             orig = None                 # already put back
             self.hat.indexPending = True
+            ok = True
             return True
         finally:
-            if dev != "" and usb.getMount(dev) == self.ADMIN_MOUNT:
-                os.sync()
-                usb.unmount(self.ADMIN_MOUNT)
-            self._restoreNoMount(orig)
+            self._endCopy(ok, dev, orig)
 
     def copyToUsb(self):
         """Copy the box's /content/ folder onto a USB key (replacing the key's /content/)."""
         orig = self._setNoMount(1)      # keep PxUSBm from mounting (and indexing) the key at /media/usb0
         dev = ""
+        ok = False
         try:
             dev = self._waitForUsb()
             if dev == "":
@@ -442,6 +556,13 @@ class BUTTONS:
                 return self._error("Nothing to copy")
             if free + self._folderSize(mnt + self.CONTENT) < needed:
                 return self._error("Not enough room")
+            if usb.fsType(dev) in self.FAT_TYPES:
+                # A FAT32 key cannot take a file of 4 GB or more (large ZIMs):
+                # say so now rather than failing at the end of a long copy.
+                (size, path) = self._largestFile(self.INTERNAL + self.CONTENT)
+                if size > self.FAT_MAX_FILE:
+                    logging.error("%s is %d bytes: too big for the FAT key %s", path, size, dev)
+                    return self._error("File over 4GB")
             self._wait(self._copyText(0, needed))
             try:
                 self._removeFolder(mnt + self.CONTENT)
@@ -461,12 +582,10 @@ class BUTTONS:
                 self.hat.indexPending = True
             else:
                 self._success()
+            ok = True
             return True
         finally:
-            if dev != "" and usb.getMount(dev) == self.ADMIN_MOUNT:
-                os.sync()
-                usb.unmount(self.ADMIN_MOUNT)
-            self._restoreNoMount(orig)
+            self._endCopy(ok, dev, orig)
 
     def eraseFolder(self):
         """Delete the box's own content (/media/usb0/content); a USB key must be removed first."""
@@ -545,7 +664,10 @@ class BUTTONS:
         finally:
             self._restoreServices()
             self.admin_busy = False
-            self._resetDisplayTimer()
+            if self.display.pageStack == 'error':
+                self._keepDisplayOn()       # stays lit until a button is pressed
+            else:
+                self._resetDisplayTimer()
 
 ###########################################################################################################
 # Button Presses go here from the interrupt handler

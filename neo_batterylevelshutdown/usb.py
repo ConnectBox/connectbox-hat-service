@@ -157,8 +157,17 @@ def mountedAt(dev_path):
 
 def _check_file_system(dev_path):
     """
-    Checks the file system of the device using dosfsck or ntfsfix.
-    Returns True on success, False on failure.
+    Check and repair the key's file system before it is mounted, with the
+    tool for its type: dosfsck -a for FAT, ntfsfix -d for NTFS; nothing for
+    exFAT, Linux file systems or an unknown type.  Returns True unless the
+    check could not be run at all: whether the key is usable is decided by
+    the mount that follows, not by the checker's exit code.
+
+    (It used to run dosfsck on every non-Linux key and treat its exit code 1
+    as a failure.  Exit code 1 means "errors found and corrected", so a FAT
+    key whose free-space count dosfsck had just fixed was refused - ntfsfix
+    was then tried on it, failed, and the copy stopped with "USB not
+    mounted" (.200, 2026-10-27).  An exFAT key went the same way.)
 
     Never on a mounted device: Linux marks a mounted FAT key "dirty", so
     dosfsck -a "repairs" it while it is in use (seen on a test box, with
@@ -168,33 +177,26 @@ def _check_file_system(dev_path):
     if where:
         logging.warning("%s is mounted at %s: file system check skipped", dev_path, ", ".join(where))
         return True
-    if fsType(dev_path) in POSIX_FILESYSTEMS:
-        logging.info(f"{dev_path} is a Linux file system: no dosfsck/ntfsfix needed")
+    fstype = fsType(dev_path)
+    if fstype in ('vfat', 'msdos', 'fat', 'fat12', 'fat16', 'fat32'):
+        command, ok_codes = "dosfsck -a " + dev_path, (0, 1)   # 1 = errors found and corrected
+    elif fstype == 'ntfs':
+        command, ok_codes = "ntfsfix -d " + dev_path, (0,)
+    else:
+        logging.info(f"{dev_path} is {fstype or 'of unknown type'}: no file system check")
         return True
     start_time = time.time()
-    fsck_command = "dosfsck -a " + dev_path
-    logging.info(f"Checking file system with: {fsck_command}")
+    logging.info(f"Checking file system with: {command}")
     try:
-        res = os.system(fsck_command)
-        print("result of fschk is: ",res)
-        if res == 256:  # dosfsck failure
-            print("dosfsck failed on (dev_path), attempting ntfsfix")
-            logging.warning(f"dosfsck failed on {dev_path}, attempting ntfsfix")
-            ntfsfix_command = "ntfsfix -d " + dev_path
-            res = os.system(ntfsfix_command)
-            if res != 0:
-                print("ntfsfix failed on (dev_path)")
-                logging.error(f"ntfsfix failed on {dev_path}")
-                return False
+        res = os.system(command)
     except Exception as e:
-        print("Failed to check file system on (dev_path): (e)")
         logging.error(f"Failed to check file system on {dev_path}: {e}")
         return False
-    finally:
-        end_time = time.time()
-        delta_time = end_time - start_time
-        print("File system check on (dev_path) completed in (delta_time:.2f) seconds")
-        logging.info(f"File system check on {dev_path} completed in {delta_time:.2f} seconds")
+    code = res >> 8 if res > 255 else res
+    if code in ok_codes:
+        logging.info(f"{command}: exit {code} (ok) in {time.time() - start_time:.2f} seconds")
+    else:
+        logging.warning(f"{command}: exit {code} in {time.time() - start_time:.2f} seconds; trying the mount anyway")
     return True
 
 def _get_mount_command(dev_path, mount_point):
@@ -436,30 +438,12 @@ def moveMount(curMount='/media/usb0', destMount='/media/usb11'):
         b = "mount " + x + " -t auto -o noatime,nodev,nosuid,utf8 " + destMount
     else:
         b = "mount " + x + " -t auto -o noatime,nodev,nosuid,iocharset=utf8 " + destMount
-    c = "true" if fstype in POSIX_FILESYSTEMS else "dosfsck -a " + x   # dosfsck/ntfsfix are FAT/NTFS only
-    if mountedAt(x):
-        c = "true"          # still mounted somewhere: never check a mounted file system
-    starttime = time.time()
-    print("checking the files system before mount with: "+ c)
-    print("Looking to mount "+c+" but checking file system, time is "+time.asctime())
-    try:
-        res = os.system(c) 				#do a file system check befor the mount.  if it is corrupted we will get a system stop PxUSBm
-        if res == 256:
-            print("failed to do dosfsck -a " + x)
-            c = "ntfsfix -d " +x 
-            try:
-                res = os.system(c)
-            except:
-                print("failed to do ntfsfix -d")
-                print("Failed to do4 ntfsfix -d on "+ x + " time is " + time.asctime())
-    except:
-        print("Failed to do dosfsck")
-        print("Failed to do Dosfsck on " + x + " time is " + time.asctime())
-        print("Did "+c+"  result is: "+str(res))
-    endtime = time.time()
-    deltatime = endtime - starttime
-    print('total time was: ' + str(deltatime) + ' seconds' )
-    print("Completed "+c+" in "+str(deltatime)+ "seconds")
+    # File system check with the right tool for the key's type (dosfsck for
+    # FAT, ntfsfix for NTFS, nothing for exFAT or Linux file systems, never on
+    # a mounted device); the mount below decides whether the key is usable.
+    # (This used to run dosfsck on every non-Linux key and ntfsfix whenever
+    # dosfsck returned 1, which on an exFAT key only produced errors in the log.)
+    _check_file_system(x)
 
 ###################### OK try a FAT mount now on the key ############################################
     print("trying to do mount: " + b)
