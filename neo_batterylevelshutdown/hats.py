@@ -351,7 +351,9 @@ class BasePhysicalHAT:
             return (0)
         wlanx = "wlan"+str(AP)
         cmd = "iwconfig"
-        rv = subprocess.check_output(cmd, stderr=None, shell=False)
+        # stderr discarded: iwconfig prints "no wireless extensions" for lo and
+        # eth0 on every call (every few seconds), which filled the journal.
+        rv = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, shell=False)
         rvs = rv.decode("utf-8").split(wlanx)
 
         if (len(rvs) >= 2):       # rvs is an array split on wlanx

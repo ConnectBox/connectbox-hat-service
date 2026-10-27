@@ -13,3 +13,12 @@ To develop or run:
 As this is an editable python installation, code changes made in the repository will be applied directly, without any reinstallation or changes to PYTHONPATH
 
 If you are deploying on a 256MB NEO, you will need to run `MAX_CONCURRENCY=1 pip install -e .` because the default installation method for the pillow library will exhaust the memory on the device.
+
+## Admin commands and the status display (ConnectBox NEO HAT)
+
+- **Copy from USB / Copy to USB / Erase** (`buttons.py`) stop the content loader and kiwix-serve to free the stick and restart kiwix-serve afterwards (if it is enabled). While copying, the display shows `Copying 45%` and the size; the percentage comes from a watcher thread that compares the destination's free space with its value when the copy started (every 3 s) and never shows 100% before the copy has returned.
+- After a copy or erase that changes the box's content, the command hands over to the main loop (`hat.indexPending`), which shows the loader's progress and **one** success page when `connectbox-loader` has finished. The re-index is started by PxUSBm (the command clears `/tmp/.internal_indexed`); the command starts the loader itself only if that has not happened within 30 s. Button presses on a wait page are ignored.
+- `/tmp/creating_menus.txt` is the status text written by mmiLoader (e.g. `Indexing 45%` / `of 778 files`); the display shows it as a wait page while it exists. A file that has not changed for 15 s while no `mmiLoader.py` is running is a leftover and is removed (`statusFileStale()`).
+- `brand.j2` is read with `globals.read_brand()` (retries for ~2 s) and written with `globals.write_brand()` (temporary file + rename, keeping owner and mode), because the main loop re-reads it on every pass and crashed once on a half-written file.
+- `dosfsck`/`ntfsfix` are never run on a mounted device.
+- The systemd unit (installed by connectbox-pi) sets `PYTHONUNBUFFERED=1`, so `print()` output reaches the journal immediately.
