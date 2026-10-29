@@ -24,6 +24,9 @@ import neo_batterylevelshutdown.globals as globals
 logging.info("...hats.py globals.device_type = %s.", globals.device_type)
 
 comsFileName = "/tmp/creating_menus.txt"
+# PxUSBm's "Checking USB" message while it checks a key's file system before
+# mounting it (refreshed every few seconds while the check runs).
+usbCheckFileName = "/tmp/connectbox-usbcheck.txt"
 var_Indexing = False
 
 
@@ -140,6 +143,19 @@ class BasePhysicalHAT:
                 return True
         return False
 
+    def usbCheckText(self):
+        """
+        PxUSBm's "Checking USB" message while it is fresh (changed within
+        STATUS_STALE_SECS), else ''.  A stale file is left over and ignored.
+        """
+        try:
+            if time.time() - os.path.getmtime(usbCheckFileName) > self.STATUS_STALE_SECS:
+                return ''
+            with open(usbCheckFileName, 'r', encoding='utf-8') as f:
+                return f.read().strip()
+        except OSError:
+            return ''
+
     def statusFileStale(self):
         now = time.time()
         if now - self._statusCheckedAt < self.STATUS_CHECK_SECS:
@@ -177,6 +193,14 @@ class BasePhysicalHAT:
                 pass
             self.display.showWaitPage(globals.a)
             return True
+        # A key's file system being checked before it is mounted: show it as a
+        # wait page and keep the display on, but it is not indexing, so no
+        # "done" checkmark when it ends (indexing that follows has its own).
+        checkText = self.usbCheckText()
+        if checkText:
+            self.displayPowerOffTime = max(getattr(self, 'displayPowerOffTime', 0), time.time() + 30)
+            self.display.showWaitPage(checkText)
+            return var_Indexing
         if var_Indexing and not self.loaderRunning():
             self.display.showSuccessPage()
             return False
