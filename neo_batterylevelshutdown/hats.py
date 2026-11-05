@@ -383,10 +383,44 @@ class BasePhysicalHAT:
         if (len(rvs) >= 2):       # rvs is an array split on wlanx
             wlanx_flags = rvs[1].split("Mode:Master")
             if (len(wlanx_flags)) > 1:
-    # we are up
-                return(1)
+                # Master mode alone is not enough (2026-11-05, CM4 with the
+                #  RTL8812AU): with hostapd "ENABLED" the radio could still be
+                #  dead (no channel, txpower -100 dBm, no beacon) and the LED
+                #  said "connect" when nobody could.  The LED is on only when
+                #  the AP is really transmitting.
+                return 1 if self.ap_radio_up(wlanx) else 0
     # we are not up... either iwconfig has no wlanAP or the wlanAP Mode: is wrong
         return (0)
+
+    @staticmethod
+    def ap_radio_up(wlanx):
+        """True unless a check shows the AP is not transmitting: hostapd must
+        report state=ENABLED for wlanx, and iw must show the AP with a channel
+        and a transmit power above 0 dBm.  A check whose tool is missing or
+        does not answer is skipped (the LED then follows Master mode, as before)."""
+        try:
+            out = subprocess.run(["hostapd_cli", "-i", wlanx, "status"], stdout=subprocess.PIPE,
+                                 stderr=subprocess.DEVNULL, timeout=5).stdout.decode("utf-8", "replace")
+            if out and "state=" in out and "state=ENABLED" not in out:
+                return False
+        except (OSError, subprocess.SubprocessError):
+            pass
+        try:
+            info = subprocess.run(["iw", "dev", wlanx, "info"], stdout=subprocess.PIPE,
+                                  stderr=subprocess.DEVNULL, timeout=5).stdout.decode("utf-8", "replace")
+            if "type AP" in info:
+                if "channel " not in info:
+                    return False
+                for line in info.split("\n"):
+                    if "txpower" in line:
+                        try:
+                            if float(line.split()[1]) <= 0:
+                                return False
+                        except (IndexError, ValueError):
+                            pass
+        except (OSError, subprocess.SubprocessError):
+            pass
+        return True
 
 
 
