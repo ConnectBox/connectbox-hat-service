@@ -231,7 +231,13 @@ def init():
 # note this will get re-read occassionally
     f.close()
 
-    f = open("/usr/local/connectbox/wificonf.txt","r")
-    dat = f.read()
-    f.close()
-    clientIF = dat.split("\n")[0].partition("AccessPointIF=")[2]
+    # wificonf.txt is rewritten (or briefly removed) by PxUSBm when the Wi-Fi
+    #  adapters change; without it keep the value we have (2026-11-06: the
+    #  service crash-looped until systemd stopped restarting it).
+    try:
+        f = open("/usr/local/connectbox/wificonf.txt","r")
+        dat = f.read()
+        f.close()
+        clientIF = dat.split("\n")[0].partition("AccessPointIF=")[2]
+    except OSError:
+        pass
