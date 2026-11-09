@@ -26,8 +26,10 @@ connectbox-pi copy).
 | `fscheck_test.py` | `usb._check_file_system` by type (FAT exit 1, NTFS, exFAT); never on a mounted key | `python3 fscheck_test.py <usb.py>` |
 | `movemount_test.py` | `usb.moveMount` to /media/usb11 per file system | `python3 movemount_test.py <usb.py>` |
 | `test51_hats.py` | the panel shows PxUSBm's "Checking USB" | `python3 test51_hats.py <hats.py>` |
+| `shutdown_test.py` | fix 75: a failed power-off (missing or wrong-architecture program, non-zero exit) tries `shutdown -h now`, then shows "Shutdown failed" and gives the buttons back instead of freezing | `python3 shutdown_test.py <hats.py>` |
 
 Results on 2026-11-01 (hat-service 731a6ff + connectbox-pi fc7d58c): 84, 23, 10, 8, 4 and 9 passed, none failed.
+Results on 2026-11-09 (hat-service d557028 + the fix 75 hats.py, connectbox-pi 912f7ab): 84, 23, 10, 8, 4, 9 and 13 passed, none failed (sim43's fake page modules now include page_internet, which displays.py imports since 2026-11-05; before that sim43 stopped with an ImportError).
 
 `tests/test_neo_batterylevelshutdown.py` is the older unit-test suite of this repo.
 See connectbox-pi `docs/testing.md` for all tests and when to run them.

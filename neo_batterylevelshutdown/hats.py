@@ -215,13 +215,34 @@ class BasePhysicalHAT:
             #  and not worry about initial state (and thus be simpler)
         self.solidLED()
 
+    # The system's power-off command (shutdownShell.sh -> shutdown.sh: sets the
+    #  AXP209 power-off bit, then shutdown -h now), and the plain fallback.
+    POWEROFF_COMMAND = ["/usr/local/bin/poweroff/poweroff"]
+    FALLBACK_SHUTDOWN_COMMAND = ["/sbin/shutdown", "-h", "now"]
+    # Longest a shutdown command may take to return (it only starts the shutdown)
+    SHUTDOWN_COMMAND_TIMEOUT_SECS = 60
+    # How long to keep the powering-off screen up waiting for the system to go
+    #  down; systemd normally stops this service within seconds
+    SHUTDOWN_WAIT_SECS = 120
+    # How long the "Shutdown failed" page stays on before the display blanks
+    SHUTDOWN_ERROR_DISPLAY_SECS = 60
+
     def shutdownDevice(self):
         """Initiate a graceful hardware shutdown.
 
         Turns off the LED (so users don't think WiFi is still active), shows the
-        powering-off screen, then calls the system poweroff script which triggers
-        the AXP209 to cut power after its configured delay.  The infinite loop at
-        the end keeps the powering-off image on screen until the power is actually cut.
+        powering-off screen, then runs the system poweroff command, which sets the
+        AXP209 to cut power after its configured delay and halts the OS.  If that
+        command cannot run or fails, a plain "shutdown -h now" is tried.  When a
+        command has started the shutdown, the powering-off screen stays up while
+        the system goes down (systemd stops this service on the way).
+
+        If no command works, or the system is still running SHUTDOWN_WAIT_SECS
+        later, the error is logged, a "Shutdown failed" page is shown, the LED is
+        put back and this method returns, so the buttons work again.  (It used to
+        loop for ever after os.system() whatever happened: on a 64-bit box the
+        32-bit poweroff binary could not run, and the panel froze on the
+        powering-off screen, 2026-11-09.)
         """
         # Turn off the LED, as some people associate that with wifi being
         #  active (the HAT can stay powered after shutdown under some
@@ -229,11 +250,52 @@ class BasePhysicalHAT:
         GPIO.output(self.PIN_LED, GPIO.HIGH)
         self.display.showPoweringOff()
         logging.info("Exiting for Shutdown")
-        os.system("/usr/local/bin/poweroff/poweroff")
-        time.sleep(5)
-        # Stick here to leave the showPoweringOff() display on to the end
-        while True:
-            pass
+        if self._runShutdownCommand(self.POWEROFF_COMMAND) or \
+                self._runShutdownCommand(self.FALLBACK_SHUTDOWN_COMMAND):
+            # Shutdown started: keep the powering-off screen up while the
+            #  system goes down; sleep rather than spin so the CPU stays free
+            deadline = time.time() + self.SHUTDOWN_WAIT_SECS
+            while time.time() < deadline:
+                time.sleep(1)
+            logging.error("Shutdown: the system is still running %d s after the "
+                          "shutdown command", self.SHUTDOWN_WAIT_SECS)
+            print("Shutdown: the system is still running after the shutdown command")
+        self._shutdownFailed()
+
+    def _runShutdownCommand(self, cmd):
+        """Run one shutdown command; return True if it ran and exited with 0.
+
+        Parameters
+        ----------
+        cmd : list of str — the command and its arguments.
+
+        Failures (missing or unrunnable program, non-zero exit, time-out) are
+        logged with the command's error output and give False.
+        """
+        try:
+            r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               timeout=self.SHUTDOWN_COMMAND_TIMEOUT_SECS)
+        except (OSError, subprocess.SubprocessError) as e:
+            logging.error("Shutdown: %s could not run: %s", cmd[0], e)
+            print("Shutdown: " + cmd[0] + " could not run: " + str(e))
+            return False
+        if r.returncode != 0:
+            err = r.stderr.decode("utf-8", "replace").strip()[:300]
+            logging.error("Shutdown: %s failed (exit %s): %s", cmd[0], r.returncode, err)
+            print("Shutdown: " + cmd[0] + " failed (exit " + str(r.returncode) + "): " + err)
+            return False
+        logging.info("Shutdown: %s started the shutdown", cmd[0])
+        return True
+
+    def _shutdownFailed(self):
+        """Show "Shutdown failed", put the LED back and let the panel carry on.
+
+        The error page stays SHUTDOWN_ERROR_DISPLAY_SECS before the display
+        blanks; any button press goes on to the status pages as usual.
+        """
+        self.display.showErrorPage("Shutdown failed")
+        self.displayPowerOffTime = time.time() + self.SHUTDOWN_ERROR_DISPLAY_SECS
+        self.solidLED()
 
     def shutdownDeviceCallback(self, channel):
         """GPIO edge-detect callback fired when the AXP209 EXTEN line goes low.

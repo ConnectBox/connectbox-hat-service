@@ -58,6 +58,13 @@ for name, cls in [("page_none", "PageBlank"), ("page_main", "PageMain"), ("page_
     m = types.ModuleType("neo_batterylevelshutdown." + name)
     setattr(m, cls, lambda *a, **k: Page())
     sys.modules["neo_batterylevelshutdown." + name] = m; setattr(pkg, name, m)
+# Internet page (2026-11-05): a real class so displays.py's isinstance() check works; not wanted
+class PageInternet:
+    def __init__(self, *a, **k): self._page = Page()
+    def draw_page(self): return self._page.draw_page()
+pi_mod = types.ModuleType("neo_batterylevelshutdown.page_internet")
+pi_mod.PageInternet = PageInternet; pi_mod.wanted = lambda: False
+sys.modules["neo_batterylevelshutdown.page_internet"] = pi_mod; pkg.page_internet = pi_mod
 hu = types.ModuleType("neo_batterylevelshutdown.HAT_Utilities"); hu.get_device = lambda: None
 sys.modules["neo_batterylevelshutdown.HAT_Utilities"] = hu
 pil = types.ModuleType("PIL"); pil.Image = types.SimpleNamespace(); sys.modules["PIL"] = pil
