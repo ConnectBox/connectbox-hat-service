@@ -16,6 +16,7 @@ import os.path
 from PIL import Image, ImageFont, ImageDraw
 
 from .HAT_Utilities import get_device
+from .page_network import draw_title
 
 BRAND_FILE = '/usr/local/connectbox/brand.j2'
 USAGE_FILE = '/usr/local/connectbox/internet_usage.json'
@@ -72,7 +73,8 @@ class PageInternet:
         img = Image.new('RGBA', size, (255, 255, 255, 255))
         d = ImageDraw.Draw(img)
         down, up = usage()
-        d.text((2, 1), "Internet: %s" % ("ON" if sharing_on() else "off"), font=font, fill="black")
+        # Title with a line under it, like the IP addresses page (2026-11-11)
+        draw_title(d, "Internet: %s" % ("ON" if sharing_on() else "off"), font)
         d.text((2, 17), "Total %s" % human(down + up), font=font, fill="black")
         d.text((2, 33), "Down  %s" % human(down), font=font, fill="black")
         d.text((2, 49), "Up    %s" % human(up), font=font, fill="black")

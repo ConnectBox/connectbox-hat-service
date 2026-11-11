@@ -64,6 +64,23 @@ spec = importlib.util.spec_from_file_location("nbs.page_network2", PAGE)
 pn2 = importlib.util.module_from_spec(spec); spec.loader.exec_module(pn2)
 check("no interface name: 'none'; interface not on the box: 'none'", pn2.address("") == pn2.NO_INTERFACE and pn2.address("nosuchif9") == pn2.NO_INTERFACE)
 
+# -- underlined title (also used by the internet page) ----------------------------------
+class FakeDraw:
+    def __init__(self): self.calls = []
+    def text(self, xy, text, **k): self.calls.append(("text", xy, text))
+    def line(self, xy, **k): self.calls.append(("line", xy))
+class FakeFont:                         # 8 pixels a character, 14 high, like HaxM-12
+    def getbbox(self, text): return (0, 0, 8 * len(text), 14)
+fd = FakeDraw(); pn2.draw_title(fd, "IP addresses", FakeFont())
+check("title: text at (2,1), then a line under it as wide as the text (y 15, x 2..97)",
+      fd.calls == [("text", (2, 1), "IP addresses"), ("line", (2, 15, 97, 15))], fd.calls)
+class OldFont:                          # Pillow before 8.0: getsize only
+    def getsize(self, text): return (8 * len(text), 14)
+fd = FakeDraw(); pn2.draw_title(fd, "Internet: ON", OldFont())
+check("title: same line with an old Pillow font (getsize)", fd.calls[1] == ("line", (2, 15, 97, 15)), fd.calls)
+internet = open(os.path.join(os.path.dirname(PAGE), "page_internet.py"), encoding="utf-8").read()
+check("internet page draws its title with draw_title", "from .page_network import draw_title" in internet and 'draw_title(d, "Internet: %s"' in internet)
+
 # -- page list and screen_enable -------------------------------------------------------
 d = open(DISPLAYS, encoding="utf-8").read(); g = open(GLOBALS, encoding="utf-8").read()
 pages = re.search(r"self\.statusPages = \[(.*?)\n        \]", d, re.S).group(1)

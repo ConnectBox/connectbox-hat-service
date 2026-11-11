@@ -97,6 +97,23 @@ def rows():
             "Eth  " + address(ETH_IF)]
 
 
+def draw_title(d, text, font, x=2, y=1):
+    """Draw a page title with a line under it, as wide as the text.
+
+    d is the ImageDraw context.  The line sits one pixel below the font's
+    height (y + 14 for the 14-pixel HaxM-12 title font), which leaves a clear
+    pixel before a next line of text placed 16 pixels below the title.
+    Also used by page_internet.
+    """
+    d.text((x, y), text, font=font, fill="black")
+    try:
+        left, top, right, bottom = font.getbbox(text)
+        width, height = right - left, bottom
+    except AttributeError:              # Pillow before 8.0 has no getbbox
+        width, height = font.getsize(text)
+    d.line((x, y + height, x + width - 1, y + height), fill="black")
+
+
 class PageNetwork:
     """Status page listing the access point, client Wi-Fi and Ethernet addresses."""
 
@@ -114,7 +131,7 @@ class PageNetwork:
         size = (self.device.width, self.device.height)
         img = Image.new('RGBA', size, (255, 255, 255, 255))
         d = ImageDraw.Draw(img)
-        d.text((2, 1), "IP addresses", font=title_font, fill="black")
+        draw_title(d, "IP addresses", title_font)
         # Three rows under the title, 15 pixels apart
         for i, text in enumerate(rows()):
             d.text((2, 19 + 15 * i), text, font=row_font, fill="black")
