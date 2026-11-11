@@ -509,6 +509,8 @@ class BasePhysicalHAT:
         times      : int   — number of blink cycles
         flashDelay : float — seconds between on/off transitions
         """
+        if getattr(self, "PIN_LED", None) is None:
+            return                  # no front panel (DummyHAT): there is no LED
         if self.check_AP_up() == 1:
             for _ in range(0, times):
                 GPIO.output(self.PIN_LED, GPIO.HIGH)
@@ -523,7 +525,12 @@ class BasePhysicalHAT:
 
         Called when battery is above the highest blink threshold (>63 %).
         The LED pin is active-low: LOW = LED on, HIGH = LED off.
+        Does nothing on a board without a front panel (DummyHAT has no LED pin;
+        BasePhysicalHAT.__init__ calls this, and it used to raise
+        AttributeError there, so the service crash-looped on a plain Pi).
         """
+        if getattr(self, "PIN_LED", None) is None:
+            return
         if self.check_AP_up() == 1:
             GPIO.output(self.PIN_LED, GPIO.LOW)
         else:
@@ -536,7 +543,17 @@ class DummyHAT(BasePhysicalHAT):
     Provides a minimal mainLoop so the service stays alive and can still show
     wait/success pages via the comsFileName IPC file (used by mmiLoader.py to
     signal indexing progress).
+
+    Also used on a Raspberry Pi or Compute Module whose AXP209 does not answer
+    (a plain Pi board with no ConnectBox front panel, or a front-panel bus that
+    is not working).  It has no LED pin, so the LED helpers do nothing.  On a
+    Pi/CM the main loop looks for the AXP209 again every
+    PANEL_RECHECK_SECS and exits when it answers, so systemd restarts the
+    service and the front panel is detected and used (2026-11-11).
     """
+
+    # How often a Pi/CM without a working front panel looks for it again
+    PANEL_RECHECK_SECS = 60
 
     def __init__(self, displayClass):
         """Initialise GPIO and call base class to turn on the LED."""
@@ -557,9 +574,29 @@ class DummyHAT(BasePhysicalHAT):
         logging.info("There is no HAT, so there's nothing to do using DummyHat")
         logging.info("globals.device_type = "+globals.device_type)
         var_Indexing = False
+        recheck = globals.device_type in ("PI", "CM")
+        nextCheck = time.time() + self.PANEL_RECHECK_SECS
         while True:
             var_Indexing = self.indexingStep(var_Indexing)
+            # Pi/CM: if the AXP209 answers now (front panel bus working again),
+            #  exit non-zero so systemd (Restart=on-failure) starts the service
+            #  again and it detects the real HAT.  Not while indexing is shown.
+            if recheck and not var_Indexing and time.time() >= nextCheck:
+                nextCheck = time.time() + self.PANEL_RECHECK_SECS
+                if self.frontPanelAnswers():
+                    logging.info("AXP209 answers on i2c-%s: restarting to use the front panel", globals.port)
+                    sys.exit(3)
             time.sleep(3)
+
+    @staticmethod
+    def frontPanelAnswers():
+        """Return True if the front panel's AXP209 answers on globals.port."""
+        try:
+            axp = AXP209(globals.port)
+            axp.close()
+            return True
+        except Exception:           # no bus, no device, I/O error: not there
+            return False
 
 
 class q1y2018HAT(BasePhysicalHAT):

@@ -163,6 +163,14 @@ def getHATClass():
         # There is no AXP209 on the Q12018 HAT
         #  so this is either a real Q1Y2018 HAT or we have a bare processor
 
+        # The Q1Y2018 HAT was only made for the NEO, and its class has no
+        #  Raspberry Pi set-up (it crashed with "no attribute
+        #  displayPowerOffTime").  A Raspberry Pi or Compute Module without an
+        #  answering AXP209 has no ConnectBox front panel (a plain Pi board) or
+        #  a front-panel bus that is not working: run without one (2026-11-11).
+        if globals.device_type in ("PI", "CM"):
+            logging.info("No AXP209 on i2c-%s: running without a front panel (DummyHAT)", globals.port)
+            return hats.DummyHAT
         logging.info("Q1Y2018 HAT Detected")
         return hats.q1y2018HAT
     except KeyboardInterrupt:
