@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs the front-panel harnesses (fixes 21-51, 75) against this checkout.
+# Runs the front-panel harnesses (fixes 21-51, 75, 79) against this checkout.
 # usage: bash tests/harness/run_all.sh [connectbox-pi checkout]     (default: ../connectbox-pi beside this repo)
 # The build installs this repo's neo_batterylevelshutdown package and then copies connectbox-pi's
 # displays.py and page_display_image.py over it, so the tests run on that same "deployed" set.
@@ -18,4 +18,5 @@ run "fscheck_test (usb.py file-system check)" "$HERE/fscheck_test.py" "$D/usb.py
 run "movemount_test (usb.py moveMount)"       "$HERE/movemount_test.py" "$D/usb.py"
 run "test51_hats (Checking USB on the panel)" "$HERE/test51_hats.py" "$D/hats.py"
 run "shutdown_test (failed power-off does not freeze the panel)" "$HERE/shutdown_test.py" "$D/hats.py"
+run "nopanel_test (Raspberry Pi without a front panel)" "$HERE/nopanel_test.py" "$D/hats.py" "$D/cli.py" "$D/displays.py"
 [ $FAILED = 0 ] && echo "ALL PASSED" || echo "SOME TESTS FAILED"; exit $FAILED

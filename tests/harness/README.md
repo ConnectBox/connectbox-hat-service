@@ -27,9 +27,11 @@ connectbox-pi copy).
 | `movemount_test.py` | `usb.moveMount` to /media/usb11 per file system | `python3 movemount_test.py <usb.py>` |
 | `test51_hats.py` | the panel shows PxUSBm's "Checking USB" | `python3 test51_hats.py <hats.py>` |
 | `shutdown_test.py` | fix 75: a failed power-off (missing or wrong-architecture program, non-zero exit) tries `shutdown -h now`, then shows "Shutdown failed" and gives the buttons back instead of freezing | `python3 shutdown_test.py <hats.py>` |
+| `nopanel_test.py` | fix 79: a Raspberry Pi/CM with no answering AXP209 runs DummyHAT (not the NEO-only Q1Y2018 class); LED helpers do nothing without an LED pin; any DummyDisplay call is a no-op; on a Pi/CM DummyHAT exits for a restart when the AXP209 answers again | `python3 nopanel_test.py <hats.py> <cli.py> <displays.py>` |
 
 Results on 2026-11-01 (hat-service 731a6ff + connectbox-pi fc7d58c): 84, 23, 10, 8, 4 and 9 passed, none failed.
 Results on 2026-11-09 (hat-service d557028 + the fix 75 hats.py, connectbox-pi 912f7ab): 84, 23, 10, 8, 4, 9 and 13 passed, none failed (sim43's fake page modules now include page_internet, which displays.py imports since 2026-11-05; before that sim43 stopped with an ImportError).
+Results on 2026-11-11 (hat-service 572faa9 + the fix 79 hats.py/cli.py/displays.py, connectbox-pi ffaccc0 + the fix 79 displays.py): 84, 23, 10, 8, 4, 9, 13 and 12 passed, none failed; nopanel_test on the old files: 6 passed, 6 failed.
 
 `tests/test_neo_batterylevelshutdown.py` is the older unit-test suite of this repo.
 See connectbox-pi `docs/testing.md` for all tests and when to run them.
