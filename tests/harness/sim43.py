@@ -54,7 +54,7 @@ sys.modules["neo_batterylevelshutdown.page_display_image"] = pdi; pkg.page_displ
 for name, cls in [("page_none", "PageBlank"), ("page_main", "PageMain"), ("page_battery", "PageBattery"),
                   ("page_info", "PageInfo"), ("page_stats", "PageStats"), ("page_memory", "PageMemory"),
                   ("page_battery_low", "PageBatteryLow"), ("page_power_down", "PagePowerDown"),
-                  ("page_multi_bat", "PageMulti_Bat")]:
+                  ("page_multi_bat", "PageMulti_Bat"), ("page_network", "PageNetwork")]:
     m = types.ModuleType("neo_batterylevelshutdown." + name)
     setattr(m, cls, lambda *a, **k: Page())
     sys.modules["neo_batterylevelshutdown." + name] = m; setattr(pkg, name, m)

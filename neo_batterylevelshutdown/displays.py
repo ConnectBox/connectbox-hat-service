@@ -18,6 +18,7 @@ from . import page_power_down
 from . import page_display_image
 from . import page_multi_bat
 from . import page_internet
+from . import page_network
 #from . import page_waiting
 
 
@@ -129,6 +130,7 @@ class OLED:
             page_stats.PageStats(self.display_device, 'week', 2),
             page_stats.PageStats(self.display_device, 'month', 1),
             page_stats.PageStats(self.display_device, 'month', 2),
+            page_network.PageNetwork(self.display_device),     # IP addresses: AP, client Wi-Fi, Ethernet
             page_internet.PageInternet(self.display_device),   # shown only while wanted()
             page_display_image.PageDisplayImage(self.display_device, 'show_admin.png'),
         ]
