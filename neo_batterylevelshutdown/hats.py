@@ -43,6 +43,18 @@ elif globals.device_type == "OZ2":
 else:
     import RPi.GPIO as GPIO  # pylint: disable=import-error
 
+# rpi-lgpio (the RPi.GPIO used on Raspberry Pi OS Trixie) turns bouncetime
+#  into lgpio's debounce: an edge is only reported once the pin has stayed at
+#  its new level for the whole bouncetime.  With 125 ms a short tap was never
+#  reported, and a slightly longer one reached handleButtonPress so late that
+#  the time left until release was under its 0.1 s noise limit, so the press
+#  was dropped (2026-11-10, CM5: 2-3 presses needed; journal buttonTime 0.05-
+#  0.09 s).  The other GPIO libraries only ignore further edges for bouncetime
+#  after one is reported, so they keep 125 ms (buttons.py keeps the 0.1 s
+#  noise limit for them too).
+GPIO_DEBOUNCES = "lgpio" in sys.modules
+BUTTON_BOUNCETIME_MS = 20 if GPIO_DEBOUNCES else 125   # button pins only
+
 
 
 from .buttons import BUTTONS
@@ -667,8 +679,14 @@ class Axp209HAT(BasePhysicalHAT):
 
     def __init__(self, displayClass):
 
+        # The AXP209 is on the front panel's I2C bus (globals.port: 10 on a
+        #  Compute Module, 1 on another Pi, 0 on a NEO/RM3).  This used bus 0
+        #  everywhere; a CM5 has no /dev/i2c-0, the open failed and the
+        #  except clause's bus.close() then raised UnboundLocalError, so the
+        #  hat service exited at every start (2026-11-10, CM5).
+        bus = None
         try:
-            bus = smbus2.SMBus(0)
+            bus = smbus2.SMBus(globals.port)
             a = int(bus.read_byte_data(0x34, 0x36))
             print("AXP209 PEK register is: "+str(a))
             bus.write_byte_data(0x34, 0x36, 0x5F)
@@ -677,10 +695,11 @@ class Axp209HAT(BasePhysicalHAT):
             print("AXP209 PEK register is now : "+str(a))
 #            bus.write_byte_data(0x34,0x32, 0xC3)			#Test power shutdown
 #            print("shutdown the AXP209 we think")
-            bus.close()
         except Exception as inst:
             print("Error reading/writing the PEK register of the AXP209 : ",type(inst), inst.args, inst)
-            bus.close()
+        finally:
+            if bus is not None:
+                bus.close()
 
 
         logging.info("Starting AXP209HAT class __init__")
@@ -924,10 +943,10 @@ class q3y2018HAT(Axp209HAT):
         super().__init__(displayClass)
         GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
                               callback=self.buttons.handleButtonPress,
-                              bouncetime=125)
+                              bouncetime=BUTTON_BOUNCETIME_MS)
         GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
                               callback=self.buttons.handleButtonPress,
-                              bouncetime=125)
+                              bouncetime=BUTTON_BOUNCETIME_MS)
 
     def powerOffDisplay(self, channel):
         """Turn off the display"""
@@ -1005,10 +1024,10 @@ class q4y2018HAT(Axp209HAT):
         if globals.device_type == "RM3":
             GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
                               callback= lambda x:self.buttons.handleButtonPress(self.PIN_L_BUTTON),
-                              bouncetime=125)
+                              bouncetime=BUTTON_BOUNCETIME_MS)
             GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
                               callback=lambda x: self.buttons.handleButtonPress(self.PIN_R_BUTTON),
-                              bouncetime=125)
+                              bouncetime=BUTTON_BOUNCETIME_MS)
             GPIO.add_event_detect(self.PIN_OTG_SENSE, GPIO.BOTH,
                                callback=lambda x:self.handleOtgSelect(),
                                bouncetime=125)
@@ -1019,10 +1038,10 @@ class q4y2018HAT(Axp209HAT):
         else:
             GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
                               callback=self.buttons.handleButtonPress,
-                              bouncetime=125)
+                              bouncetime=BUTTON_BOUNCETIME_MS)
             GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
                               callback=self.buttons.handleButtonPress,
-                              bouncetime=125)
+                              bouncetime=BUTTON_BOUNCETIME_MS)
             GPIO.add_event_detect(self.PIN_OTG_SENSE, GPIO.BOTH,
                                callback=self.handleOtgSelect,
                                bouncetime=125)
@@ -1080,10 +1099,10 @@ class q3y2021HAT(Axp209HAT):
         super().__init__(displayClass)
         GPIO.add_event_detect(self.PIN_L_BUTTON, GPIO.FALLING,
                               callback=self.buttons.handleButtonPress,
-                              bouncetime=125)
+                              bouncetime=BUTTON_BOUNCETIME_MS)
         GPIO.add_event_detect(self.PIN_R_BUTTON, GPIO.FALLING,
                               callback=self.buttons.handleButtonPress,
-                              bouncetime=125)
+                              bouncetime=BUTTON_BOUNCETIME_MS)
         GPIO.add_event_detect(self.PIN_OTG_SENSE, GPIO.BOTH,
                                callback=self.handleOtgSelect,
                                bouncetime=125)

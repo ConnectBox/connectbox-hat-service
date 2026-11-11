@@ -27,6 +27,12 @@ elif globals.device_type == "OZ2":
 else:
     import RPi.GPIO as GPIO  # pylint: disable=import-error
 
+# A press shorter than this after the edge is reported is ignored as noise.
+#  rpi-lgpio (Raspberry Pi OS Trixie) has already debounced the pin before it
+#  reports the edge (hats.BUTTON_BOUNCETIME_MS), and with the 0.1 s limit most
+#  quick taps were dropped (2026-11-10, CM5); other GPIO libraries keep 0.1 s.
+BUTTON_NOISE_SEC = 0.0 if "lgpio" in sys.modules else 0.1
+
 
 comsFileName = "/tmp/creating_menus.txt"
 DEBUG = True
@@ -735,7 +741,7 @@ class BUTTONS:
 
         # this is where we decide what to do with the button press.  ChanelTime is the first
         # button pushed, dualTime is the amount of time both buttons were pushed.
-        if channelTime < .1:  # Ignore noise
+        if channelTime < BUTTON_NOISE_SEC:  # Ignore noise (0 with rpi-lgpio, which already debounces)
             pass
 
         # if either button is below the press threshold, treat as normal
