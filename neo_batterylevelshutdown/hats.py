@@ -179,6 +179,25 @@ class BasePhysicalHAT:
             return False
         return age > self.STATUS_STALE_SECS and not self.mmiLoaderRunning()
 
+    def startWebCommands(self):
+        """
+        Let the admin page run the copy commands (buttons.BUTTONS
+        startWebCommands).  A HAT class without buttons (DummyHAT on a box with
+        no front panel, the old Q1Y2018 HAT) gets a BUTTONS object for this,
+        with its display (or a no-op one).  Called at the start of each
+        mainLoop; never stops the service.
+        """
+        try:
+            if getattr(self, 'buttons', None) is None:
+                display = getattr(self, 'display', None)
+                if display is None:
+                    from .displays import DummyDisplay
+                    display = DummyDisplay(self)
+                self.buttons = BUTTONS(self, display)
+            self.buttons.startWebCommands()
+        except Exception:
+            logging.exception("Could not start the admin page commands")
+
     def indexingStep(self, var_Indexing):
         """
         One pass of the indexing display: a wait page with mmiLoader's status
@@ -558,8 +577,11 @@ class DummyHAT(BasePhysicalHAT):
     def __init__(self, displayClass):
         """Initialise GPIO and call base class to turn on the LED."""
         setup_GPIO()
+        # The display object (a DummyDisplay: every call is a no-op).  Before
+        #  2026-11-13 there was none, so indexingStep() raised AttributeError
+        #  as soon as a key was indexed on a box with no front panel.
+        self.display = displayClass(self)
         super().__init__(displayClass)
-        pass
 
     # pylint: disable=no-self-use
     # This is a standard interface - it's ok not to use self for a dummy impl
@@ -572,6 +594,7 @@ class DummyHAT(BasePhysicalHAT):
         No battery checks or LED updates are needed without a real HAT.
         """
         logging.info("There is no HAT, so there's nothing to do using DummyHat")
+        self.startWebCommands()
         logging.info("globals.device_type = "+globals.device_type)
         var_Indexing = False
         recheck = globals.device_type in ("PI", "CM")
@@ -668,6 +691,7 @@ class q1y2018HAT(BasePhysicalHAT):
         monitors battery voltage and shuts down the device when levels are low
         """
         logging.info("Starting Monitoring")
+        self.startWebCommands()
         var_Indexing = False
         while True:
             with min_execution_time(min_time_secs=self.LED_CYCLE_TIME_SECS):
@@ -881,6 +905,7 @@ class Axp209HAT(BasePhysicalHAT):
           7. Re-reads brand.j2 in case the admin console changed settings.
         """
 #        print("at entry axp209 hat main")
+        self.startWebCommands()
         var_Indexing = False
         while True:
             # The following ensures that the while loop only executes once every

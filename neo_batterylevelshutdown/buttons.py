@@ -75,7 +75,8 @@ class BUTTONS:
         self.display = display_class
         self.hat = hat_class
         self.display_type = display_class.display_type
-        self.USABLE_BUTTONS = self.hat.USABLE_BUTTONS
+        # (a DummyHAT on a box with no front panel has no buttons)
+        self.USABLE_BUTTONS = getattr(self.hat, 'USABLE_BUTTONS', [])
         self.command_to_reference = ''
         self.l = []
         # True while an admin command (copy / erase) runs: the HAT main loop then
@@ -84,6 +85,14 @@ class BUTTONS:
         # A key held unmounted after a failed copy (see _holdKey)
         self._heldDev = ""
         self._heldOrig = None
+        # One admin command at a time, from the front panel or the admin page
+        self._commandLock = threading.Lock()
+        # What the running command is, for the admin page's status line
+        self._command = ''
+        self._source = 'panel'
+        self._requestId = None
+        self._statusState = 'idle'
+        self._webThread = None
         self._recoverNoMount()
 
     def checkReturn(self, val):
@@ -134,6 +143,7 @@ class BUTTONS:
 
     def _wait(self, text):
         """Show the animated wait page with text (the main loop keeps it animated)."""
+        self._status('running', text)
         globals.a = text
         globals.sequence = 0
         self.display.pageStack = 'wait'
@@ -147,12 +157,14 @@ class BUTTONS:
         """
         logging.info("Admin command failed: %s", text)
         print("Admin command failed: " + text)
+        self._status('error', text)
         self.display.pageStack = 'error'
         self.display.showErrorPage(text)
         self._keepDisplayOn()
         return False
 
     def _success(self):
+        self._status('done', 'Done')
         self.display.pageStack = 'success'
         self.display.showSuccessPage()
         self._resetDisplayTimer()
@@ -264,6 +276,7 @@ class BUTTONS:
         dev = usb.isUsbPresent()
         if dev != "":
             return dev
+        self._status('running', 'Insert USB key')
         self.display.pageStack = 'insertUSB'
         self.display.showInsertUsbPage()
         end = time.time() + self.USB_WAIT_SECS
@@ -277,6 +290,7 @@ class BUTTONS:
 
     def _waitForRemoval(self, dev):
         """Show the remove-USB page until the key is pulled out (or USB_WAIT_SECS pass)."""
+        self._status('running', 'Remove the USB key')
         self.display.pageStack = 'remove_usb'
         self.display.showRemoveUsbPage()
         end = time.time() + self.USB_WAIT_SECS
@@ -464,6 +478,7 @@ class BUTTONS:
                 except OSError:
                     continue
                 globals.a = self._copyText(max(0, min(99, int(100 * done / needed))), needed)
+                self._status('running', globals.a)
 
         watcher = threading.Thread(target=watch, daemon=True)
         watcher.start()
@@ -641,13 +656,128 @@ class BUTTONS:
             self._waitForRemoval(dev)
         return self._success()
 
-    def executeCommands(self, command):
+    # ── Commands from the admin page (2026-11-13) ─────────────────────────────
+    #
+    # connectbox-manage (PUT /admin/api/boxcontent) writes WEB_REQUEST_FILE;
+    # a watcher thread here picks it up and runs the same copy command as the
+    # front panel.  Every step's text (the same as the wait/error pages) is
+    # written to WEB_STATUS_FILE, which the admin page polls through
+    # connectbox-manage (GET /admin/api/boxcontent).  Panel commands write the
+    # status too, so the page shows a copy started on the panel.
+
+    WEB_REQUEST_FILE = '/run/connectbox/boxcontent_request.json'
+    WEB_STATUS_FILE = '/run/connectbox/boxcontent_status.json'
+    WEB_COMMANDS = ('copy_from_usb', 'copy_to_usb')
+    WEB_REQUEST_MAX_AGE_SECS = 60      # older requests (e.g. from before a restart) are dropped
+    WEB_POLL_SECS = 2
+
+    def _status(self, state, text):
+        """
+        Write the running command's state ('running', 'done', 'error') and
+        step text to WEB_STATUS_FILE for the admin page (atomically: a
+        temporary file renamed into place).  Never raises.
+        """
+        self._statusState = state
+        data = {'state': state, 'text': text, 'command': self._command, 'source': self._source,
+                'id': self._requestId, 'time': time.time()}
+        try:
+            os.makedirs(os.path.dirname(self.WEB_STATUS_FILE), exist_ok=True)
+            tmp = self.WEB_STATUS_FILE + '.tmp'
+            with open(tmp, 'w', encoding='utf-8') as f:
+                json.dump(data, f)
+            os.replace(tmp, self.WEB_STATUS_FILE)
+        except OSError as e:
+            logging.debug("Could not write %s: %s", self.WEB_STATUS_FILE, e)
+
+    def _takeWebRequest(self):
+        """
+        Read and remove WEB_REQUEST_FILE.  Returns {'command', 'id'} for a
+        known command asked for less than WEB_REQUEST_MAX_AGE_SECS ago, else
+        None (an unreadable, unknown or stale request is just removed).
+        """
+        path = self.WEB_REQUEST_FILE
+        if not os.path.isfile(path):
+            return None
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                req = json.load(f)
+        except (OSError, ValueError):
+            req = None
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        if not isinstance(req, dict) or req.get('command') not in self.WEB_COMMANDS:
+            logging.info("Ignoring admin page request: %s", req)
+            return None
+        try:
+            age = time.time() - float(req.get('time', 0))
+        except (TypeError, ValueError):
+            age = self.WEB_REQUEST_MAX_AGE_SECS + 1
+        if age > self.WEB_REQUEST_MAX_AGE_SECS:
+            logging.info("Ignoring a stale admin page request (%d s old)", age)
+            return None
+        return {'command': req['command'], 'id': req.get('id')}
+
+    def _watchWebRequests(self):
+        """Thread body: every WEB_POLL_SECS run a request from the admin page."""
+        while True:
+            time.sleep(self.WEB_POLL_SECS)
+            try:
+                req = self._takeWebRequest()
+                if req:
+                    logging.info("Admin page asks for %s", req['command'])
+                    self.executeCommands(req['command'], source='web', request_id=req['id'])
+            except Exception:
+                logging.exception("Admin page request failed")
+
+    def startWebCommands(self):
+        """Start the admin page request watcher (once)."""
+        if self._webThread is not None:
+            return
+        # A request left from before a restart is not run
+        try:
+            os.remove(self.WEB_REQUEST_FILE)
+        except OSError:
+            pass
+        self._webThread = threading.Thread(target=self._watchWebRequests, name='boxcontent-web', daemon=True)
+        self._webThread.start()
+
+    def executeCommands(self, command, source='panel', request_id=None):
         '''
-        Run the admin command chosen on the display.  Returns True on success,
-        False on failure (an error page is then on the screen).
+        Run an admin command, chosen on the display (source 'panel') or on the
+        admin page (source 'web', see _watchWebRequests).  Returns True on
+        success, False on failure (an error page is then on the screen and in
+        the status file).  Only one command runs at a time: a second one,
+        from either place, is refused (False, nothing changed).
         '''
-        if not (self.hat.batteryLevelAboveVoltage(self.hat.BATTERY_WARNING_VOLTAGE)):
-            # Not enough battery to finish a copy safely
+        if not self._commandLock.acquire(blocking=False):
+            logging.info("Admin command %s from %s refused: another command is running", command, source)
+            return False
+        try:
+            self._command = command
+            self._source = source
+            self._requestId = request_id
+            ok = self._executeCommand(command)
+            if ok and self._statusState != 'done':
+                # copy from USB (and copy to a key the box was serving) end by
+                #  handing the re-index to PxUSBm instead of a success page
+                self._status('done', 'Done - the menus are being rebuilt' if self.hat.indexPending else 'Done')
+            return ok
+        finally:
+            self._commandLock.release()
+
+    def _executeCommand(self, command):
+        '''
+        The body of executeCommands (the caller holds the command lock).
+        Returns True on success, False on failure.
+        '''
+        self._status('running', 'Starting')
+        hat = self.hat
+        if hasattr(hat, 'batteryLevelAboveVoltage') and hasattr(hat, 'BATTERY_WARNING_VOLTAGE') \
+                and not hat.batteryLevelAboveVoltage(hat.BATTERY_WARNING_VOLTAGE):
+            # Not enough battery to finish a copy safely (a box with no front
+            #  panel has no battery reading: no check)
             return self._error("Battery low")
         commands = {
             'remove_usb': self.removeUsb,

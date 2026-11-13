@@ -21,4 +21,5 @@ run "shutdown_test (failed power-off does not freeze the panel)" "$HERE/shutdown
 run "nopanel_test (Raspberry Pi without a front panel)" "$HERE/nopanel_test.py" "$D/hats.py" "$D/cli.py" "$D/displays.py"
 run "network_page_test (IP addresses page)" "$HERE/network_page_test.py" "$D/page_network.py" "$D/displays.py" "$D/globals.py"
 run "internet_switch_test (Internet page admin switch)" "$HERE/internet_switch_test.py" "$D/displays.py" "$D/globals.py"
+run "webcmd_test (copy commands from the admin page)" "$HERE/webcmd_test.py" "$D/buttons.py"
 [ $FAILED = 0 ] && echo "ALL PASSED" || echo "SOME TESTS FAILED"; exit $FAILED

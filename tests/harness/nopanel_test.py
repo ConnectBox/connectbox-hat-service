@@ -76,6 +76,8 @@ def dummy_hat(dev, axp_answers_after):
         def close(self): pass
     steps = {"n": 0}
     class Base:
+        def startWebCommands(self):
+            steps["web"] = steps.get("web", 0) + 1
         def indexingStep(self, v):
             steps["n"] += 1
             if steps["n"] > 20: raise Stop()
@@ -116,5 +118,12 @@ try:
 except AttributeError:
     dunder = "AttributeError"
 check("DummyDisplay: special (__x__) names are not faked", dunder == "AttributeError", dunder)
+
+# ---- DummyHAT has a display object (2026-11-13): indexingStep() calls self.display -----
+import re
+h_src = open(HATS, encoding="utf-8").read()
+m = re.search(r"class DummyHAT\(BasePhysicalHAT\):.*?\n    def mainLoop", h_src, re.S)
+check("DummyHAT.__init__ creates its display (self.display = displayClass(self))", m is not None and "self.display = displayClass(self)" in m.group(0))
+check("every HAT main loop starts the admin page commands", h_src.count("self.startWebCommands()") == 3, h_src.count("self.startWebCommands()"))
 
 print(f"\nResults: {P} passed, {F} failed"); sys.exit(1 if F else 0)
