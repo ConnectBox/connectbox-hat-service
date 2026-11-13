@@ -27,9 +27,11 @@ enable_mass_storage = ""        # additive to the g_device paramater
 #  addresses page (page_network, 2026-11-11)
 screen_enable = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1]
 # Admin switch for the internet page (brand.j2 lcd_pages_internet, 2026-11-13):
-#  displays.internetPageWanted() shows the page only while this is on AND the
-#  page is wanted (sharing on or data counted).  On when brand.j2 lacks it.
-lcd_pages_internet = 1
+#  displays.internetPageWanted() shows the page exactly while this is on.  Off
+#  by default; connectbox-manage turns it on with internet sharing and off
+#  again unless the admin set it by hand.  A brand.j2 without the key follows
+#  internet_sharing.
+lcd_pages_internet = 0
 
 # font sizes are just specified here
 font30 = 26
@@ -195,8 +197,14 @@ def init():
     except:
         pass
     # Internet page admin switch, read on its own so an older brand.j2 without
-    #  it (or without other page keys) still gives the default of on
-    lcd_pages_internet = js.get('lcd_pages_internet', 1)
+    #  it (or without other page keys) still works: then it follows
+    #  internet_sharing (key matched without regard to case, as in
+    #  page_internet.sharing_on)
+    sharing = 0
+    for k, v in js.items():
+        if k.lower() == 'internet_sharing':
+            sharing = 1 if str(v).strip().lower() in ('1', 'true') else 0
+    lcd_pages_internet = js.get('lcd_pages_internet', sharing)
 
     try:
         otg = js["otg"]
