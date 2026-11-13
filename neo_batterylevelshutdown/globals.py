@@ -26,6 +26,10 @@ enable_mass_storage = ""        # additive to the g_device paramater
 #  last) is switched by displays.internetPageWanted(); before it comes the IP
 #  addresses page (page_network, 2026-11-11)
 screen_enable = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1]
+# Admin switch for the internet page (brand.j2 lcd_pages_internet, 2026-11-13):
+#  displays.internetPageWanted() shows the page only while this is on AND the
+#  page is wanted (sharing on or data counted).  On when brand.j2 lacks it.
+lcd_pages_internet = 1
 
 # font sizes are just specified here
 font30 = 26
@@ -113,6 +117,7 @@ def init():
     global splash_font
     global usbnomount
     global screen_enable
+    global lcd_pages_internet
     global enable_mass_storage      # mass storage enabled overrides g_device always but is subject to otg setting
     global g_device                 # g_device is subject to otg setting
     global otg                      # high, low, none, both
@@ -189,6 +194,9 @@ def init():
         ]
     except:
         pass
+    # Internet page admin switch, read on its own so an older brand.j2 without
+    #  it (or without other page keys) still gives the default of on
+    lcd_pages_internet = js.get('lcd_pages_internet', 1)
 
     try:
         otg = js["otg"]
